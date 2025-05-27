@@ -159,7 +159,7 @@
             text-align: right;
         }
         
-        #usefulUrls {
+        .url-select {
             width: auto;
             min-width: 200px;
             padding: 8px 12px;
@@ -168,6 +168,75 @@
             font-size: 14px;
             background-color: #f8f9fa;
             cursor: pointer;
+        }
+        
+        /* 대리점 메모 팝업 스타일 */
+        .info-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-left: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+        
+        .info-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .popup-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .popup-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .popup-title {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .memo-content {
+            white-space: pre-line;
+            line-height: 1.5;
         }
 
         @media (max-width: 900px) {
@@ -212,9 +281,12 @@
                     
                     <div class="form-group">
                         <label for="agency">대리점 선택:</label>
-                        <select id="agency" disabled>
-                            <option value="">대리점을 선택하세요</option>
-                        </select>
+                        <div style="display: flex; align-items: center;">
+                            <select id="agency" disabled>
+                                <option value="">대리점을 선택하세요</option>
+                            </select>
+                            <button type="button" id="agencyInfoBtn" class="info-button" onclick="showAgencyInfo()" disabled>i</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -266,12 +338,134 @@
         </div>
     </div>
     
+    <!-- 대리점 메모 팝업 -->
+    <div id="memoPopup" class="popup-overlay">
+        <div class="popup-content">
+            <span class="popup-close" onclick="closeAgencyInfo()">&times;</span>
+            <h3 class="popup-title" id="popupTitle">대리점 업무 메모</h3>
+            <div class="memo-content" id="memoContent"></div>
+        </div>
+    </div>
+    
     <script>
         // 통신사별 대리점 목록
         const agencies = {
-            'SK': ['큐브', '럭스', '나텔', '밀리언', '드블랙', '카파', '장천', '삼보/엠디도매'],
+            'SK': ['큐브', '럭스', '나텔', '밀리언', '드블랙', '카파', '장천', '삼보/엠디도매', '코웨어'],
             'KT': ['오앤티', '재희', '안산/이스턴'],
             'LG': ['소리', '제이/휴넷']
+        };
+        
+        // 대리점별 업무 메모
+        const agencyMemos = {
+            'SK': {
+                '큐브': `[큐브 업무 메모]
+어드민대리점설정 : SK큐브
+■ SK3번 추천인코드				
+- 100201 입력 필수				
+신조 및 개통 요청 이전에 추천인코드 필수 입력 !!!!!`,
+
+                '럭스': `[럭스 업무 메모]
+1. 개통 요청 마감: 평일 17:30, 토요일 12:30
+2. 유심 발송 요청은 별도 양식으로 전달
+3. 전환지원금 신청 시 이전 통신사 가입 증빙 필요
+4. 프로모션 코드: SK-LUX-2025
+5. 문의 연락처: 02-234-5678 (담당자: 이럭스)
+6. 특이사항: 프리미엄 요금제 가입 시 추가 사은품 제공`,
+
+                '나텔': `[나텔 업무 메모]
+1. 개통 요청 마감: 평일 17:30, 토요일 12:30
+2. 택배 발송 시간: 오전 11시, 오후 3시 (하루 2회)
+3. 유심 발송 요청은 별도 양식으로 전달
+4. 전환지원금 신청 시 이전 통신사 가입 증빙 필요
+5. 문의 연락처: 02-234-5678 (담당자: 박나텔)
+6. 특이사항: 택배 요청 시 주소 정확히 기재 필수`,
+
+                '밀리언': `[밀리언 업무 메모]
+1. 사이트 ID/PW
+    ID:raon010
+    PW:1124
+    2차 PW:2023
+2. ★우체국택배 / 택배마감 4시							
+    ★조회및 개통 요청 가능시간 : 5시 30분까지			
+    *밀리언주소:송파구 백제고분로 19길 3, HC빌딩 2층 밀레니엄통신/ 070-7455-6672
+3. 특별 할인: 선택약정 25% + 추가 5% (조건부)
+4. 문의 연락처: 02-345-6789 (담당자: 이밀리언)
+5. 특이사항: 프리미엄 요금제 가입 시 추가 혜택 제공`,
+
+                '드블랙': `[드블랙 업무 메모]
+★MNO 개통지연있음★					
+★개통후 우주패스 별도 요청★					
+☆그외 필요 메모는 카톡방 톡게시판에 등록 되있음					
+					
+**드블랙 주소 :서울시 강남구 신사동 590-9 삼륭빌딩 5층					
+박지성 / 010-6234-4450 / 한우석 010-3851-5874`,
+
+                '카파': `[카파 업무 메모]
+1. 개통 요청 시간: 평일 9:00 ~ 17:30
+2. 단말기 배송: 익일 배송 (오후 3시 이전 주문 건)
+3. 프로모션 코드: SK-KAP-2025
+4. 문의 연락처: 02-567-8901 (담당자: 정카파)
+5. 특이사항: 법인 고객 전용 할인 프로그램 운영 중`,
+
+                '장천': `[장천 업무 메모]
+1. 개통 요청 마감: 평일 17:00
+2. 단말기 재고 문의: 카카오톡 채널 @장천모바일
+3. 프로모션 코드: SK-JC-2025
+4. 문의 연락처: 02-678-9012 (담당자: 한장천)
+5. 특이사항: 지방 배송 시 추가 1일 소요`,
+
+                '삼보/엠디도매': `[삼보/엠디도매 업무 메모]
+1. 개통 요청 시간: 평일 9:00 ~ 18:00
+2. 대량 주문(10대 이상) 시 사전 연락 필수
+3. 프로모션 코드: SK-SMD-2025
+4. 문의 연락처: 02-789-0123 (담당자: 강삼보)
+5. 특이사항: B2B 전용 할인 프로그램 운영 중`,
+                
+                '코웨어': `[코웨어 업무 메모]
+1. 개통 요청 시간: 평일 9:00 ~ 17:00
+2. 택배 발송: 오후 3시 마감 (익일 배송)
+3. 유심 발송 요청: 별도 양식으로 전달
+4. 문의 연락처: 02-555-7890 (담당자: 김코웨어)
+5. 특이사항: 법인 고객 전용 할인 프로그램 운영 중
+6. 개통 요청 시 특이사항 필수 기재`
+            },
+            'KT': {
+                '오앤티': `[오앤티 업무 메모]
+1. 개통 요청 마감: 평일 17:30
+2. 단말기 배송: 당일 배송 (정오 이전 주문 건)
+3. 프로모션 코드: KT-ONT-2025
+4. 문의 연락처: 02-890-1234 (담당자: 오앤티)
+5. 특이사항: KT 프리미엄 요금제 가입 시 추가 할인`,
+
+                '재희': `[재희 업무 메모]
+1. 개통 요청 시간: 평일 9:00 ~ 18:30
+2. 단말기 재고 확인: 홈페이지에서 실시간 확인 가능
+3. 프로모션 코드: KT-JH-2025
+4. 문의 연락처: 02-901-2345 (담당자: 김재희)
+5. 특이사항: 5월 프로모션 - 아이폰 시리즈 특별 할인`,
+
+                '안산/이스턴': `[안산/이스턴 업무 메모]
+1. 개통 요청 마감: 평일 17:00
+2. 단말기 배송: 수도권 지역 당일 배송 가능
+3. 프로모션 코드: KT-AS-2025
+4. 문의 연락처: 02-012-3456 (담당자: 이안산)
+5. 특이사항: 기업 고객 전용 상담 채널 운영 중`
+            },
+            'LG': {
+                '소리': `[소리 업무 메모]
+1. 개통 요청 시간: 평일 9:00 ~ 19:00
+2. 단말기 배송: 전국 익일 배송
+3. 프로모션 코드: LG-SR-2025
+4. 문의 연락처: 02-123-4567 (담당자: 박소리)
+5. 특이사항: LG 전용 요금제 가입 시 추가 혜택`,
+
+                '제이/휴넷': `[제이/휴넷 업무 메모]
+1. 개통 요청 마감: 평일 18:00
+2. 단말기 재고 확인: 오전 9시, 오후 2시 업데이트
+3. 프로모션 코드: LG-JH-2025
+4. 문의 연락처: 02-234-5678 (담당자: 최제이)
+5. 특이사항: 선택약정 25% 가입 시 추가 사은품 제공`
+            }
         };
 
         // 대리점별 양식 템플릿
@@ -328,8 +522,7 @@
                     // 기본 정보 처리
                     const name = info['가입자명'] || info['고객명'] || '';
                     const contact = info['개통번호'] || info['전화번호'] || '';
-                    const modelColor = `${info['모델명'] || ''} / ${info['색상'] || ''} / ${info['단말기일련번호'] || ''}`;
-                    const usim = info['유심'] || '';
+                    const modelColor = `${info['모델명'] || ''} / ${info['색상'] || ''}`;
                     const plan = info['요금제'] || '';
                     const subscriptionType = info['가입유형'] || '';
                     
@@ -341,7 +534,7 @@
                         template = `판매점명 :	 에이치엘
 고객명 :	${name}	
 개통번호 :	${contact}	
-모델명 / 색상 / 일련번호 :	${modelColor}	
+모델명 / 색상 :	${modelColor}	
 유심 일련번호 :	${info['유심일련번호'] || ''}	
 요금제명(혜택) :	${plan}	
 개통유형 :	${subscriptionType}	
@@ -361,7 +554,7 @@
                         template = `판매점명 :	 에이치엘
 고객명 :	${name}	
 개통번호 :	${contact}	
-모델명 / 색상 / 일련번호 :	${modelColor}	
+모델명 / 색상 :	${modelColor}	
 유심 일련번호 :	${info['유심일련번호'] || ''}	
 요금제명(혜택) :	${plan}	
 개통유형 :	${subscriptionType}	
@@ -382,7 +575,7 @@
                         template = `판매점명 :	 에이치엘
 고객명 :	${name}	
 개통번호 :	${contact}	
-모델명 / 색상 / 일련번호 :	${modelColor}	
+모델명 / 색상 :	${modelColor}	
 유심 일련번호 :	${info['유심일련번호'] || ''}	
 요금제명(혜택) :	${plan}	
 개통유형 :	${subscriptionType}	
@@ -400,7 +593,7 @@
                         template = `판매점명 :	 에이치엘
 고객명 :	${name}	
 개통번호 :	${contact}	
-모델명 / 색상 / 일련번호 :	${modelColor}	
+모델명 / 색상 :	${modelColor}	
 유심 일련번호 :	${info['유심일련번호'] || ''}	
 요금제명(혜택) :	${plan}	
 개통유형 :	${subscriptionType}	
@@ -439,29 +632,53 @@
                         naPaymentInfo += info['할부개월수'];
                     }
                     
-                    // 재고요청 양식
-                    const naStockRequest = `[나텔] ${naName}님 / ${naModel} / ${naColor} / ${naPlan} / ${naSubscriptionType} / ${naPaymentInfo} ${info['최종구매가']}`;
+                    // 배송요청 양식 (첫 번째 textarea)
+                    const naStockRequest = `택배요청	
+	
+주소 :	${naAddress}
+수취인 :	${naName}
+연락처 :	${naContact}
+기종/색상:	${naModel} / ${naColor}
+유심 :	${info['유심일련번호'] || ''}`;
                     
-                    // 개통요청 양식
-                    const naOpenRequest = `[나텔] ${naName}님 개통요청
-
-◎ 고객명 : ${naName}
-◎ 연락처 : ${naContact}
-◎ 주소 : ${naAddress}
-◎ 모델 : ${naModel}
-◎ 색상 : ${naColor}
-◎ 가입유형 : ${naSubscriptionType}
-◎ 현통신사 : ${naTelecom}
-◎ 인증방법 : ${naAuth}
-◎ 요금제 : ${naPlan}
-◎ 공시지원금 : ${info['공시'] || '0'}
-◎ 추가지원금 : ${info['추지'] || '0'}${info['전환지원금'] && info['전환지원금'] !== '0' ? `
-◎ 전환지원금 : ${info['전환지원금']}` : ''}
-◎ 할부 : ${naPaymentInfo}
-◎ 구매가 : ${info['최종구매가'] || ''}원
-◎ 일련번호 : ${info['단말기일련번호'] || ''}
-◎ 유심 일련번호 : ${info['유심일련번호'] || ''}
-◎ 부가서비스 : ${info['부가서비스'] || ''}`;
+                    // 개통요청 양식 (두 번째 textarea)
+                    // 약정 정보 처리 (공시지원 또는 선택약정 + 개월수)
+                    let contractInfo = '';
+                    if (info['공시선약여부'] === '공시지원') {
+                        contractInfo = `공시지원 ${info['약정개월수'] || '24개월'}`;
+                    } else if (info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') {
+                        contractInfo = `선택약정 ${info['약정개월수'] || '24개월'}`;
+                    } else {
+                        contractInfo = `약정없음`;
+                    }
+                    
+                    // 선납 정보 처리 (프리할부 있으면 기재, 없으면 0)
+                    const prepayInfo = info['프리할부'] && info['프리할부'] !== '0' ? info['프리할부'] : '0';
+                    
+                    // 원금 정보 처리 (할부면 최종구매가, 현금이면 0(현금완납))
+                    const principalInfo = info['할부현금여부'] === '할부' ? info['최종구매가'] || '0' : '0(현금완납)';
+                    
+                    // 개월 정보 처리 (할부면 할부개월수, 현금이면 0)
+                    const monthsInfo = info['할부현금여부'] === '할부' ? info['할부개월수'] || '24개월' : '0';
+                    
+                    // 생년월일 또는 주민번호 처리
+                    const birthOrRegNum = info['생년월일'] || info['주민번호'] || '';
+                    
+                    const naOpenRequest = `개통요청 / 전문화	
+유형: ${naSubscriptionType}
+고객명 :	${naName}
+생년월일 :	${birthOrRegNum}
+번호 :	${naContact}
+기종/색상 :	${naModel} / ${naColor}
+일련번호 :	${info['단말기일련번호'] || ''}
+유심 :	${info['유심일련번호'] || ''}
+요금제 :	${naPlan}
+약정 :	${contractInfo}
+선납 :	${prepayInfo}
+원금 : ${principalInfo}	
+개월 :	${monthsInfo}
+부가 :	${info['부가서비스'] || ''}
+보험 :	`;
                     
                     return { naStockRequest, naOpenRequest };
                 },
@@ -469,11 +686,34 @@
                 '드블랙': (info) => `[드블랙] ${info.고객명} / ${info.모델명} / ${info.색상} / ${info.요금제} / ${info.가입유형} / ${info.할부현금여부} ${info.최종구매가}원`,
                 '카파': (info) => `[카파]\n고객: ${info.고객명}\n기기: ${info.모델명} ${info.색상}\n요금: ${info.요금제}\n유형: ${info.가입유형}\n금액: ${info.할부현금여부} ${info.최종구매가}원`,
                 '장천': (info) => `[장천] ${info.고객명} - ${info.모델명} ${info.색상} - ${info.요금제} - ${info.가입유형} - ${info.할부현금여부} ${info.최종구매가}원`,
-                '삼보/엠디도매': (info) => `[삼보/엠디도매]\n${info.고객명}\n${info.모델명}\n${info.색상}\n${info.요금제}\n${info.가입유형}\n${info.할부현금여부} ${info.최종구매가}원`
+                '삼보/엠디도매': (info) => `[삼보/엠디도매]\n${info.고객명}\n${info.모델명}\n${info.색상}\n${info.요금제}\n${info.가입유형}\n${info.할부현금여부} ${info.최종구매가}원`,
+                '코웨어': (info) => {
+                    // 기본 정보 처리
+                    const name = info['고객명'] || '';
+                    const contact = info['연락처'] || '';
+                    const modelColor = `${info['모델명'] || ''} / ${info['색상'] || ''}`;
+                    const plan = info['요금제'] || '';
+                    const subscriptionType = info['가입유형'] || '';
+                    
+                    // 코웨어 양식
+                    return `[코웨어 개통요청]
+고객명: ${name}
+연락처: ${contact}
+모델/색상: ${modelColor}
+요금제: ${plan}
+가입유형: ${subscriptionType}
+단말기일련번호: ${info['단말기일련번호'] || ''}
+유심일련번호: ${info['유심일련번호'] || ''}
+공시/선약: ${info['공시선약여부'] || ''} ${info['약정개월수'] || '24개월'}
+할부/현금: ${info['할부현금여부'] || ''} ${info['할부개월수'] || ''}
+최종구매가: ${info['최종구매가'] || ''}원
+부가서비스: ${info['부가서비스'] || ''}
+특이사항: ${info['특이사항'] || ''}`;
+                }
             },
             'KT': {
                 '오앤티': (info) => `[오앤티] ${info.고객명} / ${info.모델명} ${info.색상} / ${info.요금제} / ${info.가입유형} / ${info.할부현금여부} ${info.최종구매가}원`,
-                '재희': (info) => `[재희]\n고객명: ${info.고객명}\n모델명: ${info.모델명}\n색상: ${info.색상}\n요금제: ${info.요금제}\n가입유형: ${info.가입유형}\n${info.할부현금여부}: ${info.최종구매가}원`,
+                '재희': (info) => `[재희] ${info.고객명} / ${info.모델명} ${info.색상} / ${info.요금제} / ${info.가입유형} / ${info.할부현금여부} ${info.최종구매가}원`,
                 '안산/이스턴': (info) => `[안산/이스턴] ${info.고객명} - ${info.모델명} - ${info.색상} - ${info.요금제} - ${info.가입유형} - ${info.할부현금여부} ${info.최종구매가}원`
             },
             'LG': {
@@ -486,9 +726,12 @@
         function updateAgencies() {
             const telecomSelect = document.getElementById('telecom');
             const agencySelect = document.getElementById('agency');
+            const agencyInfoBtn = document.getElementById('agencyInfoBtn');
             
             // 대리점 선택 초기화
             agencySelect.innerHTML = '<option value="">대리점을 선택하세요</option>';
+            agencySelect.disabled = true;
+            agencyInfoBtn.disabled = true;
             
             const selectedTelecom = telecomSelect.value;
             
@@ -503,9 +746,7 @@
                 
                 // 대리점 선택 활성화
                 agencySelect.disabled = false;
-            } else {
-                // 통신사가 선택되지 않았으면 대리점 선택 비활성화
-                agencySelect.disabled = true;
+                agencyInfoBtn.disabled = false;
             }
         }
 
@@ -954,12 +1195,65 @@
             // 더블클릭 이벤트 설정
             setupDoubleClickCopy();
         }
+        // 대리점 정보 팝업 함수
+        function showAgencyInfo() {
+            const telecomSelect = document.getElementById('telecom');
+            const agencySelect = document.getElementById('agency');
+            const selectedTelecom = telecomSelect.value;
+            const selectedAgency = agencySelect.value;
+            
+            if (!selectedTelecom || !selectedAgency) {
+                alert('통신사와 대리점을 모두 선택해주세요.');
+                return;
+            }
+            
+            const popup = document.getElementById('memoPopup');
+            const popupTitle = document.getElementById('popupTitle');
+            const popupContent = document.getElementById('memoContent');
+            
+            // 팝업 제목 설정
+            popupTitle.textContent = `${selectedAgency} 업무 메모`;
+            
+            // 팝업 내용 설정
+            if (agencyMemos[selectedTelecom] && agencyMemos[selectedTelecom][selectedAgency]) {
+                popupContent.textContent = agencyMemos[selectedTelecom][selectedAgency];
+            } else {
+                popupContent.textContent = '해당 대리점에 대한 업무 메모가 없습니다.';
+            }
+            
+            // 팝업 표시
+            popup.style.display = 'flex';
+        }
+        
+        // 대리점 정보 팝업 닫기 함수
+        function closeAgencyInfo() {
+            const popup = document.getElementById('memoPopup');
+            popup.style.display = 'none';
+        }
+        
+        // ESC 키로 팝업 닫기
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeAgencyInfo();
+            }
+        });
+        
+        // 팝업 외부 클릭 시 닫기
+        document.getElementById('memoPopup').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeAgencyInfo();
+            }
+        });
+        
         // 페이지 로드 시 초기화
         // 유용한 URL 사이트 목록
         const usefulSites = [
-            { name: '통신사 공식신청서', sites: [
+            { name: 'SK 업무관련', sites: [
                 { name: 'SK 티게이트', url: 'https://tgate.sktelecom.com/' },
-                { name: 'GTS', url: 'https://gts.bizmax.net/' }
+                { name: 'SK 티게이트 조회', url: 'https://tgateplus.sktelecom.com/scrb/frontList.do' },
+                { name: 'GTS', url: 'https://gts.bizmax.net/' },
+                { name: '밀리언 접수 사이트', url: 'http://www.inbangpan.co.kr' },
+                { name: '코웨어 포털', url: 'https://coware.co.kr/portal' }
             ]},
             { name: '휴대폰 요금관련 정보', sites: [
                 { name: '레인보우컨설팅', url: 'https://goodmorningrainbow.com/renew/index.php' }
