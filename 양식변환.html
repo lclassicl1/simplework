@@ -362,7 +362,22 @@
 어드민대리점설정 : SK큐브
 ■ SK3번 추천인코드				
 - 100201 입력 필수				
-신조 및 개통 요청 이전에 추천인코드 필수 입력 !!!!!`,
+신조 및 개통 요청 이전에 추천인코드 필수 입력 !!!!!
+
+■ 업무 흐름 ■    
+접수확인->신조->배정요청					
+개통요청시 개통 메모 신청내역에 일련+유심 기재후					
+스윙전송
+
+■ 티게이트 신조 요청시 ■
+
+지점_접수완료 -탭 변경				
+신용 이상 없을시 - 접수완료				
+신용 이상 있을시 - 배송보류				
+**간혹 접수완료여도 신조정상이 아닌경우가 있음				
+
+■ 큐브 주소 ■
+경기도 고양시 일산동구 중앙로1261번길 77 한신메트로폴리스 702호	/ 010-7591-0800			`,
 
                 '럭스': `[럭스 업무 메모]
 1. 개통 요청 마감: 평일 17:30, 토요일 12:30
@@ -422,12 +437,20 @@
 5. 특이사항: B2B 전용 할인 프로그램 운영 중`,
                 
                 '코웨어': `[코웨어 업무 메모]
-1. 개통 요청 시간: 평일 9:00 ~ 17:00
-2. 택배 발송: 오후 3시 마감 (익일 배송)
-3. 유심 발송 요청: 별도 양식으로 전달
-4. 문의 연락처: 02-555-7890 (담당자: 김코웨어)
-5. 특이사항: 법인 고객 전용 할인 프로그램 운영 중
-6. 개통 요청 시 특이사항 필수 기재`
+어드민 대리점 설정 : SK 코웨어(장용범사장)
+
+티게이트 아이디비번		
+ES0029		
+dodam8989!
+
+**티게이트 개통메모 넣고 스윙전송 해야함 **
+
+★개통기준정책 ★
+
+티게이트 접수건은 개통처에서 신조 해줌 // 티게이트 메모 보면 알수 있음
+
+우주패스링크				
+https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             },
             'KT': {
                 '오앤티': `[오앤티 업무 메모]
@@ -690,25 +713,65 @@
                 '코웨어': (info) => {
                     // 기본 정보 처리
                     const name = info['고객명'] || '';
-                    const contact = info['연락처'] || '';
-                    const modelColor = `${info['모델명'] || ''} / ${info['색상'] || ''}`;
+                    const regNum = info['주민번호'] || info['생년월일'] || '';
+                    const contact = info['전화번호'] || info['개통번호'] || info['연락처'] || ''; // 전화번호나 개통번호 우선 사용
+                    const modelInfo = `${info['모델명'] || ''} ${info['색상'] || ''}`;
+                    const serialNum = info['단말기일련번호'] || '';
                     const plan = info['요금제'] || '';
-                    const subscriptionType = info['가입유형'] || '';
+                    
+                    // 할부 정보 처리
+                    let installment = '';
+                    if (info['할부현금여부'] === '할부') {
+                        installment = `${info['할부개월수'] || '24개월'}`;
+                    } else if (info['할부현금여부'] === '현금') {
+                        installment = '0'; // 현금인 경우 0으로 표시
+                    }
+                    
+                    // 프리할부 정보
+                    const prepay = info['프리할부'] || '0';
+                    
+                    // 할부원금 정보
+                    let principal = '0';
+                    if (info['할부현금여부'] === '할부') {
+                        principal = info['최종구매가'] || '0'; // 할부인 경우에만 최종구매가 표시
+                    }
+                    
+                    // 현금완납 정보
+                    const cashPayment = info['할부현금여부'] === '현금' ? 'O' : '';
+                    
+                    // 선약 & 공시 정보
+                    let contractType = '';
+                    if (info['공시선약여부'] === '공시지원') {
+                        contractType = `공시 ${info['약정개월수'] || '24개월'}`;
+                    } else if (info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') {
+                        contractType = `선약 ${info['약정개월수'] || '24개월'}`;
+                    }
+                    
+                    // 유심 정보
+                    const usim = info['유심일련번호'] || info['유심'] || '';
+                    
+                    // 부가서비스 정보
+                    const addon = info['부가서비스'] || '';
+                    
+                    // 보험가입여부 정보
+                    const insurance = info['보험'] || '';
                     
                     // 코웨어 양식
-                    return `[코웨어 개통요청]
-고객명: ${name}
-연락처: ${contact}
-모델/색상: ${modelColor}
-요금제: ${plan}
-가입유형: ${subscriptionType}
-단말기일련번호: ${info['단말기일련번호'] || ''}
-유심일련번호: ${info['유심일련번호'] || ''}
-공시/선약: ${info['공시선약여부'] || ''} ${info['약정개월수'] || '24개월'}
-할부/현금: ${info['할부현금여부'] || ''} ${info['할부개월수'] || ''}
-최종구매가: ${info['최종구매가'] || ''}원
-부가서비스: ${info['부가서비스'] || ''}
-특이사항: ${info['특이사항'] || ''}`;
+                    return `* 개통요청	
+고객명 - ${name}	
+주민번호 - ${regNum}	
+개통번호 - ${contact}	
+단말정보 - ${modelInfo}	
+일련번호 - ${serialNum}	
+요금제 - ${plan}	
+할부 - ${installment}	
+프리 - ${prepay}	
+할부원금 - ${principal}	
+현금완납 - ${cashPayment}	
+선약&공시 - ${contractType}	
+유심 - ${usim}	
+부가 - ${addon}	
+보험가입여부 - ${insurance}`;
                 }
             },
             'KT': {
@@ -1253,7 +1316,7 @@
                 { name: 'SK 티게이트 조회', url: 'https://tgateplus.sktelecom.com/scrb/frontList.do' },
                 { name: 'GTS', url: 'https://gts.bizmax.net/' },
                 { name: '밀리언 접수 사이트', url: 'http://www.inbangpan.co.kr' },
-                { name: '코웨어 포털', url: 'https://coware.co.kr/portal' }
+                { name: 'SK 큐브 재고표(SK3 탭 확인)', url: 'https://docs.google.com/spreadsheets/d/1BlrYaOOqMFEb-TLVnvI6KXCjMJvUWT7UipUAUgvqI5g/edit#gid=1994358026' }
             ]},
             { name: '휴대폰 요금관련 정보', sites: [
                 { name: '레인보우컨설팅', url: 'https://goodmorningrainbow.com/renew/index.php' }
