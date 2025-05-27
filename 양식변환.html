@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>통신사 양식 변환기</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .layout-container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .input-column {
+            flex: 1;
+        }
+
+        .output-column {
+            flex: 1;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        select, textarea, input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        select {
+            background-color: white;
+            cursor: pointer;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        .input-textarea {
+            min-height: 300px;
+        }
+
+        .output-textarea {
+            min-height: 300px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #convertBtn {
+            background-color: #4CAF50;
+            color: white;
+            flex: 2;
+        }
+
+        #convertBtn:hover {
+            background-color: #45a049;
+        }
+
+        #copyBtn {
+            background-color: #2196F3;
+            color: white;
+            flex: 1;
+        }
+
+        #copyBtn:hover {
+            background-color: #0b7dda;
+        }
+
+        #clearBtn {
+            background-color: #f44336;
+            color: white;
+            flex: 1;
+        }
+
+        #clearBtn:hover {
+            background-color: #d32f2f;
+        }
+
+        #outputText {
+            background-color: #f9f9f9;
+        }
+
+        .output-section {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        .output-section h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        /* URL 선택박스 스타일 */
+        .url-container {
+            margin-bottom: 20px;
+            text-align: right;
+        }
+        
+        #usefulUrls {
+            width: auto;
+            min-width: 200px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            background-color: #f8f9fa;
+            cursor: pointer;
+        }
+
+        @media (max-width: 900px) {
+            .layout-container {
+                flex-direction: column;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>어드민 양식 변환기</h1>
+        
+        <div class="url-container">
+            <select id="usefulUrls" onchange="openSelectedUrl()">
+                <option value="">유용한 사이트 목록</option>
+                <!-- 사이트 목록은 이곳에 추가됩니다 -->
+            </select>
+        </div>
+        
+        <div class="layout-container">
+            <!-- 입력 컨테이너 (왼쪽 영역) -->
+            <div class="input-column">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="telecom">통신사 선택:</label>
+                        <select id="telecom" onchange="updateAgencies()">
+                            <option value="">통신사를 선택하세요</option>
+                            <option value="SK">SK</option>
+                            <option value="KT">KT</option>
+                            <option value="LG">LG</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="agency">대리점 선택:</label>
+                        <select id="agency" disabled>
+                            <option value="">대리점을 선택하세요</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="deviceSerial">단말기 일련번호:</label>
+                        <input type="text" id="deviceSerial" class="form-control" placeholder="단말기 일련번호를 입력하세요">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="simSerial">유심 일련번호:</label>
+                        <input type="text" id="simSerial" class="form-control" placeholder="유심 일련번호를 입력하세요">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="inputText">원본 텍스트:</label>
+                    <textarea id="inputText" class="input-textarea" placeholder="여기에 원본 텍스트를 입력하세요"></textarea>
+                </div>
+                
+                <div class="button-group">
+                    <button id="convertBtn" onclick="convertFormat()">변환하기</button>
+                    <button id="copyBtn" onclick="copyToClipboard()">결과 복사</button>
+                    <button id="clearBtn" onclick="clearAll()">모두 지우기</button>
+                </div>
+            </div>
+            
+            <!-- 출력 컨테이너 (오른쪽 영역) -->
+            <div class="output-column">
+                <div id="outputContainer">
+                    <div class="form-group">
+                        <label for="outputText">변환된 텍스트:</label>
+                        <textarea id="outputText" class="output-textarea"></textarea>
+                    </div>
+                </div>
+                
+                <!-- 양식이 여러개인 경우를 위한 템플릿 -->
+                <div id="splitOutputTemplate" style="display: none;">
+                    <div class="output-section">
+                        <h3>재고요청:</h3>
+                        <textarea id="outputText1" class="output-textarea"></textarea>
+                    </div>
+                    <div class="output-section">
+                        <h3>개통요청:</h3>
+                        <textarea id="outputText2" class="output-textarea"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 통신사별 대리점 목록
+        const agencies = {
+            'SK': ['큐브', '럭스', '나텔', '밀리언', '드블랙', '카파', '장천', '삼보/엠디도매'],
+            'KT': ['오앤티', '재희', '안산/이스턴'],
+            'LG': ['소리', '제이/휴넷']
+        };
+
+        // 대리점별 양식 템플릿
+        const templates = {
+            'SK': {
+                '큐브': (info) => {
+                    // 이름 처리
+                    const name = info['가입자명'] || info['고객명'] || '';
+                    // 연락처 처리
+                    const contact = info['개통번호'] || info['전화번호'] || '';
+                    // 주소 처리
+                    const address = info['택배주소'] || info['배송주소지'] || '';
+                    // 통신사/인증 처리
+                    const telecom = info['현재통신사'] || '';
+                    // 할부원금 처리
+                    let paymentInfo = '';
+                    if (info['할부현금여부'] === '현금') {
+                        paymentInfo = '★현금완납';
+                    } else {
+                        paymentInfo = info['할부현금여부'] + ' ' + info['최종구매가'] + '원';
+                    }
+                    
+                    // 재고요청 양식
+                    const stockRequest = `★재고요청(SK3)
+택배or퀵 :	
+이름:	${name}
+연락처 :	${contact}
+주소 :	${address}
+유심 :	${info['유심'] || ''}
+모델명 :	${info['모델명'] || ''}
+색상 :	${info['색상'] || ''}`;
+                    
+                    // 개통요청 양식
+                    const openRequest = `■SK3 개통요청		
+◎ 고객명 / 번호 :	${name} / ${contact}	
+◎ 주민번호 :	${info['주민번호'] || info['생년월일'] || ''}	
+◎ 통신사/인증 :	${telecom}	
+◎ 모델/색상 :	${info['모델명'] || ''} / ${info['색상'] || ''}	
+◎ 일련번호 :	${info['단말기일련번호'] || ''}	
+◎ 유심 일련번호 :	${info['유심일련번호'] || ''}	
+◎ 유심비용:	${info['유심'] || ''}	
+◎ 요금제 / 혜택 :	${info['요금제'] || ''}	
+◎ 공시지원금 :	${info['공시'] || '0'}	
+◎ 추지(15%) :	${info['추지'] || '0'}	${info['전환지원금'] && info['전환지원금'] !== '0' ? `
+◎ 전환지원금 :	${info['전환지원금']}	` : ''}
+◎ 고객선납 :	${info['프리할부'] || '0'}	
+◎ 할부원금 : ${paymentInfo}		
+◎ 약정유형 :	${info['공시선약여부'] || ''} ${info['약정개월수'] || ''}	
+◎ 부가서비스 :	${info['부가서비스'] || ''}`;
+                    
+                    return { stockRequest, openRequest };
+                },
+                '럭스': (info) => {
+                    // 기본 정보 처리
+                    const name = info['가입자명'] || info['고객명'] || '';
+                    const contact = info['개통번호'] || info['전화번호'] || '';
+                    const modelColor = `${info['모델명'] || ''} / ${info['색상'] || ''} / ${info['단말기일련번호'] || ''}`;
+                    const usim = info['유심'] || '';
+                    const plan = info['요금제'] || '';
+                    const subscriptionType = info['가입유형'] || '';
+                    
+                    // 공시선약여부와 할부현금여부에 따른 양식 분류
+                    let template = '';
+                    
+                    // 공시지원 + 현금
+                    if (info['공시선약여부'] === '공시지원' && info['할부현금여부'] === '현금') {
+                        template = `판매점명 :	 에이치엘
+고객명 :	${name}	
+개통번호 :	${contact}	
+모델명 / 색상 / 일련번호 :	${modelColor}	
+유심 일련번호 :	${info['유심일련번호'] || ''}	
+요금제명(혜택) :	${plan}	
+개통유형 :	${subscriptionType}	
+공시 ${info['약정개월수'] || '24개월'}		
+현금완납		
+		
+출고가 ${info['출고가'] || ''}
+공시지원 ${info['공시'] || ''}
+추가지원 ${info['추지'] || ''}${info['전환지원금'] && info['전환지원금'] !== '0' ? `
+전환지원금 ${info['전환지원금']}` : ''}
+최종구매가 ${info['최종구매가'] || ''}
+		
+보험 / 부가서비스 : ${info['부가서비스'] || ''}`;
+                    }
+                    // 공시지원 + 할부
+                    else if (info['공시선약여부'] === '공시지원' && info['할부현금여부'] === '할부') {
+                        template = `판매점명 :	 에이치엘
+고객명 :	${name}	
+개통번호 :	${contact}	
+모델명 / 색상 / 일련번호 :	${modelColor}	
+유심 일련번호 :	${info['유심일련번호'] || ''}	
+요금제명(혜택) :	${plan}	
+개통유형 :	${subscriptionType}	
+공시 ${info['약정개월수'] || '24개월'}		
+할부 ${info['할부개월수'] || '24개월'}		
+		
+출고가 ${info['출고가'] || ''}
+공시지원 ${info['공시'] || ''}
+추가지원 ${info['추지'] || ''}${info['전환지원금'] && info['전환지원금'] !== '0' ? `
+전환지원금 ${info['전환지원금']}` : ''}
+프리할부 ${info['프리할부'] || ''}
+최종구매가 ${info['최종구매가'] || ''}
+		
+보험 / 부가서비스 : ${info['부가서비스'] || ''}`;
+                    }
+                    // 선택약정 + 현금
+                    else if ((info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') && info['할부현금여부'] === '현금') {
+                        template = `판매점명 :	 에이치엘
+고객명 :	${name}	
+개통번호 :	${contact}	
+모델명 / 색상 / 일련번호 :	${modelColor}	
+유심 일련번호 :	${info['유심일련번호'] || ''}	
+요금제명(혜택) :	${plan}	
+개통유형 :	${subscriptionType}	
+선약 ${info['약정개월수'] || '24개월'}		
+현금완납		
+		
+출고가 ${info['출고가'] || ''}${info['전환지원금'] && info['전환지원금'] !== '0' ? `
+전환지원금 ${info['전환지원금']}` : ''}
+최종구매가 ${info['최종구매가'] || ''}
+		
+보험 / 부가서비스 : ${info['부가서비스'] || ''}`;
+                    }
+                    // 선택약정 + 할부
+                    else if ((info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') && info['할부현금여부'] === '할부') {
+                        template = `판매점명 :	 에이치엘
+고객명 :	${name}	
+개통번호 :	${contact}	
+모델명 / 색상 / 일련번호 :	${modelColor}	
+유심 일련번호 :	${info['유심일련번호'] || ''}	
+요금제명(혜택) :	${plan}	
+개통유형 :	${subscriptionType}	
+선약 ${info['약정개월수'] || '24개월'}		
+할부 ${info['할부개월수'] || '24개월'}		
+		
+출고가 ${info['출고가'] || ''}${info['전환지원금'] && info['전환지원금'] !== '0' ? `
+전환지원금 ${info['전환지원금']}` : ''}
+프리할부 ${info['프리할부'] || ''}
+최종구매가 ${info['최종구매가'] || ''}
+		
+보험 / 부가서비스 : ${info['부가서비스'] || ''}`;
+                    }
+                    // 기본 형태 (위 조건에 해당되지 않는 경우)
+                    else {
+                        template = `[럭스] ${name}님 / ${info['모델명'] || ''} / ${info['색상'] || ''} / ${plan} / ${subscriptionType} / ${info['할부현금여부'] || ''} ${info['최종구매가'] || ''}`;
+                    }
+                    
+                    return template;
+                },
+                '나텔': (info) => {
+                    // 기본 정보 처리
+                    const naName = info['가입자명'] || info['고객명'] || '';
+                    const naContact = info['개통번호'] || info['전화번호'] || '';
+                    const naAddress = info['택배주소'] || info['배송주소지'] || '';
+                    const naModel = info['모델명'] || '';
+                    const naColor = info['색상'] || '';
+                    const naPlan = info['요금제'] || '';
+                    const naSubscriptionType = info['가입유형'] || '';
+                    const naTelecom = info['현재통신사'] || '';
+                    const naAuth = info['인증방법'] || '';
+                    
+                    // 할부 정보 처리
+                    let naPaymentInfo = info['할부현금여부'] || '';
+                    if (naPaymentInfo === '할부' && info['할부개월수']) {
+                        naPaymentInfo += info['할부개월수'];
+                    }
+                    
+                    // 재고요청 양식
+                    const naStockRequest = `[나텔] ${naName}님 / ${naModel} / ${naColor} / ${naPlan} / ${naSubscriptionType} / ${naPaymentInfo} ${info['최종구매가']}`;
+                    
+                    // 개통요청 양식
+                    const naOpenRequest = `[나텔] ${naName}님 개통요청
+
+◎ 고객명 : ${naName}
+◎ 연락처 : ${naContact}
+◎ 주소 : ${naAddress}
+◎ 모델 : ${naModel}
+◎ 색상 : ${naColor}
+◎ 가입유형 : ${naSubscriptionType}
+◎ 현통신사 : ${naTelecom}
+◎ 인증방법 : ${naAuth}
+◎ 요금제 : ${naPlan}
+◎ 공시지원금 : ${info['공시'] || '0'}
+◎ 추가지원금 : ${info['추지'] || '0'}${info['전환지원금'] && info['전환지원금'] !== '0' ? `
+◎ 전환지원금 : ${info['전환지원금']}` : ''}
+◎ 할부 : ${naPaymentInfo}
+◎ 구매가 : ${info['최종구매가'] || ''}원
+◎ 일련번호 : ${info['단말기일련번호'] || ''}
+◎ 유심 일련번호 : ${info['유심일련번호'] || ''}
+◎ 부가서비스 : ${info['부가서비스'] || ''}`;
+                    
+                    return { naStockRequest, naOpenRequest };
+                },
+                '밀리언': (info) => `[밀리언]\n고객명: ${info.고객명}\n모델: ${info.모델명}\n색상: ${info.색상}\n요금제: ${info.요금제}\n가입유형: ${info.가입유형}\n${info.할부현금여부}: ${info.최종구매가}원`,
+                '드블랙': (info) => `[드블랙] ${info.고객명} / ${info.모델명} / ${info.색상} / ${info.요금제} / ${info.가입유형} / ${info.할부현금여부} ${info.최종구매가}원`,
+                '카파': (info) => `[카파]\n고객: ${info.고객명}\n기기: ${info.모델명} ${info.색상}\n요금: ${info.요금제}\n유형: ${info.가입유형}\n금액: ${info.할부현금여부} ${info.최종구매가}원`,
+                '장천': (info) => `[장천] ${info.고객명} - ${info.모델명} ${info.색상} - ${info.요금제} - ${info.가입유형} - ${info.할부현금여부} ${info.최종구매가}원`,
+                '삼보/엠디도매': (info) => `[삼보/엠디도매]\n${info.고객명}\n${info.모델명}\n${info.색상}\n${info.요금제}\n${info.가입유형}\n${info.할부현금여부} ${info.최종구매가}원`
+            },
+            'KT': {
+                '오앤티': (info) => `[오앤티] ${info.고객명} / ${info.모델명} ${info.색상} / ${info.요금제} / ${info.가입유형} / ${info.할부현금여부} ${info.최종구매가}원`,
+                '재희': (info) => `[재희]\n고객명: ${info.고객명}\n모델명: ${info.모델명}\n색상: ${info.색상}\n요금제: ${info.요금제}\n가입유형: ${info.가입유형}\n${info.할부현금여부}: ${info.최종구매가}원`,
+                '안산/이스턴': (info) => `[안산/이스턴] ${info.고객명} - ${info.모델명} - ${info.색상} - ${info.요금제} - ${info.가입유형} - ${info.할부현금여부} ${info.최종구매가}원`
+            },
+            'LG': {
+                '소리': (info) => `[소리] ${info.고객명} / ${info.모델명} / ${info.색상} / ${info.요금제} / ${info.가입유형} / ${info.할부현금여부} ${info.최종구매가}원`,
+                '제이/휴넷': (info) => `[제이/휴넷]\n고객: ${info.고객명}\n모델: ${info.모델명}\n색상: ${info.색상}\n요금제: ${info.요금제}\n가입유형: ${info.가입유형}\n${info.할부현금여부}: ${info.최종구매가}원`
+            }
+        };
+
+        // 통신사 선택에 따라 대리점 목록 업데이트
+        function updateAgencies() {
+            const telecomSelect = document.getElementById('telecom');
+            const agencySelect = document.getElementById('agency');
+            
+            // 대리점 선택 초기화
+            agencySelect.innerHTML = '<option value="">대리점을 선택하세요</option>';
+            
+            const selectedTelecom = telecomSelect.value;
+            
+            if (selectedTelecom) {
+                // 선택된 통신사에 해당하는 대리점 목록 추가
+                agencies[selectedTelecom].forEach(agency => {
+                    const option = document.createElement('option');
+                    option.value = agency;
+                    option.textContent = agency;
+                    agencySelect.appendChild(option);
+                });
+                
+                // 대리점 선택 활성화
+                agencySelect.disabled = false;
+            } else {
+                // 통신사가 선택되지 않았으면 대리점 선택 비활성화
+                agencySelect.disabled = true;
+            }
+        }
+
+        // 텍스트에서 고객 정보 추출
+        function extractCustomerInfo(text) {
+            const customerInfo = {};
+            
+            // 정규식 패턴으로 각 항목 추출
+            const patterns = {
+                '전화번호': /\*\*전화번호\s*-\s*([^\n]+)/,
+                '개통번호': /\*\*개통번호\s*-\s*([^\n]+)/,
+                '모델명': /\*\*모델명\s*-\s*([^\n]+)/,
+                '색상': /\*\*색상\s*-\s*([^\n]+)/,
+                '고객명': /\*\*고객명\s*-\s*([^\n]+)/,
+                '가입자명': /\*\*가입자명\s*-\s*([^\n]+)/,
+                '주민번호': /\*\*주민번호\s*-\s*([^\n]+)/,
+                '생년월일': /\*\*생년월일\s*-\s*([^\n]+)/,
+                '택배주소': /\*\*택배주소\s*-\s*([^\n]+)/,
+                '배송주소지': /\*\*배송주소지\s*-\s*([^\n]+)/,
+                '현재통신사': /\*\*현재통신사\s*-\s*([^\n]+)/,
+                '요금제': /\*\*요금제\s*-\s*([^\n]+)/,
+                '가입유형': /\*\*가입유형\s*-\s*([^\n]+)/,
+                '할인유형': /\*\*할인유형\s*-\s*([^\n]+)/,
+                '유심': /\*\*유심\s*-\s*([^\n]+)/,
+                '부가서비스': /\*\*부가서비스\s*-\s*([^\n]+)/
+            };
+            
+            // 각 패턴에 맞게 정보 추출
+            for (const [key, pattern] of Object.entries(patterns)) {
+                const match = text.match(pattern);
+                if (match && match[1]) {
+                    customerInfo[key] = match[1].trim();
+                } else {
+                    customerInfo[key] = '';
+                }
+            }
+            
+            // 개통번호와 전화번호 통합 처리 (전화번호가 없을 경우 개통번호 사용)
+            if (!customerInfo['전화번호'] && customerInfo['개통번호']) {
+                customerInfo['전화번호'] = customerInfo['개통번호'];
+            }
+            
+            // 고객명과 가입자명 통합 처리 (고객명이 없을 경우 가입자명 사용)
+            if (!customerInfo['고객명'] && customerInfo['가입자명']) {
+                customerInfo['고객명'] = customerInfo['가입자명'];
+            }
+            
+            // 주민번호와 생년월일 통합 처리 (주민번호가 없을 경우 생년월일 사용)
+            if (!customerInfo['주민번호'] && customerInfo['생년월일']) {
+                customerInfo['주민번호'] = customerInfo['생년월일'];
+            }
+            
+            // 택배주소와 배송주소지 통합 처리 (택배주소가 없을 경우 배송주소지 사용)
+            if (!customerInfo['택배주소'] && customerInfo['배송주소지']) {
+                customerInfo['택배주소'] = customerInfo['배송주소지'];
+            }
+            
+            // 가입유형에서 공시선약여부와 약정개월수 추출
+            if (customerInfo['가입유형']) {
+                // 공시지원 여부 추출
+                if (customerInfo['가입유형'].includes('공시지원')) {
+                    customerInfo['공시선약여부'] = '공시지원';
+                } else if (customerInfo['가입유형'].includes('선택약정')) {
+                    customerInfo['공시선약여부'] = '선택약정';
+                } else if (customerInfo['가입유형'].includes('선약')) {
+                    customerInfo['공시선약여부'] = '선약';
+                } else {
+                    customerInfo['공시선약여부'] = '';
+                }
+                
+                // 약정 개월수 추출
+                const monthMatch = customerInfo['가입유형'].match(/(\d+)\s*개월/);
+                if (monthMatch && monthMatch[1]) {
+                    customerInfo['약정개월수'] = monthMatch[1] + '개월';
+                } else {
+                    customerInfo['약정개월수'] = '';
+                }
+            } else {
+                customerInfo['공시선약여부'] = '';
+                customerInfo['약정개월수'] = '';
+            }
+            
+            // 할인유형에서 공시선약여부와 약정개월수 추출
+            if (customerInfo['할인유형']) {
+                // 공시지원 여부 추출
+                if (customerInfo['할인유형'].includes('공시지원')) {
+                    customerInfo['공시선약여부'] = '공시지원';
+                } else if (customerInfo['할인유형'].includes('선택약정')) {
+                    customerInfo['공시선약여부'] = '선택약정';
+                } else if (customerInfo['할인유형'].includes('선약')) {
+                    customerInfo['공시선약여부'] = '선약';
+                }
+                
+                // 약정 개월수 추출
+                const monthMatch = customerInfo['할인유형'].match(/(\d+)\s*개월/);
+                if (monthMatch && monthMatch[1]) {
+                    customerInfo['약정개월수'] = monthMatch[1] + '개월';
+                }
+            }
+            
+            // 출고가, 공시, 추지, 전환지원금, 프리할부, 할부/현금 정보 추출
+            // 전환지원금이 포함된 패턴
+            const conversionPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)\s*-\s*(전환지원금?|전환)\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d+|\ud604\uae08)\s*([\d,]+)/;
+            const conversionMatch = text.match(conversionPattern);
+            
+            if (conversionMatch) {
+                customerInfo['출고가'] = conversionMatch[1].trim();
+                customerInfo['공시'] = conversionMatch[2].trim();
+                customerInfo['추지'] = conversionMatch[3].trim();
+                customerInfo['전환지원금'] = conversionMatch[5].trim();
+                customerInfo['프리할부'] = conversionMatch[6] ? conversionMatch[6].trim() : '0';
+                
+                // 할부/현금 여부 확인
+                if (conversionMatch[7].includes('할부')) {
+                    customerInfo['할부현금여부'] = '할부';
+                    
+                    // 할부개월수 추출
+                    const installmentMatch = conversionMatch[7].match(/(\d+)/);
+                    if (installmentMatch && installmentMatch[1]) {
+                        customerInfo['할부개월수'] = installmentMatch[1] + '개월';
+                    } else {
+                        customerInfo['할부개월수'] = '24개월'; // 기본값
+                    }
+                } else {
+                    customerInfo['할부현금여부'] = '현금';
+                    customerInfo['할부개월수'] = '';
+                }
+                
+                customerInfo['최종구매가'] = conversionMatch[8].trim();
+            } else {
+                // 기존 패턴 (전환지원금 없는 경우)
+                const pricePattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d+|\ud604\uae08)\s*([\d,]+)/;
+                const priceMatch = text.match(pricePattern);
+                
+                if (priceMatch) {
+                    customerInfo['출고가'] = priceMatch[1].trim();
+                    customerInfo['공시'] = priceMatch[2].trim();
+                    customerInfo['추지'] = priceMatch[3].trim();
+                    customerInfo['전환지원금'] = '0';
+                    customerInfo['프리할부'] = priceMatch[4] ? priceMatch[4].trim() : '0';
+                    
+                    // 할부/현금 여부 확인
+                    if (priceMatch[5].includes('할부')) {
+                        customerInfo['할부현금여부'] = '할부';
+                        
+                        // 할부개월수 추출
+                        const installmentMatch = priceMatch[5].match(/(\d+)/);
+                        if (installmentMatch && installmentMatch[1]) {
+                            customerInfo['할부개월수'] = installmentMatch[1] + '개월';
+                        } else {
+                            customerInfo['할부개월수'] = '24개월'; // 기본값
+                        }
+                    } else {
+                        customerInfo['할부현금여부'] = '현금';
+                        customerInfo['할부개월수'] = '';
+                    }
+                    
+                    customerInfo['최종구매가'] = priceMatch[6].trim();
+                } else {
+                    // 현금 형식 패턴 확인 (전환지원금 포함)
+                    const cashConversionPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)\s*-\s*(전환지원금?|전환)\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/;
+                    const cashConversionMatch = text.match(cashConversionPattern);
+                    
+                    if (cashConversionMatch) {
+                        customerInfo['출고가'] = cashConversionMatch[1].trim();
+                        customerInfo['공시'] = cashConversionMatch[2].trim();
+                        customerInfo['추지'] = cashConversionMatch[3].trim();
+                        customerInfo['전환지원금'] = cashConversionMatch[5].trim();
+                        customerInfo['프리할부'] = cashConversionMatch[6] ? cashConversionMatch[6].trim() : '0';
+                        customerInfo['할부현금여부'] = '현금';
+                        customerInfo['할부개월수'] = '';
+                        customerInfo['최종구매가'] = cashConversionMatch[7].trim();
+                    } else {
+                        // 기존 현금 형식 패턴 (전환지원금 없는 경우)
+                        const cashPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/;
+                        const cashMatch = text.match(cashPattern);
+                        
+                        if (cashMatch) {
+                            customerInfo['출고가'] = cashMatch[1].trim();
+                            customerInfo['공시'] = cashMatch[2].trim();
+                            customerInfo['추지'] = cashMatch[3].trim();
+                            customerInfo['전환지원금'] = '0';
+                            customerInfo['프리할부'] = cashMatch[4] ? cashMatch[4].trim() : '0';
+                            customerInfo['할부현금여부'] = '현금';
+                            customerInfo['할부개월수'] = '';
+                            customerInfo['최종구매가'] = cashMatch[5].trim();
+                        } else {
+                            // 할부 형식 패턴 확인 (전환지원금 포함)
+                            const installmentConversionPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)\s*-\s*(전환지원금?|전환)\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*할부(\d+)\s*([\d,]+)/;
+                            const installmentConversionMatch = text.match(installmentConversionPattern);
+                            
+                            if (installmentConversionMatch) {
+                                customerInfo['출고가'] = installmentConversionMatch[1].trim();
+                                customerInfo['공시'] = installmentConversionMatch[2].trim();
+                                customerInfo['추지'] = installmentConversionMatch[3].trim();
+                                customerInfo['전환지원금'] = installmentConversionMatch[5].trim();
+                                customerInfo['프리할부'] = installmentConversionMatch[6] ? installmentConversionMatch[6].trim() : '0';
+                                customerInfo['할부현금여부'] = '할부';
+                                customerInfo['할부개월수'] = installmentConversionMatch[7] + '개월';
+                                customerInfo['최종구매가'] = installmentConversionMatch[8].trim();
+                            } else {
+                                // 기존 할부 형식 패턴 (전환지원금 없는 경우)
+                                const alternatePattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*할부(\d+)\s*([\d,]+)/;
+                                const alternateMatch = text.match(alternatePattern);
+                                
+                                if (alternateMatch) {
+                                    customerInfo['출고가'] = alternateMatch[1].trim();
+                                    customerInfo['공시'] = alternateMatch[2].trim();
+                                    customerInfo['추지'] = alternateMatch[3].trim();
+                                    customerInfo['전환지원금'] = '0';
+                                    customerInfo['프리할부'] = alternateMatch[4] ? alternateMatch[4].trim() : '0';
+                                    customerInfo['할부현금여부'] = '할부';
+                                    customerInfo['할부개월수'] = alternateMatch[5] + '개월';
+                                    customerInfo['최종구매가'] = alternateMatch[6].trim();
+                                } else {
+                                    customerInfo['출고가'] = '';
+                                    customerInfo['공시'] = '';
+                                    customerInfo['추지'] = '';
+                                    customerInfo['전환지원금'] = '0';
+                                    customerInfo['프리할부'] = '0';
+                                    customerInfo['할부현금여부'] = '';
+                                    customerInfo['할부개월수'] = '';
+                                    customerInfo['최종구매가'] = '';
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return customerInfo;
+        }
+
+        // 양식 변환 함수
+        function convertFormat() {
+            const telecomSelect = document.getElementById('telecom');
+            const agencySelect = document.getElementById('agency');
+            const inputText = document.getElementById('inputText');
+            const deviceSerialInput = document.getElementById('deviceSerial');
+            const simSerialInput = document.getElementById('simSerial');
+            const outputContainer = document.getElementById('outputContainer');
+            
+            const selectedTelecom = telecomSelect.value;
+            const selectedAgency = agencySelect.value;
+            
+            if (!selectedTelecom || !selectedAgency) {
+                alert('통신사와 대리점을 모두 선택해주세요.');
+                return;
+            }
+            
+            if (!inputText.value.trim()) {
+                alert('변환할 텍스트를 입력해주세요.');
+                return;
+            }
+            
+            // 고객 정보 추출
+            const customerInfo = extractCustomerInfo(inputText.value);
+            
+            // 단말기 일련번호와 유심 일련번호 추가
+            if (deviceSerialInput.value.trim()) {
+                customerInfo['단말기일련번호'] = deviceSerialInput.value.trim();
+            }
+            
+            if (simSerialInput.value.trim()) {
+                customerInfo['유심일련번호'] = simSerialInput.value.trim();
+            }
+            
+            // 콘솔에 객체 정보 출력 (디버깅용)
+            console.log('추출된 고객 정보 객체:', customerInfo);
+            console.table(customerInfo); // 테이블 형태로 출력하여 가독성 향상
+            
+            // 출력 컨테이너 초기화
+            outputContainer.innerHTML = '';
+            
+            // 선택된 대리점에 맞는 템플릿으로 변환
+            try {
+                const template = templates[selectedTelecom][selectedAgency];
+                if (template) {
+                    // SK-큐브의 경우 양식이 두개로 분할됨
+                    if (selectedTelecom === 'SK' && selectedAgency === '큐브') {
+                        const result = template(customerInfo);
+                        
+                        // 분할된 출력을 위한 UI 생성
+                        const splitOutput = document.getElementById('splitOutputTemplate').cloneNode(true);
+                        splitOutput.id = '';
+                        splitOutput.style.display = 'block';
+                        outputContainer.innerHTML = ''; // 출력 컨테이너 초기화
+                        outputContainer.appendChild(splitOutput);
+                        
+                        // 각 텍스트에리어에 결과 설정
+                        outputContainer.querySelector('#outputText1').value = result.stockRequest;
+                        outputContainer.querySelector('#outputText2').value = result.openRequest;
+                    } else if (selectedTelecom === 'SK' && selectedAgency === '나텔') {
+                        // 나텔의 경우도 양식이 두개로 분할됨
+                        const result = template(customerInfo);
+                        
+                        // 분할된 출력을 위한 UI 생성
+                        const splitOutput = document.getElementById('splitOutputTemplate').cloneNode(true);
+                        splitOutput.id = '';
+                        splitOutput.style.display = 'block';
+                        outputContainer.innerHTML = ''; // 출력 컨테이너 초기화
+                        outputContainer.appendChild(splitOutput);
+                        
+                        // 각 텍스트에리어에 결과 설정
+                        outputContainer.querySelector('#outputText1').value = result.naStockRequest;
+                        outputContainer.querySelector('#outputText2').value = result.naOpenRequest;
+                    } else {
+                        // 단일 출력 형태
+                        const singleOutput = document.createElement('div');
+                        singleOutput.className = 'form-group';
+                        singleOutput.innerHTML = `
+                            <label for="outputText">변환된 텍스트:</label>
+                            <textarea id="outputText" class="output-textarea"></textarea>
+                        `;
+                        outputContainer.innerHTML = ''; // 출력 컨테이너 초기화
+                        outputContainer.appendChild(singleOutput);
+                        
+                        // 결과 설정
+                        outputContainer.querySelector('#outputText').value = template(customerInfo);
+                    }
+                    
+                    // 더블클릭 이벤트 설정
+                    setupDoubleClickCopy();
+                } else {
+                    // 템플릿이 없는 경우
+                    const singleOutput = document.createElement('div');
+                    singleOutput.className = 'form-group';
+                    singleOutput.innerHTML = `
+                        <label for="outputText">변환된 텍스트:</label>
+                        <textarea id="outputText" class="output-textarea"></textarea>
+                    `;
+                    outputContainer.innerHTML = ''; // 출력 컨테이너 초기화
+                    outputContainer.appendChild(singleOutput);
+                    outputContainer.querySelector('#outputText').value = '선택한 대리점에 대한 템플릿이 없습니다.';
+                }
+            } catch (error) {
+                console.error('변환 중 오류 발생:', error);
+                
+                // 오류 발생 시 단일 출력 형태
+                const singleOutput = document.createElement('div');
+                singleOutput.className = 'form-group';
+                singleOutput.innerHTML = `
+                    <label for="outputText">변환된 텍스트:</label>
+                    <textarea id="outputText" class="output-textarea"></textarea>
+                `;
+                outputContainer.innerHTML = ''; // 출력 컨테이너 초기화
+                outputContainer.appendChild(singleOutput);
+                outputContainer.querySelector('#outputText').value = '변환 중 오류가 발생했습니다. 입력 텍스트를 확인해주세요.';
+            }
+        }
+
+        // 결과 복사 함수
+        function copyToClipboard() {
+            // SK-큐브의 경우 여러 텍스트에리어가 있을 수 있음
+            const outputText1 = document.getElementById('outputText1');
+            const outputText2 = document.getElementById('outputText2');
+            const outputText = document.getElementById('outputText');
+            
+            let textToCopy = '';
+            let elementToCopy = null;
+            
+            // 어떤 텍스트에리어가 있는지 확인
+            if (outputText1 && outputText1.value.trim()) {
+                textToCopy = outputText1.value + '\n\n' + (outputText2 ? outputText2.value : '');
+                elementToCopy = outputText1;
+            } else if (outputText && outputText.value.trim()) {
+                textToCopy = outputText.value;
+                elementToCopy = outputText;
+            }
+            
+            if (!textToCopy) {
+                alert('복사할 내용이 없습니다.');
+                return;
+            }
+            
+            // 클립보드에 복사
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                // 복사 성공 시 시각적 피드백
+                const elements = [outputText1, outputText2, outputText].filter(el => el);
+                
+                elements.forEach(el => {
+                    const originalBgColor = el.style.backgroundColor;
+                    el.style.backgroundColor = '#d4edda';
+                    setTimeout(() => {
+                        el.style.backgroundColor = originalBgColor;
+                    }, 500);
+                });
+            }).catch(err => {
+                console.error('클립보드 복사 오류:', err);
+                alert('복사 중 오류가 발생했습니다.');
+            });
+        }
+
+        // 텍스트에리어 더블클릭 복사 함수
+        function setupDoubleClickCopy() {
+            // 출력 컨테이너의 모든 텍스트에리어에 더블클릭 이벤트 추가
+            const outputContainer = document.getElementById('outputContainer');
+            const textareas = outputContainer.querySelectorAll('textarea');
+            
+            textareas.forEach(textarea => {
+                textarea.removeEventListener('dblclick', handleDoubleClick);
+                textarea.addEventListener('dblclick', handleDoubleClick);
+            });
+        }
+        
+        // 더블클릭 이벤트 핸들러
+        function handleDoubleClick(event) {
+            const textarea = event.target;
+            
+            // 텍스트 선택
+            textarea.select();
+            
+            // 클립보드에 복사
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                // 복사 성공 시 시각적 피드백
+                const originalBgColor = textarea.style.backgroundColor;
+                textarea.style.backgroundColor = '#d4edda';
+                setTimeout(() => {
+                    textarea.style.backgroundColor = originalBgColor;
+                }, 500);
+            }).catch(err => {
+                console.error('클립보드 복사 오류:', err);
+                alert('복사 중 오류가 발생했습니다.');
+            });
+        }
+        
+        // 모두 지우기 함수
+        function clearAll() {
+            document.getElementById('telecom').value = '';
+            const agencySelect = document.getElementById('agency');
+            agencySelect.innerHTML = '<option value="">대리점을 선택하세요</option>';
+            agencySelect.disabled = true;
+            document.getElementById('deviceSerial').value = '';
+            document.getElementById('simSerial').value = '';
+            document.getElementById('inputText').value = '';
+            
+            // 출력 컨테이너 초기화
+            const outputContainer = document.getElementById('outputContainer');
+            outputContainer.innerHTML = `
+                <div class="form-group">
+                    <label for="outputText">변환된 텍스트:</label>
+                    <textarea id="outputText" class="output-textarea" placeholder="여기에 변환된 결과가 표시됩니다. 더블클릭하면 복사됩니다."></textarea>
+                </div>
+            `;
+            
+            // 더블클릭 이벤트 설정
+            setupDoubleClickCopy();
+        }
+        // 페이지 로드 시 초기화
+        // 유용한 URL 사이트 목록
+        const usefulSites = [
+            { name: '통신사 공식신청서', sites: [
+                { name: 'SK 티게이트', url: 'https://tgate.sktelecom.com/' },
+                { name: 'GTS', url: 'https://gts.bizmax.net/' }
+            ]},
+            { name: '휴대폰 요금관련 정보', sites: [
+                { name: '레인보우컨설팅', url: 'https://goodmorningrainbow.com/renew/index.php' }
+            ]},
+            { name: '요금제 정보', sites: [
+                { name: 'SK 요금제', url: 'https://www.tworld.co.kr/normal.do?serviceId=S_PROD2001&viewId=V_PROD2001&prod_id=TW50000001' },
+                { name: 'KT 요금제', url: 'https://product.kt.com/wDic/index.do' },
+                { name: 'LG U+ 요금제', url: 'https://www.uplus.co.kr/ent/spps/chrg/RetrievePsChrgLstPaging.hpi' }
+            ]},
+            { name: '유용한 도구', sites: [
+                { name: '유심 번호 조회', url: 'https://www.msisdn.kr/' },
+                { name: '전화번호 소유자 조회', url: 'https://www.msisdn.kr/search/search.php' },
+                { name: '우편번호 조회', url: 'https://www.epost.go.kr/search.RetrieveNewAddressAreaCdList.comm' }
+            ]}
+        ];
+        
+        // 선택한 URL 열기 함수
+        function openSelectedUrl() {
+            const selectBox = document.getElementById('usefulUrls');
+            const selectedValue = selectBox.value;
+            
+            if (selectedValue) {
+                window.open(selectedValue, '_blank');
+                // 선택박스 초기화
+                selectBox.selectedIndex = 0;
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // 초기 텍스트에리어에 더블클릭 이벤트 설정
+            setupDoubleClickCopy();
+            
+            // 초기화 메시지 추가
+            const outputText = document.getElementById('outputText');
+            if (outputText) {
+                outputText.placeholder = '여기에 변환된 결과가 표시됩니다. 더블클릭하면 복사됩니다.';
+                // 클래스 추가
+                outputText.classList.add('output-textarea');
+            }
+            
+            // 입력 텍스트에리어에 클래스 추가
+            const inputText = document.getElementById('inputText');
+            if (inputText) {
+                inputText.classList.add('input-textarea');
+            }
+            
+            // 유용한 URL 목록 초기화
+            const usefulUrlsSelect = document.getElementById('usefulUrls');
+            
+            // 그룹별로 사이트 목록 추가
+            usefulSites.forEach(group => {
+                // 그룹 제목 추가
+                const groupOption = document.createElement('optgroup');
+                groupOption.label = group.name;
+                
+                // 그룹 내 사이트 추가
+                group.sites.forEach(site => {
+                    const option = document.createElement('option');
+                    option.value = site.url;
+                    option.textContent = site.name;
+                    groupOption.appendChild(option);
+                });
+                
+                usefulUrlsSelect.appendChild(groupOption);
+            });
+        });
+    </script>
+</body>
+</html>
