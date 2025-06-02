@@ -238,6 +238,65 @@
             white-space: pre-line;
             line-height: 1.5;
         }
+        
+        /* 키-값 테이블 스타일 */
+        .key-value-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .key-value-table th {
+            background-color: #f5f5f5;
+            padding: 8px 12px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #ddd;
+            width: 30%;
+        }
+        
+        .key-value-table td {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            position: relative;
+            transition: background-color 0.2s;
+        }
+        
+        .key-value-table td:hover {
+            background-color: #f0f8ff;
+        }
+        
+        .key-value-table td::after {
+            content: "클릭하여 복사";
+            position: absolute;
+            right: 10px;
+            color: #999;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .key-value-table td:hover::after {
+            opacity: 1;
+        }
+        
+        .key-value-table td.copied {
+            background-color: #e6ffe6;
+        }
+        
+        .key-value-table td.copied::after {
+            content: "복사됨!";
+            color: #4CAF50;
+            opacity: 1;
+        }
+        
+        .copy-notice {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #666;
+            font-style: italic;
+        }
 
         @media (max-width: 900px) {
             .layout-container {
@@ -316,10 +375,18 @@
             
             <!-- 출력 컨테이너 (오른쪽 영역) -->
             <div class="output-column">
-                <div id="outputContainer">
-                    <div class="form-group">
-                        <label for="outputText">변환된 텍스트:</label>
-                        <textarea id="outputText" class="output-textarea"></textarea>
+                <div id="outputContainer" style="display: block;">
+                    <div id="singleOutputContainer">
+                        <div class="form-group">
+                            <label for="outputText">변환된 텍스트:</label>
+                            <textarea id="outputText" class="output-textarea"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div id="splitOutputContainer" style="display: none;">
+                    </div>
+                    
+                    <div id="keyValueTableContainer" style="display: none;">
                     </div>
                 </div>
                 
@@ -333,6 +400,16 @@
                         <h3>개통요청:</h3>
                         <textarea id="outputText2" class="output-textarea"></textarea>
                     </div>
+                </div>
+                
+                <!-- 키-값 테이블 템플릿 -->
+                <div id="keyValueTableTemplate" style="display: none;">
+                    <div class="copy-notice">각 항목을 클릭하면 해당 값이 클립보드에 복사됩니다.</div>
+                    <table class="key-value-table" id="keyValueTable">
+                        <tbody>
+                            <!-- 키-값 행이 여기에 추가됩니다 -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -1051,6 +1128,9 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             const deviceSerialInput = document.getElementById('deviceSerial');
             const simSerialInput = document.getElementById('simSerial');
             const outputContainer = document.getElementById('outputContainer');
+            const singleOutputContainer = document.getElementById('singleOutputContainer');
+            const splitOutputContainer = document.getElementById('splitOutputContainer');
+            const keyValueTableContainer = document.getElementById('keyValueTableContainer');
             
             const selectedTelecom = telecomSelect.value;
             const selectedAgency = agencySelect.value;
@@ -1081,88 +1161,245 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             console.log('추출된 고객 정보 객체:', customerInfo);
             console.table(customerInfo); // 테이블 형태로 출력하여 가독성 향상
             
-            // 출력 컨테이너 초기화
-            outputContainer.innerHTML = '';
+            // 출력 컨테이너 표시
+            outputContainer.style.display = 'block';
+            
+            // 키-값 테이블 사용 여부 확인
+            const useKeyValueTable = 
+                (selectedTelecom === 'KT' && selectedAgency === '재희') || 
+                (selectedTelecom === 'LG' && selectedAgency === '소리');
             
             // 선택된 대리점에 맞는 템플릿으로 변환
             try {
+                // 키-값 테이블 형식 사용
+                if (useKeyValueTable) {
+                    // 다른 출력 컨테이너 숨기기
+                    singleOutputContainer.style.display = 'none';
+                    splitOutputContainer.style.display = 'none';
+                    
+                    // 키-값 테이블 템플릿 복제 및 표시
+                    const keyValueTable = document.getElementById('keyValueTableTemplate').cloneNode(true);
+                    keyValueTable.id = '';
+                    keyValueTable.style.display = 'block';
+                    keyValueTableContainer.innerHTML = '';
+                    keyValueTableContainer.appendChild(keyValueTable);
+                    keyValueTableContainer.style.display = 'block';
+                    
+                    // 키-값 테이블 생성
+                    createKeyValueTable(customerInfo);
+                    return;
+                }
+                
+                // 일반 템플릿 사용
                 const template = templates[selectedTelecom][selectedAgency];
                 if (template) {
+                    // 키-값 테이블 컨테이너 숨기기
+                    keyValueTableContainer.style.display = 'none';
+                    
                     // SK-큐브의 경우 양식이 두개로 분할됨
                     if (selectedTelecom === 'SK' && selectedAgency === '큐브') {
                         const result = template(customerInfo);
                         
+                        // 단일 출력 컨테이너 숨기기
+                        singleOutputContainer.style.display = 'none';
+                        
                         // 분할된 출력을 위한 UI 생성
                         const splitOutput = document.getElementById('splitOutputTemplate').cloneNode(true);
                         splitOutput.id = '';
                         splitOutput.style.display = 'block';
-                        outputContainer.innerHTML = ''; // 출력 컨테이너 초기화
-                        outputContainer.appendChild(splitOutput);
+                        splitOutputContainer.innerHTML = '';
+                        splitOutputContainer.appendChild(splitOutput);
+                        splitOutputContainer.style.display = 'block';
                         
                         // 각 텍스트에리어에 결과 설정
-                        outputContainer.querySelector('#outputText1').value = result.stockRequest;
-                        outputContainer.querySelector('#outputText2').value = result.openRequest;
+                        splitOutputContainer.querySelector('#outputText1').value = result.stockRequest;
+                        splitOutputContainer.querySelector('#outputText2').value = result.openRequest;
                     } else if (selectedTelecom === 'SK' && selectedAgency === '나텔') {
                         // 나텔의 경우도 양식이 두개로 분할됨
                         const result = template(customerInfo);
                         
+                        // 단일 출력 컨테이너 숨기기
+                        singleOutputContainer.style.display = 'none';
+                        
                         // 분할된 출력을 위한 UI 생성
                         const splitOutput = document.getElementById('splitOutputTemplate').cloneNode(true);
                         splitOutput.id = '';
                         splitOutput.style.display = 'block';
-                        outputContainer.innerHTML = ''; // 출력 컨테이너 초기화
-                        outputContainer.appendChild(splitOutput);
+                        splitOutputContainer.innerHTML = '';
+                        splitOutputContainer.appendChild(splitOutput);
+                        splitOutputContainer.style.display = 'block';
                         
                         // 각 텍스트에리어에 결과 설정
-                        outputContainer.querySelector('#outputText1').value = result.naStockRequest;
-                        outputContainer.querySelector('#outputText2').value = result.naOpenRequest;
+                        splitOutputContainer.querySelector('#outputText1').value = result.naStockRequest;
+                        splitOutputContainer.querySelector('#outputText2').value = result.naOpenRequest;
                     } else {
                         // 단일 출력 형태
-                        const singleOutput = document.createElement('div');
-                        singleOutput.className = 'form-group';
-                        singleOutput.innerHTML = `
-                            <label for="outputText">변환된 텍스트:</label>
-                            <textarea id="outputText" class="output-textarea"></textarea>
-                        `;
-                        outputContainer.innerHTML = ''; // 출력 컨테이너 초기화
-                        outputContainer.appendChild(singleOutput);
+                        splitOutputContainer.style.display = 'none';
+                        singleOutputContainer.style.display = 'block';
                         
                         // 결과 설정
-                        outputContainer.querySelector('#outputText').value = template(customerInfo);
+                        document.getElementById('outputText').value = template(customerInfo);
                     }
                     
                     // 더블클릭 이벤트 설정
                     setupDoubleClickCopy();
                 } else {
                     // 템플릿이 없는 경우
-                    const singleOutput = document.createElement('div');
-                    singleOutput.className = 'form-group';
-                    singleOutput.innerHTML = `
-                        <label for="outputText">변환된 텍스트:</label>
-                        <textarea id="outputText" class="output-textarea"></textarea>
-                    `;
-                    outputContainer.innerHTML = ''; // 출력 컨테이너 초기화
-                    outputContainer.appendChild(singleOutput);
-                    outputContainer.querySelector('#outputText').value = '선택한 대리점에 대한 템플릿이 없습니다.';
+                    keyValueTableContainer.style.display = 'none';
+                    splitOutputContainer.style.display = 'none';
+                    singleOutputContainer.style.display = 'block';
+                    document.getElementById('outputText').value = '선택한 대리점에 대한 템플릿이 없습니다.';
                 }
             } catch (error) {
                 console.error('변환 중 오류 발생:', error);
                 
                 // 오류 발생 시 단일 출력 형태
-                const singleOutput = document.createElement('div');
-                singleOutput.className = 'form-group';
-                singleOutput.innerHTML = `
-                    <label for="outputText">변환된 텍스트:</label>
-                    <textarea id="outputText" class="output-textarea"></textarea>
-                `;
-                outputContainer.innerHTML = ''; // 출력 컨테이너 초기화
-                outputContainer.appendChild(singleOutput);
-                outputContainer.querySelector('#outputText').value = '변환 중 오류가 발생했습니다. 입력 텍스트를 확인해주세요.';
+                keyValueTableContainer.style.display = 'none';
+                splitOutputContainer.style.display = 'none';
+                singleOutputContainer.style.display = 'block';
+                document.getElementById('outputText').value = '변환 중 오류가 발생했습니다. 입력 텍스트를 확인해주세요.';
             }
+        }
+        
+        // 키-값 테이블 생성 함수
+        function createKeyValueTable(customerInfo) {
+            const tableBody = document.querySelector('#keyValueTable tbody');
+            tableBody.innerHTML = ''; // 테이블 초기화
+            
+            // 필드 매핑 정의 (화면에 표시될 이름 -> 객체의 실제 키)
+            const fieldMapping = {
+                '고객명': '고객명',
+                '전화번호': '전화번호',
+                '개통번호': '개통번호',
+                '모델명': '모델명',
+                '색상': '색상',
+                '가입유형': '가입유형',
+                '할인유형': '할인유형',
+                '요금제': '요금제',
+                '유심': '유심',
+                '부가서비스': '부가서비스',
+                '출고가': '출고가',
+                '공시지원금': '공시',
+                '추가지원금': '추지',
+                '전환지원금': '전환지원금',
+                '실 구매가': '최종구매가',
+                '주민번호': '주민번호',
+                '생년월일': '생년월일',
+                '택배주소': '택배주소',
+                '배송주소지': '배송주소지',
+                '현재통신사': '현재통신사',
+                '단말기일련번호': '단말기일련번호',
+                '유심일련번호': '유심일련번호'
+            };
+            
+            // 표시할 필드 순서 정의
+            const fields = [
+                '고객명', '전화번호', '개통번호', '모델명', '색상',
+                '가입유형', '할인유형', '요금제', '유심', '부가서비스',
+                '출고가', '공시지원금', '추가지원금', '전환지원금', '실 구매가', // 추가된 필드
+                '주민번호', '생년월일', '택배주소', '배송주소지', '현재통신사',
+                '단말기일련번호', '유심일련번호'
+            ];
+            
+            // 필드마다 행 생성
+            fields.forEach(displayName => {
+                // 매핑된 실제 키 가져오기
+                const actualKey = fieldMapping[displayName];
+                
+                // 기존 필드가 있는 경우
+                if (actualKey && customerInfo[actualKey]) {
+                    addTableRow(tableBody, displayName, customerInfo[actualKey]);
+                } 
+                // 전환지원금은 값이 있는 경우에만 표시
+                else if (displayName === '전환지원금') {
+                    // 값이 있고 0이 아닌 경우에만 표시
+                    if (actualKey && customerInfo[actualKey] && 
+                        customerInfo[actualKey] !== '0' && 
+                        customerInfo[actualKey] !== 0 && 
+                        customerInfo[actualKey].toString().trim() !== '') {
+                        addTableRow(tableBody, displayName, customerInfo[actualKey]);
+                    }
+                }
+                // 출고가, 공시지원금, 추가지원금, 실 구매가 필드는 없는 경우에도 표시
+                else if (displayName === '출고가' || displayName === '공시지원금' || 
+                         displayName === '추가지원금' || displayName === '실 구매가') {
+                    // 해당 필드가 없는 경우 빈 값으로 표시
+                    addTableRow(tableBody, displayName, actualKey && customerInfo[actualKey] ? customerInfo[actualKey] : '');
+                }
+            });
+        }
+        
+        // 키-값 테이블에 행 추가하는 함수
+        function addTableRow(tableBody, key, value) {
+            const row = document.createElement('tr');
+            
+            const keyCell = document.createElement('td');
+            keyCell.className = 'key-cell';
+            keyCell.textContent = key;
+            
+            const valueCell = document.createElement('td');
+            valueCell.className = 'value-cell';
+            valueCell.textContent = value;
+            valueCell.setAttribute('data-value', value);
+            valueCell.onclick = function() {
+                copyToClipboardWithFeedback(this.getAttribute('data-value'), this);
+            };
+            
+            row.appendChild(keyCell);
+            row.appendChild(valueCell);
+            tableBody.appendChild(row);
+        }
+        
+        // 클립보드에 복사 후 피드백을 제공하는 함수
+        function copyToClipboardWithFeedback(text, element) {
+            navigator.clipboard.writeText(text).then(() => {
+                // 복사 성공 표시
+                element.classList.add('copied');
+                
+                // 1.5초 후 복사 성공 표시 제거
+                setTimeout(() => {
+                    element.classList.remove('copied');
+                }, 1500);
+                
+                // 화면 중앙에 복사 성공 알림 표시
+                const copyNotice = document.createElement('div');
+                copyNotice.className = 'copy-success';
+                copyNotice.textContent = '복사됨!';
+                copyNotice.style.position = 'fixed';
+                copyNotice.style.top = '50%';
+                copyNotice.style.left = '50%';
+                copyNotice.style.transform = 'translate(-50%, -50%)';
+                copyNotice.style.backgroundColor = 'rgba(76, 175, 80, 0.9)';
+                copyNotice.style.color = 'white';
+                copyNotice.style.padding = '10px 20px';
+                copyNotice.style.borderRadius = '5px';
+                copyNotice.style.zIndex = '2000';
+                copyNotice.style.transition = 'opacity 0.3s';
+                
+                document.body.appendChild(copyNotice);
+                
+                // 1초 후 알림 페이드아웃
+                setTimeout(() => {
+                    copyNotice.style.opacity = '0';
+                    setTimeout(() => {
+                        document.body.removeChild(copyNotice);
+                    }, 300);
+                }, 1000);
+            }).catch(err => {
+                console.error('복사 실패:', err);
+                alert('복사에 실패했습니다.');
+            });
         }
 
         // 결과 복사 함수
         function copyToClipboard() {
+            // 키-값 테이블이 표시되어 있는지 확인
+            const keyValueTableContainer = document.getElementById('keyValueTableContainer');
+            if (keyValueTableContainer && keyValueTableContainer.style.display !== 'none') {
+                alert('키-값 테이블에서는 각 항목을 클릭하여 개별적으로 복사해주세요.');
+                return;
+            }
+            
             // SK-큐브의 경우 여러 텍스트에리어가 있을 수 있음
             const outputText1 = document.getElementById('outputText1');
             const outputText2 = document.getElementById('outputText2');
@@ -1171,36 +1408,77 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             let textToCopy = '';
             let elementToCopy = null;
             
-            // 어떤 텍스트에리어가 있는지 확인
-            if (outputText1 && outputText1.value.trim()) {
-                textToCopy = outputText1.value + '\n\n' + (outputText2 ? outputText2.value : '');
+            if (outputText1 && outputText1.style.display !== 'none' && outputText1.value.trim() !== '') {
+                textToCopy = outputText1.value;
                 elementToCopy = outputText1;
-            } else if (outputText && outputText.value.trim()) {
+            } else if (outputText2 && outputText2.style.display !== 'none' && outputText2.value.trim() !== '') {
+                textToCopy = outputText2.value;
+                elementToCopy = outputText2;
+            } else if (outputText && outputText.value.trim() !== '') {
                 textToCopy = outputText.value;
                 elementToCopy = outputText;
-            }
-            
-            if (!textToCopy) {
-                alert('복사할 내용이 없습니다.');
+            } else {
+                alert('복사할 텍스트가 없습니다.');
                 return;
             }
             
-            // 클립보드에 복사
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                // 복사 성공 시 시각적 피드백
-                const elements = [outputText1, outputText2, outputText].filter(el => el);
+            // 클립보드 API를 사용하여 복사
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textToCopy)
+                    .then(() => {
+                        // 복사 완료 표시
+                        const originalBgColor = elementToCopy.style.backgroundColor;
+                        elementToCopy.style.backgroundColor = '#e6ffe6';
+                        
+                        setTimeout(() => {
+                            elementToCopy.style.backgroundColor = originalBgColor;
+                        }, 500);
+                        
+                        // 화면 중앙에 복사 성공 알림 표시
+                        const copyNotice = document.createElement('div');
+                        copyNotice.className = 'copy-success';
+                        copyNotice.textContent = '복사됨!';
+                        copyNotice.style.position = 'fixed';
+                        copyNotice.style.top = '50%';
+                        copyNotice.style.left = '50%';
+                        copyNotice.style.transform = 'translate(-50%, -50%)';
+                        copyNotice.style.backgroundColor = 'rgba(76, 175, 80, 0.9)';
+                        copyNotice.style.color = 'white';
+                        copyNotice.style.padding = '10px 20px';
+                        copyNotice.style.borderRadius = '5px';
+                        copyNotice.style.zIndex = '2000';
+                        copyNotice.style.transition = 'opacity 0.3s';
+                        
+                        document.body.appendChild(copyNotice);
+                        
+                        // 1초 후 알림 페이드아웃
+                        setTimeout(() => {
+                            copyNotice.style.opacity = '0';
+                            setTimeout(() => {
+                                document.body.removeChild(copyNotice);
+                            }, 300);
+                        }, 1000);
+                    })
+                    .catch(err => {
+                        console.error('복사 실패:', err);
+                        alert('복사에 실패했습니다.');
+                    });
+            } else {
+                // 예전 방식 사용 (Clipboard API가 지원되지 않는 경우)
+                elementToCopy.select();
+                document.execCommand('copy');
                 
-                elements.forEach(el => {
-                    const originalBgColor = el.style.backgroundColor;
-                    el.style.backgroundColor = '#d4edda';
-                    setTimeout(() => {
-                        el.style.backgroundColor = originalBgColor;
-                    }, 500);
-                });
-            }).catch(err => {
-                console.error('클립보드 복사 오류:', err);
-                alert('복사 중 오류가 발생했습니다.');
-            });
+                // 복사 완료 표시
+                const originalBgColor = elementToCopy.style.backgroundColor;
+                elementToCopy.style.backgroundColor = '#e6ffe6';
+                
+                setTimeout(() => {
+                    elementToCopy.style.backgroundColor = originalBgColor;
+                }, 500);
+                
+                // 알림 표시
+                alert('텍스트가 복사되었습니다.');
+            }
         }
 
         // 텍스트에리어 더블클릭 복사 함수
