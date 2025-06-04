@@ -622,7 +622,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                     // 기본 정보 처리
                     const name = info['가입자명'] || info['고객명'] || '';
                     const contact = info['개통번호'] || info['전화번호'] || '';
-                    const modelColor = `${info['모델명'] || ''} / ${info['색상'] || ''}`;
+                    const modelColor = `${info['모델명'] || ''} / ${info['색상'] || ''} / ${info['단말기일련번호'] || ''}`;
                     const plan = info['요금제'] || '';
                     const subscriptionType = info['가입유형'] || '';
                     
@@ -634,7 +634,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                         template = `판매점명 :	 에이치엘
 고객명 :	${name}	
 개통번호 :	${contact}	
-모델명 / 색상 :	${modelColor}	
+모델명 / 색상 / 일련번호 :	${modelColor}	
 유심 일련번호 :	${info['유심일련번호'] || ''}	
 요금제명(혜택) :	${plan}	
 개통유형 :	${subscriptionType}	
@@ -654,7 +654,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                         template = `판매점명 :	 에이치엘
 고객명 :	${name}	
 개통번호 :	${contact}	
-모델명 / 색상 :	${modelColor}	
+모델명 / 색상 / 일련번호 :	${modelColor}	
 유심 일련번호 :	${info['유심일련번호'] || ''}	
 요금제명(혜택) :	${plan}	
 개통유형 :	${subscriptionType}	
@@ -675,7 +675,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                         template = `판매점명 :	 에이치엘
 고객명 :	${name}	
 개통번호 :	${contact}	
-모델명 / 색상 :	${modelColor}	
+모델명 / 색상 / 일련번호 :	${modelColor}	
 유심 일련번호 :	${info['유심일련번호'] || ''}	
 요금제명(혜택) :	${plan}	
 개통유형 :	${subscriptionType}	
@@ -693,7 +693,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                         template = `판매점명 :	 에이치엘
 고객명 :	${name}	
 개통번호 :	${contact}	
-모델명 / 색상 :	${modelColor}	
+모델명 / 색상 / 일련번호 :	${modelColor}	
 유심 일련번호 :	${info['유심일련번호'] || ''}	
 요금제명(혜택) :	${plan}	
 개통유형 :	${subscriptionType}	
@@ -1516,25 +1516,34 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
         
         // 모두 지우기 함수
         function clearAll() {
-            document.getElementById('telecom').value = '';
-            const agencySelect = document.getElementById('agency');
-            agencySelect.innerHTML = '<option value="">대리점을 선택하세요</option>';
-            agencySelect.disabled = true;
+            // 입력 필드 초기화
+            document.getElementById('inputText').value = '';
             document.getElementById('deviceSerial').value = '';
             document.getElementById('simSerial').value = '';
-            document.getElementById('inputText').value = '';
+            
+            // 통신사 및 대리점 선택 초기화
+            const telecomSelect = document.getElementById('telecom');
+            const agencySelect = document.getElementById('agency');
+            telecomSelect.value = '';
+            agencySelect.innerHTML = '<option value="">대리점을 선택하세요</option>';
+            agencySelect.disabled = true;
             
             // 출력 컨테이너 초기화
             const outputContainer = document.getElementById('outputContainer');
             outputContainer.innerHTML = `
-                <div class="form-group">
+                <div id="singleOutputContainer" class="form-group">
                     <label for="outputText">변환된 텍스트:</label>
                     <textarea id="outputText" class="output-textarea" placeholder="여기에 변환된 결과가 표시됩니다. 더블클릭하면 복사됩니다."></textarea>
                 </div>
+                <div id="splitOutputContainer" style="display: none;"></div>
+                <div id="keyValueTableContainer" style="display: none;"></div>
             `;
             
             // 더블클릭 이벤트 설정
             setupDoubleClickCopy();
+            
+            // 입력 필드에 포커스
+            document.getElementById('inputText').focus();
         }
         // 대리점 정보 팝업 함수
         function showAgencyInfo() {
