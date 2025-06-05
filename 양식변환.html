@@ -376,9 +376,27 @@
             <!-- 출력 컨테이너 (오른쪽 영역) -->
             <div class="output-column">
                 <div id="outputContainer" style="display: block;">
+                    <!-- 럭스 전용 추가 textarea (신조/재고) -->
+                    <div id="luxExtraOutputs" style="display:none;">
+                        <div class="form-group">
+                            <label for="luxRequestText">신조요청양식:</label>
+                            <textarea id="luxRequestText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="luxStockText">재고요청 양식:</label>
+                            <textarea id="luxStockText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                    </div>
+                    <style>
+                        .compact-textarea {
+                            height: 100px !important;  /* Reduced from default height */
+                            min-height: 100px;
+                            resize: vertical;
+                        }
+                    </style>
                     <div id="singleOutputContainer">
                         <div class="form-group">
-                            <label for="outputText">변환된 텍스트:</label>
+                            <label id="outputTextLabel" for="outputText">변환된 텍스트:</label>
                             <textarea id="outputText" class="output-textarea"></textarea>
                         </div>
                     </div>
@@ -930,6 +948,12 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                         }
                     }
                     
+                    // 생년월일/주민번호 포맷 정규화 (000718 - 3251915 -> 000718-3251915)
+                    if ((key === '생년월일' || key === '주민번호') && value) {
+                        // 하이픈 주변의 공백 제거
+                        value = value.replace(/\s*-\s*/g, '-');
+                    }
+                    
                     customerInfo[key] = value;
                 } else {
                     customerInfo[key] = '';
@@ -1167,25 +1191,32 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
 
         // 양식 변환 함수
         function convertFormat() {
-            const telecomSelect = document.getElementById('telecom');
+            // 모든 DOM 요소 참조 가져오기
             const agencySelect = document.getElementById('agency');
             const inputText = document.getElementById('inputText');
+            const luxExtraOutputs = document.getElementById('luxExtraOutputs');
+            const singleOutputContainer = document.getElementById('singleOutputContainer');
+            const outputTextLabel = document.getElementById('outputTextLabel');
+            const outputText = document.getElementById('outputText');
+            const telecomSelect = document.getElementById('telecom');
             const deviceSerialInput = document.getElementById('deviceSerial');
             const simSerialInput = document.getElementById('simSerial');
             const outputContainer = document.getElementById('outputContainer');
-            const singleOutputContainer = document.getElementById('singleOutputContainer');
             const splitOutputContainer = document.getElementById('splitOutputContainer');
             const keyValueTableContainer = document.getElementById('keyValueTableContainer');
             
-            const selectedTelecom = telecomSelect.value;
-            const selectedAgency = agencySelect.value;
+            // 선택된 값 가져오기
+            const agency = agencySelect ? agencySelect.value : '';
+            const selectedTelecom = telecomSelect ? telecomSelect.value : '';
+            const selectedAgency = agency;
             
+            // 입력값 검증
             if (!selectedTelecom || !selectedAgency) {
                 alert('통신사와 대리점을 모두 선택해주세요.');
                 return;
             }
             
-            if (!inputText.value.trim()) {
+            if (!inputText || !inputText.value.trim()) {
                 alert('변환할 텍스트를 입력해주세요.');
                 return;
             }
@@ -1194,12 +1225,83 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             const customerInfo = extractCustomerInfo(inputText.value);
             
             // 단말기 일련번호와 유심 일련번호 추가
-            if (deviceSerialInput.value.trim()) {
+            if (deviceSerialInput && deviceSerialInput.value.trim()) {
                 customerInfo['단말기일련번호'] = deviceSerialInput.value.trim();
             }
             
-            if (simSerialInput.value.trim()) {
+            if (simSerialInput && simSerialInput.value.trim()) {
                 customerInfo['유심일련번호'] = simSerialInput.value.trim();
+            }
+            
+            // 럭스 대리점이면 3개 textarea 보이기, 기존 textarea label 변경
+            if (agency === '럭스') {
+                if (luxExtraOutputs) luxExtraOutputs.style.display = 'block';
+                if (singleOutputContainer) singleOutputContainer.style.display = 'block';
+                if (outputTextLabel) outputTextLabel.textContent = '개통요청양식:';
+                
+                // 가입유형에 따른 신조요청양식 텍스트 생성
+                const subscriptionType = customerInfo['가입유형'] || '';
+                let requestTypeText = '';
+                
+                if (subscriptionType.includes('번호이동') || subscriptionType.includes('번이')) {
+                    requestTypeText = '번이 신조요청후 유키반려';
+                } else if (subscriptionType.includes('신규가입') || subscriptionType.includes('신규')) {
+                    requestTypeText = '신규 신조요청후 유키반려';
+                } else if (subscriptionType.includes('기기변경') || subscriptionType.includes('기변')) {
+                    requestTypeText = '기변 신조요청후 유키반려';
+                } else {
+                    requestTypeText = '신조요청후 유키반려';
+                }
+                
+                // 신조요청양식 텍스트 설정 (1번째 textarea)
+                const luxRequestText = document.getElementById('luxRequestText');
+                if (luxRequestText) {
+                    // 주민번호 유효성 검사 (번호이동/번이인 경우)
+                    let juminNumber = customerInfo['주민번호'] || customerInfo['생년월일'] || '';
+                    let juminError = '';
+                    
+                    if ((subscriptionType.includes('번호이동') || subscriptionType.includes('번이')) && juminNumber) {
+                        const juminRegex = /^\d{6}-?[1-4]\d{6}$/;
+                        if (!juminRegex.test(juminNumber)) {
+                            juminError = ' (⚠️ 번이의 경우 신조하려면 주민번호 전체가 필요합니다 어드민 메모를 재확인해주세요.)';
+                        }
+                    }
+                    
+                    luxRequestText.value = `[${requestTypeText}]\n` +
+                                          `업체명: 에이치엘\n` +
+                                          `고객명: ${customerInfo['고객명'] || ''}\n` +
+                                          `전화번호: ${customerInfo['전화번호'] || customerInfo['연락처'] || ''}\n` +
+                                          `주민번호: ${juminNumber}${juminError}`;
+                }
+                
+                // 재고요청 양식 설정 (2번째 textarea)
+                const luxStockText = document.getElementById('luxStockText');
+                if (luxStockText) {
+                    // 유심 동봉 여부 결정
+                    let simIncluded = 'Y'; // 기본값 Y
+                    const simInfo = customerInfo['유심'] || '';
+                    
+                    // 유심 정보에 따라 조건부 설정
+                    if (simInfo.includes('기존')) {
+                        simIncluded = 'N';
+                    } else if (simInfo.includes('신규') || simInfo.includes('구매') || simInfo.includes('후납')) {
+                        simIncluded = 'Y';
+                    }
+                    
+                    // 재고 요청서 텍스트 생성
+                    luxStockText.value = `□재고 요청서□        
+매장상호 : 에이치엘        
+고객명 : ${customerInfo['고객명'] || ''}
+연락처 : ${customerInfo['전화번호'] || customerInfo['연락처'] || ''}
+받을 주소 : ${customerInfo['택배주소'] || customerInfo['배송주소지'] || ''}
+퀵/택배 : 택배
+기종/색상 : ${customerInfo['모델명'] || ''} ${customerInfo['색상'] || ''}
+유심동봉여부 : ${simIncluded}`;
+                }
+            } else {
+                if (luxExtraOutputs) luxExtraOutputs.style.display = 'none';
+                if (singleOutputContainer) singleOutputContainer.style.display = 'block';
+                if (outputTextLabel) outputTextLabel.textContent = '변환된 텍스트:';
             }
             
             // 콘솔에 객체 정보 출력 (디버깅용)
