@@ -896,21 +896,21 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             
             // 정규식 패턴으로 각 항목 추출
             const patterns = {
-                '전화번호': /\*\*전화번호\s*-\s*([^\n]+)/,
-                '개통번호': /\*\*개통번호\s*-\s*([^\n]+)/,
-                '모델명': /\*\*모델명\s*-\s*([^\n]+)/,
-                '색상': /\*\*색상\s*-\s*([^\n]+)/,
+                '전화번호': /\*\*\s*전\s*화\s*번\s*호\s*[\-:：]\s*([^\n]+)/i,
+                '개통번호': /\*\*\s*개\s*통\s*번\s*호\s*[\-:：]\s*([^\n]+)/i,
+                '모델명': /\*\*\s*모\s*델\s*명\s*[\-:]\s*([^\n]+)/i,
+                '색상': /\*\*\s*색\s*상\s*[\-:]\s*([^\n]+)/i,
                 '고객명': /\*\*고객명\s*-\s*([^\n]+)/,
                 '가입자명': /\*\*가입자명\s*-\s*([^\n]+)/,
                 '주민번호': /\*\*주민번호\s*-\s*([^\n]+)/,
                 '생년월일': /\*\*생년월일\s*-\s*([^\n]+)/,
-                '택배주소': /\*\*택배주소\s*-\s*([^\n]+)/,
-                '배송주소지': /\*\*배송주소지\s*-\s*([^\n]+)/,
+                '택배주소': /\*\*\s*택\s*배(?:\s*주\s*소|\s*\S*주소\S*)\s*[\-:：]\s*([^\n]+)/i,
+                '배송주소지': /\*\*\s*배\s*송(?:\s*주\s*소\s*지|\s*\S*주소지\S*)\s*[\-:：]\s*([^\n]+)/i,
                 '현재통신사': /\*\*현재통신사\s*-\s*([^\n]+)/,
-                '요금제': /\*\*요금제\s*-\s*([^\n]+)/,
+                '요금제': /\*\*\s*요\s*금\s*제\s*[\-:：]\s*([^\n]+)/i,
                 '가입유형': /\*\*가입유형\s*-\s*([^\n]+)/,
                 '할인유형': /\*\*할인유형\s*-\s*([^\n]+)/,
-                '유심': /\*\*유심\s*-\s*([^\n]+)/,
+                '유심': /\*\*\s*유\s*심(?:\s*비\s*용)?\s*[\-:：]\s*([^\n]+)/i,
                 '부가서비스': /\*\*부가서비스\s*-\s*([^\n]+)/
             };
             
@@ -918,7 +918,19 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             for (const [key, pattern] of Object.entries(patterns)) {
                 const match = text.match(pattern);
                 if (match && match[1]) {
-                    customerInfo[key] = match[1].trim();
+                    let value = match[1].trim();
+                    
+                    // 전화번호/개통번호 포맷 정규화 (01012345678 -> 010-1234-5678)
+                    if ((key === '전화번호' || key === '개통번호') && value) {
+                        // 모든 공백과 하이픈 제거
+                        const numbers = value.replace(/[\s\-]/g, '');
+                        // 01012345678 -> 010-1234-5678 형식으로 변환
+                        if (numbers.length >= 10) {
+                            value = numbers.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3');
+                        }
+                    }
+                    
+                    customerInfo[key] = value;
                 } else {
                     customerInfo[key] = '';
                 }
@@ -949,19 +961,29 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                 // 공시지원 여부 추출
                 if (customerInfo['가입유형'].includes('공시지원')) {
                     customerInfo['공시선약여부'] = '공시지원';
+                    customerInfo['약정개월수'] = '24개월'; // 공시지원은 무조건 24개월
                 } else if (customerInfo['가입유형'].includes('선택약정')) {
                     customerInfo['공시선약여부'] = '선택약정';
+                    
+                    // 선택약정인 경우에만 가입유형에서 개월수 추출
+                    const monthMatch = customerInfo['가입유형'].match(/(\d+)\s*개월/);
+                    if (monthMatch && monthMatch[1]) {
+                        customerInfo['약정개월수'] = monthMatch[1] + '개월';
+                    } else {
+                        customerInfo['약정개월수'] = '';
+                    }
                 } else if (customerInfo['가입유형'].includes('선약')) {
                     customerInfo['공시선약여부'] = '선약';
+                    
+                    // 선약인 경우에만 가입유형에서 개월수 추출
+                    const monthMatch = customerInfo['가입유형'].match(/(\d+)\s*개월/);
+                    if (monthMatch && monthMatch[1]) {
+                        customerInfo['약정개월수'] = monthMatch[1] + '개월';
+                    } else {
+                        customerInfo['약정개월수'] = '';
+                    }
                 } else {
                     customerInfo['공시선약여부'] = '';
-                }
-                
-                // 약정 개월수 추출
-                const monthMatch = customerInfo['가입유형'].match(/(\d+)\s*개월/);
-                if (monthMatch && monthMatch[1]) {
-                    customerInfo['약정개월수'] = monthMatch[1] + '개월';
-                } else {
                     customerInfo['약정개월수'] = '';
                 }
             } else {
@@ -969,42 +991,65 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                 customerInfo['약정개월수'] = '';
             }
             
-            // 할인유형에서 공시선약여부와 약정개월수 추출
-            if (customerInfo['할인유형']) {
+            // 할인유형에서 공시선약여부와 약정개월수 추출 (기존 가입유형에서 공시지원이 아닌 경우에만 적용)
+            if (customerInfo['할인유형'] && customerInfo['공시선약여부'] !== '공시지원') {
                 // 공시지원 여부 추출
-                if (customerInfo['할인유형'].includes('공시지원')) {
+                if (customerInfo['할인유형'].includes('공시지원') || customerInfo['할인유형'].trim() === '공시') {
                     customerInfo['공시선약여부'] = '공시지원';
+                    customerInfo['약정개월수'] = '24개월'; // 공시지원은 무조건 24개월
                 } else if (customerInfo['할인유형'].includes('선택약정')) {
                     customerInfo['공시선약여부'] = '선택약정';
+                    
+                    // 선택약정인 경우에만 할인유형에서 개월수 추출
+                    const monthMatch = customerInfo['할인유형'].match(/(\d+)\s*개월/);
+                    if (monthMatch && monthMatch[1]) {
+                        customerInfo['약정개월수'] = monthMatch[1] + '개월';
+                    }
                 } else if (customerInfo['할인유형'].includes('선약')) {
                     customerInfo['공시선약여부'] = '선약';
-                }
-                
-                // 약정 개월수 추출
-                const monthMatch = customerInfo['할인유형'].match(/(\d+)\s*개월/);
-                if (monthMatch && monthMatch[1]) {
-                    customerInfo['약정개월수'] = monthMatch[1] + '개월';
+                    
+                    // 선약인 경우에만 할인유형에서 개월수 추출
+                    const monthMatch = customerInfo['할인유형'].match(/(\d+)\s*개월/);
+                    if (monthMatch && monthMatch[1]) {
+                        customerInfo['약정개월수'] = monthMatch[1] + '개월';
+                    }
                 }
             }
             
             // 출고가, 공시, 추지, 전환지원금, 프리할부, 할부/현금 정보 추출
-            // 전환지원금이 포함된 패턴
-            const conversionPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)\s*-\s*(전환지원금?|전환)\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d+|\ud604\uae08)\s*([\d,]+)/;
-            const conversionMatch = text.match(conversionPattern);
+            // 1. 괄호 포함 패턴 (예: **출고가 (1,540,000)- 공시(700,000)- 전지(100,000) = 현금(740,000))
+            const parenthesizedPattern = /\*\*\s*출고가\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*-\s*공시\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*-\s*(?:추지|전지|전환지원금?|전환)\s*[\(\[]?\s*([\d,]*)\s*[\]\)]?\s*(?:\s*-\s*프리할부\s*[\(\[]?\s*([\d,]*)\s*[\]\)]?)?\s*=\s*(할부\d*|\ud604\uae08)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?/i;
             
-            if (conversionMatch) {
-                customerInfo['출고가'] = conversionMatch[1].trim();
-                customerInfo['공시'] = conversionMatch[2].trim();
-                customerInfo['추지'] = conversionMatch[3].trim();
-                customerInfo['전환지원금'] = conversionMatch[5].trim();
-                customerInfo['프리할부'] = conversionMatch[6] ? conversionMatch[6].trim() : '0';
+            // 2. 일반 패턴 (괄호 없음, 기존 형식 유지)
+            const normalPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*(?:추지|전지|전환지원금?|전환)\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d*|\ud604\uae08)\s*([\d,]+)/i;
+            
+            // 패턴 매칭 시도 (괄호 포함 패턴 먼저 시도)
+            let match = text.match(parenthesizedPattern) || text.match(normalPattern);
+            
+            if (match) {
+                // 매칭된 그룹 인덱스 정리
+                const groups = {
+                    출고가: match[1] || '0',
+                    공시: match[2] || '0',
+                    전환지원금: match[3] || '0',
+                    프리할부: match[4] || '0',
+                    할부현금: match[5] || '현금',
+                    최종구매가: match[6] || '0',
+                    추지: '0' // 기본값으로 0 설정
+                };
+                
+                customerInfo['출고가'] = groups.출고가.trim();
+                customerInfo['공시'] = groups.공시.trim();
+                customerInfo['추지'] = groups.추지.trim();
+                customerInfo['전환지원금'] = groups.전환지원금.trim();
+                customerInfo['프리할부'] = groups.프리할부.trim();
                 
                 // 할부/현금 여부 확인
-                if (conversionMatch[7].includes('할부')) {
+                if (groups.할부현금.includes('할부')) {
                     customerInfo['할부현금여부'] = '할부';
                     
                     // 할부개월수 추출
-                    const installmentMatch = conversionMatch[7].match(/(\d+)/);
+                    const installmentMatch = groups.할부현금.match(/(\d+)/);
                     if (installmentMatch && installmentMatch[1]) {
                         customerInfo['할부개월수'] = installmentMatch[1] + '개월';
                     } else {
@@ -1015,10 +1060,10 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                     customerInfo['할부개월수'] = '';
                 }
                 
-                customerInfo['최종구매가'] = conversionMatch[8].trim();
+                customerInfo['최종구매가'] = groups.최종구매가.trim();
             } else {
                 // 기존 패턴 (전환지원금 없는 경우)
-                const pricePattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d+|\ud604\uae08)\s*([\d,]+)/;
+                const pricePattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d*|\ud604\uae08)\s*([\d,]+)/i;
                 const priceMatch = text.match(pricePattern);
                 
                 if (priceMatch) {
@@ -1606,7 +1651,11 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                 { name: 'SK 큐브 재고표(SK3 탭 확인)', url: 'https://docs.google.com/spreadsheets/d/1BlrYaOOqMFEb-TLVnvI6KXCjMJvUWT7UipUAUgvqI5g/edit#gid=1994358026' }
             ]},
             { name: '휴대폰 요금관련 정보', sites: [
-                { name: '레인보우컨설팅', url: 'https://goodmorningrainbow.com/renew/index.php' }
+                { name: '레인보우컨설팅', url: 'https://goodmorningrainbow.com/renew/index.php' },
+                { name: '스마트초이스', url: 'https://www.smartchoice.or.kr/smc/index.do' }
+            ]},
+            { name: '올바른 주소 확인', sites: [
+                { name: '주소정보누리집', url: 'https://www.juso.go.kr/openIndexPage.do' }
             ]},
         ];
         
