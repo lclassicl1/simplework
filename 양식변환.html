@@ -1348,20 +1348,33 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             // 출력 컨테이너 표시
             outputContainer.style.display = 'block';
             
-            // 키-값 테이블 사용 여부 확인
-            const useKeyValueTable = 
-                (selectedTelecom === 'KT' && selectedAgency === '재희') || 
-                (selectedTelecom === 'LG' && selectedAgency === '소리');
-            
             // 선택된 대리점에 맞는 템플릿으로 변환
             try {
-                // 키-값 테이블 형식 사용
-                if (useKeyValueTable) {
-                    // 다른 출력 컨테이너 숨기기
+                // 재희 또는 소리 대리점인 경우 추가 텍스트에리어 표시
+                const isSpecialAgency = (selectedTelecom === 'KT' && selectedAgency === '재희') || 
+                                      (selectedTelecom === 'LG' && selectedAgency === '소리');
+                
+                if (isSpecialAgency) {
+                    // 추가 텍스트에리어 생성 및 표시 (키-값 테이블보다 먼저)
+                    let additionalContainer = document.getElementById('additionalOutputContainer');
+                    if (!additionalContainer) {
+                        additionalContainer = document.createElement('div');
+                        additionalContainer.id = 'additionalOutputContainer';
+                        additionalContainer.className = 'form-group';
+                        additionalContainer.style.marginBottom = '20px';  // 아래쪽 여백 추가
+                        additionalContainer.innerHTML = `
+                            <label for="additionalOutputText">추가 정보:</label>
+                            <textarea id="additionalOutputText" class="output-textarea" style="min-height: 120px; width: 100%;" placeholder="추가 정보가 여기에 표시됩니다. 더블클릭하면 복사됩니다."></textarea>
+                        `;
+                        // 키-값 테이블 컨테이너 앞에 추가
+                        keyValueTableContainer.parentNode.insertBefore(additionalContainer, keyValueTableContainer);
+                    }
+                    additionalContainer.style.display = 'block';
+                    
+                    // 키-값 테이블 생성 (기존 로직 유지)
                     singleOutputContainer.style.display = 'none';
                     splitOutputContainer.style.display = 'none';
                     
-                    // 키-값 테이블 템플릿 복제 및 표시
                     const keyValueTable = document.getElementById('keyValueTableTemplate').cloneNode(true);
                     keyValueTable.id = '';
                     keyValueTable.style.display = 'block';
@@ -1369,9 +1382,28 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                     keyValueTableContainer.appendChild(keyValueTable);
                     keyValueTableContainer.style.display = 'block';
                     
-                    // 키-값 테이블 생성
                     createKeyValueTable(customerInfo);
+                    
+                    // 추가 정보 설정
+                    let additionalOutput = '';
+                    if (selectedAgency === '재희') {
+                        additionalOutput = `${customerInfo.모델명 || ''} / ${customerInfo.가입유형 || ''}\n` +
+                            `${customerInfo.고객명 || ''} / ${customerInfo.주민번호 || customerInfo.생년월일 || ''} / ${customerInfo.개통번호 || customerInfo.전화번호 || customerInfo.연락처 || ''}\n` +
+                            `접수 확인 부탁드립니다.`;
+                    } else if (selectedAgency === '소리') {
+                        additionalOutput = `${customerInfo.모델명 || ''} / ${customerInfo.가입유형 || ''}\n` +
+                            `${customerInfo.고객명 || ''} / ${customerInfo.주민번호 || customerInfo.생년월일 || ''} / ${customerInfo.개통번호 || customerInfo.전화번호 || customerInfo.연락처 || ''}\n` +
+                            `접수 확인 및 신조 부탁드립니다.`;
+                    }
+                    
+                    document.getElementById('additionalOutputText').value = additionalOutput;
                     return;
+                } else {
+                    // 다른 대리점의 경우 추가 텍스트에리어 숨기기
+                    const additionalContainer = document.getElementById('additionalOutputContainer');
+                    if (additionalContainer) {
+                        additionalContainer.style.display = 'none';
+                    }
                 }
                 
                 // 일반 템플릿 사용
