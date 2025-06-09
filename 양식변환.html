@@ -475,12 +475,13 @@
 경기도 고양시 일산동구 중앙로1261번길 77 한신메트로폴리스 702호	/ 010-7591-0800			`,
 
                 '럭스': `[럭스 업무 메모]
-1. 개통 요청 마감: 평일 17:30, 토요일 12:30
-2. 유심 발송 요청은 별도 양식으로 전달
-3. 전환지원금 신청 시 이전 통신사 가입 증빙 필요
-4. 프로모션 코드: SK-LUX-2025
-5. 문의 연락처: 02-234-5678 (담당자: 이럭스)
-6. 특이사항: 프리미엄 요금제 가입 시 추가 사은품 제공`,
+1. 재고표는 럭스 업무 카카오톡방에서 확인 가능
+2. 어드민대리점설정 : 유스퀘어(펜타곤)
+3. 티게이트 ID/PW
+
+럭스(JNJ) - 인증씨투비		
+아이디 :ctr077		
+비번 : qwerqwer!!`,
 
                 '나텔': `[나텔 업무 메모]
 1. 개통 요청 마감: 평일 17:30, 토요일 12:30
@@ -801,8 +802,41 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                     return { naStockRequest, naOpenRequest };
                 },
                 '밀리언': (info) => `[밀리언]\n고객명: ${info.고객명}\n모델: ${info.모델명}\n색상: ${info.색상}\n요금제: ${info.요금제}\n가입유형: ${info.가입유형}\n${info.할부현금여부}: ${info.최종구매가}원`,
+                '카파': (info) => {
+                    // 배송요청 양식 (첫 번째 textarea)
+                    const stockRequest = `★ 단말기 배정요청 ★		
+		
+* 배송방법 (택배or퀵) :	
+* 고객명 (수취인) : ${info['고객명'] || ''}
+* 연락처 : ${info['전화번호'] || info['연락처'] || ''}
+* 주소 : ${info['택배주소'] || info['배송주소지'] || ''}	 
+* 모델명 : ${info['모델명'] || ''}
+* 용량 : ${info['용량'] || ''}	 
+* 색상 : ${info['색상'] || ''}
+* 판매유형 : 
+* USIM 발송여부 : ${info['유심'] ? 'Y' : 'N'}`;
+                    
+                    // 개통요청 양식 (두 번째 textarea)
+                    const openRequest = `★판매점명★	에이치엘
+개통유형>${info['가입유형'] || ''}
+고객명>${info['고객명'] || ''}
+개통번호>${info['전화번호'] || info['연락처'] || ''}
+주민번호>${info['주민번호'] || info['생년월일'] || ''}
+단말모델명>	${info['모델명'] || ''}	
+단말색상>${info['색상'] || ''}
+일련번호>${info['단말기일련번호'] || ''}
+유심번호>${info['유심일련번호'] || ''}
+요금제>${info['요금제'] || ''}
+부가서비스>${info['부가서비스'] || ''}
+약정유형>${info['공시선약여부'] || ''}
+할부개월수>${info['할부현금여부'] === '할부' ? (info['할부개월수'] || '24') : '0'}
+프리할부>${info['프리할부'] || ''}
+할부원금>${info['할부현금여부'] === '할부' ? (info['최종구매가'] || '0') : '0'}
+번호이동인증>	`;
+                    
+                    return { stockRequest, openRequest };
+                }, 
                 '드블랙': (info) => `[드블랙] ${info.고객명} / ${info.모델명} / ${info.색상} / ${info.요금제} / ${info.가입유형} / ${info.할부현금여부} ${info.최종구매가}원`,
-                '카파': (info) => `[카파]\n고객: ${info.고객명}\n기기: ${info.모델명} ${info.색상}\n요금: ${info.요금제}\n유형: ${info.가입유형}\n금액: ${info.할부현금여부} ${info.최종구매가}원`,
                 '장천': (info) => `[장천] ${info.고객명} - ${info.모델명} ${info.색상} - ${info.요금제} - ${info.가입유형} - ${info.할부현금여부} ${info.최종구매가}원`,
                 '삼보/엠디도매': (info) => `[삼보/엠디도매]\n${info.고객명}\n${info.모델명}\n${info.색상}\n${info.요금제}\n${info.가입유형}\n${info.할부현금여부} ${info.최종구매가}원`,
                 '코웨어': (info) => {
@@ -1183,13 +1217,16 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                 return;
             }
             
-            if (!inputText || !inputText.value.trim()) {
-                alert('변환할 텍스트를 입력해주세요.');
-                return;
-            }
+            // 개발 단계에서는 입력 텍스트 검증 생략
+            // if (!inputText || !inputText.value.trim()) {
+            //     alert('변환할 텍스트를 입력해주세요.');
+            //     return;
+            // }
             
-            // 고객 정보 추출
-            const customerInfo = extractCustomerInfo(inputText.value);
+            // 고객 정보 추출 (개발 단계에서는 빈 문자열로 대체 가능)
+            const customerInfo = inputText && inputText.value.trim() ? 
+                extractCustomerInfo(inputText.value) : 
+                { '고객명': '테스트고객', '전화번호': '010-1234-5678', '모델명': '갤럭시S23', '색상': '블랙', '요금제': '5G 프리미어' };
             
             // 단말기 일련번호와 유심 일련번호 추가
             if (deviceSerialInput && deviceSerialInput.value.trim()) {
@@ -1310,8 +1347,8 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                     // 키-값 테이블 컨테이너 숨기기
                     keyValueTableContainer.style.display = 'none';
                     
-                    // SK-큐브의 경우 양식이 두개로 분할됨
-                    if (selectedTelecom === 'SK' && selectedAgency === '큐브') {
+                    // SK-큐브 또는 카파의 경우 양식이 두개로 분할됨
+                    if (selectedTelecom === 'SK' && (selectedAgency === '큐브' || selectedAgency === '카파')) {
                         const result = template(customerInfo);
                         
                         // 단일 출력 컨테이너 숨기기
