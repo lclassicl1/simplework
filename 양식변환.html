@@ -5,6 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>통신사 양식 변환기</title>
     <style>
+        /* Toast Notification Styles */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+        
         * {
             box-sizing: border-box;
             margin: 0;
@@ -432,6 +455,9 @@
             </div>
         </div>
     </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">클립보드에 복사되었습니다!</div>
     
     <!-- 대리점 메모 팝업 -->
     <div id="memoPopup" class="popup-overlay">
@@ -1039,13 +1065,18 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             }
             
             // 출고가, 공시, 추지, 전환지원금, 프리할부, 할부/현금 정보 추출
-            // 1. 괄호 포함 패턴 (예: **출고가 (1,540,000)- 공시(700,000)- 전지(100,000) = 현금(740,000))
-            const parenthesizedPattern = /\*\*\s*출고가\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*-\s*공시\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*-\s*(?:추지|전지|전환지원금?|전환)\s*[\(\[]?\s*([\d,]*)\s*[\]\)]?\s*(?:\s*-\s*프리할부\s*[\(\[]?\s*([\d,]*)\s*[\]\)]?)?\s*=\s*(할부\d*|\ud604\uae08)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?/i;
+            // 1. 기본값 초기화
+            customerInfo['추지'] = '0';
+            customerInfo['전환지원금'] = '0';
+            customerInfo['프리할부'] = '0';
             
-            // 2. 일반 패턴 (괄호 없음, 기존 형식 유지)
-            const normalPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*(?:추지|전지|전환지원금?|전환)\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d*|\ud604\uae08)\s*([\d,]+)/i;
+            // 2. 괄호 포함 패턴 (예: **출고가 (1,540,000)- 공시(700,000)- 전지(100,000) = 현금(740,000))
+            const parenthesizedPattern = /\*\*\s*출고가\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*-\s*공시\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*(?:-\s*(?:추지|추가지원)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*(?:-\s*(?:전지|전환지원금?|전환)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*(?:-\s*프리할부\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*=\s*(할부\d*|\ud604\uae08)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?/i;
             
-            // 패턴 매칭 시도 (괄호 포함 패턴 먼저 시도)
+            // 3. 일반 패턴 (괄호 없음, 기존 형식 유지)
+            const normalPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*(?:-\s*(?:추지|추가지원)\s+([\d,]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,]+))?\s*(?:-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d*|\ud604\uae08)\s*([\d,]+)/i;
+            
+            // 4. 패턴 매칭 시도 (괄호 포함 패턴 먼저 시도)
             let match = text.match(parenthesizedPattern) || text.match(normalPattern);
             
             if (match) {
@@ -1053,19 +1084,19 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                 const groups = {
                     출고가: match[1] || '0',
                     공시: match[2] || '0',
-                    전환지원금: match[3] || '0',
-                    프리할부: match[4] || '0',
-                    할부현금: match[5] || '현금',
-                    최종구매가: match[6] || '0',
-                    추지: '0' // 기본값으로 0 설정
+                    추지: match[3] || '0',
+                    전환지원금: match[4] || '0',
+                    프리할부: match[5] || '0',
+                    할부현금: match[6] || '현금',
+                    최종구매가: match[7] || '0'
                 };
                 
-                // 고객 정보에 할당
+                // 고객 정보에 할당 (0이 아닌 경우에만 업데이트)
                 customerInfo['출고가'] = groups.출고가.trim();
                 customerInfo['공시'] = groups.공시.trim();
-                customerInfo['추지'] = groups.추지.trim();
-                customerInfo['전환지원금'] = groups.전환지원금.trim();
-                customerInfo['프리할부'] = groups.프리할부.trim();
+                if (groups.추지 !== '0') customerInfo['추지'] = groups.추지.trim();
+                if (groups.전환지원금 !== '0') customerInfo['전환지원금'] = groups.전환지원금.trim();
+                if (groups.프리할부 !== '0') customerInfo['프리할부'] = groups.프리할부.trim();
                 
                 console.log('매칭된 정보:', groups); // 디버깅용
                 
@@ -1087,16 +1118,15 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                 
                 customerInfo['최종구매가'] = groups.최종구매가.trim();
             } else {
-                // 추가 패턴 시도: 괄호 없는 패턴 (추지만 있는 경우)
-                const pricePattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d*|\ud604\uae08)\s*([\d,]+)/i;
+                // 추가 패턴 시도: 추지만 있는 경우 (괄호 없음)
+                const pricePattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원)\s+([\d,]+))?(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d*|\ud604\uae08)\s*([\d,]+)/i;
                 const priceMatch = text.match(pricePattern);
                 
                 if (priceMatch) {
                     customerInfo['출고가'] = priceMatch[1].trim();
                     customerInfo['공시'] = priceMatch[2].trim();
-                    customerInfo['추지'] = priceMatch[3].trim();
-                    customerInfo['전환지원금'] = '0';
-                    customerInfo['프리할부'] = priceMatch[4] ? priceMatch[4].trim() : '0';
+                    if (priceMatch[3]) customerInfo['추지'] = priceMatch[3].trim();
+                    if (priceMatch[4]) customerInfo['프리할부'] = priceMatch[4].trim();
                     
                     // 할부/현금 여부 확인
                     if (priceMatch[5].includes('할부')) {
@@ -1116,13 +1146,16 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                     
                     customerInfo['최종구매가'] = priceMatch[6].trim();
                 } else {
-                    // 현금 형식 패턴 확인 (전환지원금 포함)
-                    const cashConversionPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)\s*-\s*(전환지원금?|전환)\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/;
+                    // 현금 형식 패턴 확인 (추지와 전환지원금이 모두 있는 경우)
+                    const cashConversionPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원)\s+([\d,]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,]+))?\s*(?:-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/i;
                     const cashConversionMatch = text.match(cashConversionPattern);
                     
                     if (cashConversionMatch) {
                         customerInfo['출고가'] = cashConversionMatch[1].trim();
                         customerInfo['공시'] = cashConversionMatch[2].trim();
+                        if (cashConversionMatch[3]) customerInfo['추지'] = cashConversionMatch[3].trim();
+                        if (cashConversionMatch[4]) customerInfo['전환지원금'] = cashConversionMatch[4].trim();
+                        if (cashConversionMatch[5]) customerInfo['프리할부'] = cashConversionMatch[5].trim();
                         customerInfo['추지'] = cashConversionMatch[3].trim();
                         customerInfo['전환지원금'] = cashConversionMatch[5].trim();
                         customerInfo['프리할부'] = cashConversionMatch[6] ? cashConversionMatch[6].trim() : '0';
@@ -1634,14 +1667,34 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
 
         // 텍스트에리어 더블클릭 복사 함수
         function setupDoubleClickCopy() {
-            // 출력 컨테이너의 모든 텍스트에리어에 더블클릭 이벤트 추가
+            // 출력 컨테이너에 이벤트 위임 방식으로 더블클릭 이벤트 추가
             const outputContainer = document.getElementById('outputContainer');
-            const textareas = outputContainer.querySelectorAll('textarea');
             
-            textareas.forEach(textarea => {
-                textarea.removeEventListener('dblclick', handleDoubleClick);
-                textarea.addEventListener('dblclick', handleDoubleClick);
-            });
+            // 기존 이벤트 리스너 제거 (중복 방지)
+            outputContainer.removeEventListener('dblclick', handleTextareaDoubleClick);
+            
+            // 이벤트 위임을 사용하여 동적으로 추가된 textarea에도 적용
+            outputContainer.addEventListener('dblclick', handleTextareaDoubleClick);
+        }
+        
+        // 이벤트 위임을 위한 핸들러
+        function handleTextareaDoubleClick(event) {
+            // 이벤트가 발생한 요소가 textarea인지 확인
+            if (event.target.tagName === 'TEXTAREA') {
+                handleDoubleClick(event);
+            }
+        }
+        
+        // 토스트 메시지 표시 함수
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            // 2초 후에 토스트 숨기기
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
         }
         
         // 더블클릭 이벤트 핸들러
@@ -1654,10 +1707,17 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             // 클립보드에 복사
             navigator.clipboard.writeText(textarea.value).then(() => {
                 // 복사 성공 시 시각적 피드백
-                const originalBgColor = textarea.style.backgroundColor;
-                textarea.style.backgroundColor = '#d4edda';
+                const originalBorder = textarea.style.border;
+                textarea.style.border = '2px solid #4CAF50';
+                textarea.style.boxShadow = '0 0 0 2px rgba(76, 175, 80, 0.3)';
+                
+                // 토스트 메시지 표시
+                showToast('클립보드에 복사되었습니다!');
+                
+                // 0.5초 후에 원래 스타일로 복원
                 setTimeout(() => {
-                    textarea.style.backgroundColor = originalBgColor;
+                    textarea.style.border = originalBorder;
+                    textarea.style.boxShadow = '';
                 }, 500);
             }).catch(err => {
                 console.error('클립보드 복사 오류:', err);
