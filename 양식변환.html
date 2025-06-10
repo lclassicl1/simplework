@@ -430,6 +430,10 @@
                             min-height: 150px;
                             resize: vertical;
                         }
+                        #outputText1 {
+                            height: 170px !important;
+                            min-height: 170px;
+                        }
                     </style>
                     <div id="singleOutputContainer">
                         <div class="form-group">
@@ -1763,36 +1767,46 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             const currentTelecom = telecomSelect.value;
             const currentAgency = agencySelect.value;
             
-            telecomSelect.value = '';
-            agencySelect.innerHTML = '<option value="">대리점을 선택하세요</option>';
-            agencySelect.disabled = true;
-            
             // 출력 컨테이너 초기화 (기존 구조 유지)
             const outputContainer = document.getElementById('outputContainer');
             outputContainer.style.display = 'block';
             
-            // Reset to the original structure
+            // Reset to the original structure with proper Lux agency labels
             outputContainer.innerHTML = `
-                <!-- 럭스 전용 추가 textarea (신조/재고) -->
+                <!-- 럭스 전용 추가 textarea (신조/재고/개통) -->
                 <div id="luxExtraOutputs" style="display:none;">
                     <div class="form-group">
                         <label for="luxRequestText">신조요청양식:</label>
                         <textarea id="luxRequestText" class="output-textarea compact-textarea" placeholder="신조 요청 양식이 여기에 표시됩니다."></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="luxStockText">재고요청 양식:</label>
+                        <label for="luxStockText">재고요청양식:</label>
                         <textarea id="luxStockText" class="output-textarea compact-textarea" placeholder="재고 요청 양식이 여기에 표시됩니다."></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="luxMemoText">메모:</label>
-                        <textarea id="luxMemoText" class="output-textarea compact-textarea" placeholder="메모가 여기에 표시됩니다."></textarea>
+                        <label for="luxMemoText">개통요청양식:</label>
+                        <textarea id="luxMemoText" class="output-textarea compact-textarea" placeholder="개통 요청 양식이 여기에 표시됩니다."></textarea>
                     </div>
                 </div>
                 <style>
-                    .compact-textarea {
-                        height: 100px !important;
-                        min-height: 100px;
+                    #luxRequestText {
+                        height: 130px !important;
+                        min-height: 130px;
                         resize: vertical;
+                    }
+                    #luxStockText {
+                        height: 220px !important;
+                        min-height: 220px;
+                        resize: vertical;
+                    }
+                    #luxMemoText {
+                        height: 150px !important;
+                        min-height: 150px;
+                        resize: vertical;
+                    }
+                    #outputText1 {
+                        height: 170px !important;
+                        min-height: 170px;
                     }
                 </style>
                 <div id="singleOutputContainer">
@@ -1804,6 +1818,11 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                 <div id="splitOutputContainer" style="display: none;"></div>
                 <div id="keyValueTableContainer" style="display: none;"></div>
             `;
+            
+            // Reset telecom and agency selects after updating the output container
+            telecomSelect.value = '';
+            agencySelect.innerHTML = '<option value="">대리점을 선택하세요</option>';
+            agencySelect.disabled = true;
             
             // 더블클릭 이벤트 설정
             setupDoubleClickCopy();
