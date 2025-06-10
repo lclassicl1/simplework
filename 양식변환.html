@@ -406,12 +406,12 @@
                             <textarea id="luxRequestText" class="output-textarea compact-textarea"></textarea>
                         </div>
                         <div class="form-group">
-                            <label for="luxStockText">재고요청 양식:</label>
-                            <textarea id="luxStockText" class="output-textarea compact-textarea"></textarea>
+                            <label for="luxMemoText">재고요청양식:</label>
+                            <textarea id="luxMemoText" class="output-textarea compact-textarea"></textarea>
                         </div>
                         <div class="form-group">
-                            <label for="luxMemoText">메모:</label>
-                            <textarea id="luxMemoText" class="output-textarea compact-textarea"></textarea>
+                            <label for="luxStockText">개통요청양식:</label>
+                            <textarea id="luxStockText" class="output-textarea compact-textarea"></textarea>
                         </div>
                     </div>
                     <style>
@@ -680,7 +680,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                     if (['기기변경', '보상기변', '기변'].includes(subscriptionType)) {
                         prefix = '기변';
                     } else if (['번호이동', '번이'].includes(subscriptionType)) {
-                        prefix = '번';
+                        prefix = '번이';
                     } else if (['신규가입', '신규'].includes(subscriptionType)) {
                         prefix = '신규';
                     }
@@ -778,8 +778,16 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                         stock = `[럭스] ${name}님 / ${info['모델명'] || ''} / ${info['색상'] || ''} / ${plan} / ${subscriptionType} / ${info['할부현금여부'] || ''} ${info['최종구매가'] || ''}`;
                     }
                     
-                    // 메모 (기본값)
-                    const memo = `[메모]\n추가 메모 사항을 입력하세요.`;
+                    // 재고요청양식 (메모 텍스트에리어에 표시됨)
+                    const simIncluded = ['번호이동', '번이', '신규가입', '신규'].includes(subscriptionType) ? 'Y' : 'N';
+                    const memo = `□재고 요청서□
+매장상호 : 에이치엘
+고객명: ${name}
+연락처: ${contact}
+받을 주소: ${info['택배주소'] || info['배송주소지'] || ''}
+퀵/택배: 택배
+기종/색상: ${info['모델명'] || ''} / ${info['색상'] || ''}
+유심동봉여부: ${simIncluded}`;
                     
                     // 3개의 텍스트에리어에 들어갈 내용 반환
                     return {
@@ -1299,78 +1307,6 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                 customerInfo['유심일련번호'] = simSerialInput.value.trim();
             }
             
-            // 럭스 대리점이면 3개 textarea 보이기, 기존 textarea label 변경
-            if (agency === '럭스') {
-                if (luxExtraOutputs) luxExtraOutputs.style.display = 'block';
-                if (singleOutputContainer) singleOutputContainer.style.display = 'block';
-                if (outputTextLabel) outputTextLabel.textContent = '개통요청양식:';
-                
-                // 가입유형에 따른 신조요청양식 텍스트 생성
-                const subscriptionType = customerInfo['가입유형'] || '';
-                let requestTypeText = '';
-                
-                if (subscriptionType.includes('번호이동') || subscriptionType.includes('번이')) {
-                    requestTypeText = '번이';
-                } else if (subscriptionType.includes('신규가입') || subscriptionType.includes('신규')) {
-                    requestTypeText = '신규';
-                } else if (subscriptionType.includes('기기변경') || subscriptionType.includes('기변')) {
-                    requestTypeText = '기변';
-                } else {
-                    requestTypeText = '';
-                }
-                
-                // 신조요청양식 텍스트 설정 (1번째 textarea)
-                const luxRequestText = document.getElementById('luxRequestText');
-                if (luxRequestText) {
-                    // 주민번호 유효성 검사 (번호이동/번이인 경우)
-                    let juminNumber = customerInfo['주민번호'] || customerInfo['생년월일'] || '';
-                    let juminError = '';
-                    
-                    if ((subscriptionType.includes('번호이동') || subscriptionType.includes('번이')) && juminNumber) {
-                        const juminRegex = /^\d{6}-?[1-4]\d{6}$/;
-                        if (!juminRegex.test(juminNumber)) {
-                            juminError = ' (⚠️ 번이의 경우 신조하려면 주민번호 전체가 필요합니다 어드민 메모를 재확인해주세요.)';
-                        }
-                    }
-                    
-                    const requestHeader = requestTypeText ? `${requestTypeText} 신조요청후 유키반려` : '신조요청후 유키반려';
-                    luxRequestText.value = `${requestHeader}\n` +
-                                          `업체명: 에이치엘\n` +
-                                          `고객명: ${customerInfo['고객명'] || ''}\n` +
-                                          `전화번호: ${customerInfo['전화번호'] || customerInfo['연락처'] || ''}\n` +
-                                          `주민번호: ${juminNumber}${juminError}`;
-                }
-                
-                // 재고요청 양식 설정 (2번째 textarea)
-                const luxStockText = document.getElementById('luxStockText');
-                if (luxStockText) {
-                    // 유심 동봉 여부 결정
-                    let simIncluded = 'Y'; // 기본값 Y
-                    const simInfo = customerInfo['유심'] || '';
-                    
-                    // 유심 정보에 따라 조건부 설정
-                    if (simInfo.includes('기존')) {
-                        simIncluded = 'N';
-                    } else if (simInfo.includes('신규') || simInfo.includes('구매') || simInfo.includes('후납')) {
-                        simIncluded = 'Y';
-                    }
-                    
-                    // 재고 요청서 텍스트 생성
-                    luxStockText.value = `□재고 요청서□        
-매장상호 : 에이치엘        
-고객명 : ${customerInfo['고객명'] || ''}
-연락처 : ${customerInfo['전화번호'] || customerInfo['연락처'] || ''}
-받을 주소 : ${customerInfo['택배주소'] || customerInfo['배송주소지'] || ''}
-퀵/택배 : 택배
-기종/색상 : ${customerInfo['모델명'] || ''} ${customerInfo['색상'] || ''}
-유심동봉여부 : ${simIncluded}`;
-                }
-            } else {
-                if (luxExtraOutputs) luxExtraOutputs.style.display = 'none';
-                if (singleOutputContainer) singleOutputContainer.style.display = 'block';
-                if (outputTextLabel) outputTextLabel.textContent = '변환된 텍스트:';
-            }
-            
             // 콘솔에 객체 정보 출력 (디버깅용)
             console.log('추출된 고객 정보 객체:', customerInfo);
             console.table(customerInfo); // 테이블 형태로 출력하여 가독성 향상
@@ -1382,26 +1318,24 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             try {
                 // 특수 대리점 처리
                 const isSpecialAgency = (selectedTelecom === 'KT' && selectedAgency === '재희') || 
-                                      (selectedTelecom === 'LG' && selectedTelecom === '소리');
+                                      (selectedTelecom === 'LG' && selectedAgency === '소리');
                 const isLuxAgency = (selectedTelecom === 'SK' && selectedAgency === '럭스');
                 
-                // 럭스 대리점인 경우 3개의 텍스트에리어 표시
+                // 템플릿 가져오기 및 실행
+                const template = templates[selectedTelecom]?.[selectedAgency];
+                if (!template) {
+                    throw new Error('선택하신 대리점에 대한 템플릿을 찾을 수 없습니다.');
+                }
+                
+                // 템플릿 실행
+                const result = template(customerInfo);
+                
+                // 대리점 유형에 따른 처리
                 if (isLuxAgency) {
-                    // luxExtraOutputs 표시
-                    const luxOutputs = document.getElementById('luxExtraOutputs');
-                    if (luxOutputs) {
-                        luxOutputs.style.display = 'block';
-                    }
-                    // 다른 컨테이너들 숨기기
-                    singleOutputContainer.style.display = 'none';
-                    splitOutputContainer.style.display = 'none';
-                    keyValueTableContainer.style.display = 'none';
-                    
-                    // 템플릿 실행
-                    const template = templates[selectedTelecom][selectedAgency];
-                    if (template) {
-                        const result = template(customerInfo);
-                        // luxExtraOutputs 내부의 textarea들에 값 설정
+                    // 럭스 대리점인 경우 3개의 텍스트에리어 표시
+                    if (luxExtraOutputs) {
+                        luxExtraOutputs.style.display = 'block';
+                        // 템플릿 결과에서 값 설정
                         const luxRequestText = document.getElementById('luxRequestText');
                         const luxStockText = document.getElementById('luxStockText');
                         const luxMemoText = document.getElementById('luxMemoText');
@@ -1410,10 +1344,13 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                         if (luxStockText) luxStockText.value = result.stock || '';
                         if (luxMemoText) luxMemoText.value = result.memo || '';
                     }
-                    return;
-                }
-                // 재희 또는 소리 대리점인 경우
-                else if (isSpecialAgency) {
+                    
+                    // 다른 컨테이너들 숨기기
+                    if (singleOutputContainer) singleOutputContainer.style.display = 'none';
+                    if (splitOutputContainer) splitOutputContainer.style.display = 'none';
+                    if (keyValueTableContainer) keyValueTableContainer.style.display = 'none';
+                } else if (isSpecialAgency) {
+                    // 재희 또는 소리 대리점인 경우
                     // 추가 텍스트에리어 생성 및 표시 (키-값 테이블보다 먼저)
                     let additionalContainer = document.getElementById('additionalOutputContainer');
                     if (!additionalContainer) {
@@ -1458,24 +1395,17 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                     document.getElementById('additionalOutputText').value = additionalOutput;
                     return;
                 } else {
-                    // 다른 대리점의 경우 추가 컨테이너들 숨기기
+                    // 일반 대리점 처리
+                    // 추가 컨테이너들 숨기기
                     const additionalContainer = document.getElementById('additionalOutputContainer');
-                    const luxOutputs = document.getElementById('luxExtraOutputs');
-                    
                     if (additionalContainer) additionalContainer.style.display = 'none';
+                    
+                    // 럭스 출력 영역 숨기기
+                    const luxOutputs = document.getElementById('luxExtraOutputs');
                     if (luxOutputs) luxOutputs.style.display = 'none';
-                }
-                
-                // 일반 템플릿 사용
-                const template = templates[selectedTelecom][selectedAgency];
-                if (template) {
-                    // 키-값 테이블 컨테이너 숨기기
-                    keyValueTableContainer.style.display = 'none';
                     
                     // SK-큐브 또는 카파의 경우 양식이 두개로 분할됨
                     if (selectedTelecom === 'SK' && (selectedAgency === '큐브' || selectedAgency === '카파')) {
-                        const result = template(customerInfo);
-                        
                         // 단일 출력 컨테이너 숨기기
                         singleOutputContainer.style.display = 'none';
                         
@@ -1488,12 +1418,9 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                         splitOutputContainer.style.display = 'block';
                         
                         // 각 텍스트에리어에 결과 설정
-                        splitOutputContainer.querySelector('#outputText1').value = result.stockRequest;
-                        splitOutputContainer.querySelector('#outputText2').value = result.openRequest;
+                        splitOutputContainer.querySelector('#outputText1').value = result.stockRequest || '';
+                        splitOutputContainer.querySelector('#outputText2').value = result.openRequest || '';
                     } else if (selectedTelecom === 'SK' && selectedAgency === '나텔') {
-                        // 나텔의 경우도 양식이 두개로 분할됨
-                        const result = template(customerInfo);
-                        
                         // 단일 출력 컨테이너 숨기기
                         singleOutputContainer.style.display = 'none';
                         
@@ -1506,25 +1433,21 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                         splitOutputContainer.style.display = 'block';
                         
                         // 각 텍스트에리어에 결과 설정
-                        splitOutputContainer.querySelector('#outputText1').value = result.naStockRequest;
-                        splitOutputContainer.querySelector('#outputText2').value = result.naOpenRequest;
+                        splitOutputContainer.querySelector('#outputText1').value = result.naStockRequest || '';
+                        splitOutputContainer.querySelector('#outputText2').value = result.naOpenRequest || '';
                     } else {
                         // 단일 출력 형태
                         splitOutputContainer.style.display = 'none';
                         singleOutputContainer.style.display = 'block';
                         
                         // 결과 설정
-                        document.getElementById('outputText').value = template(customerInfo);
+                        document.getElementById('outputText').value = typeof result === 'object' ? 
+                            JSON.stringify(result, null, 2) : 
+                            String(result || '');
                     }
                     
                     // 더블클릭 이벤트 설정
                     setupDoubleClickCopy();
-                } else {
-                    // 템플릿이 없는 경우
-                    keyValueTableContainer.style.display = 'none';
-                    splitOutputContainer.style.display = 'none';
-                    singleOutputContainer.style.display = 'block';
-                    document.getElementById('outputText').value = '선택한 대리점에 대한 템플릿이 없습니다.';
                 }
             } catch (error) {
                 console.error('변환 중 오류 발생:', error);
@@ -1827,16 +1750,46 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             // 통신사 및 대리점 선택 초기화
             const telecomSelect = document.getElementById('telecom');
             const agencySelect = document.getElementById('agency');
+            const currentTelecom = telecomSelect.value;
+            const currentAgency = agencySelect.value;
+            
             telecomSelect.value = '';
             agencySelect.innerHTML = '<option value="">대리점을 선택하세요</option>';
             agencySelect.disabled = true;
             
-            // 출력 컨테이너 초기화
+            // 출력 컨테이너 초기화 (기존 구조 유지)
             const outputContainer = document.getElementById('outputContainer');
+            outputContainer.style.display = 'block';
+            
+            // Reset to the original structure
             outputContainer.innerHTML = `
-                <div id="singleOutputContainer" class="form-group">
-                    <label for="outputText">변환된 텍스트:</label>
-                    <textarea id="outputText" class="output-textarea" placeholder="여기에 변환된 결과가 표시됩니다. 더블클릭하면 복사됩니다."></textarea>
+                <!-- 럭스 전용 추가 textarea (신조/재고) -->
+                <div id="luxExtraOutputs" style="display:none;">
+                    <div class="form-group">
+                        <label for="luxRequestText">신조요청양식:</label>
+                        <textarea id="luxRequestText" class="output-textarea compact-textarea" placeholder="신조 요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="luxStockText">재고요청 양식:</label>
+                        <textarea id="luxStockText" class="output-textarea compact-textarea" placeholder="재고 요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="luxMemoText">메모:</label>
+                        <textarea id="luxMemoText" class="output-textarea compact-textarea" placeholder="메모가 여기에 표시됩니다."></textarea>
+                    </div>
+                </div>
+                <style>
+                    .compact-textarea {
+                        height: 100px !important;
+                        min-height: 100px;
+                        resize: vertical;
+                    }
+                </style>
+                <div id="singleOutputContainer">
+                    <div class="form-group">
+                        <label id="outputTextLabel" for="outputText">변환된 텍스트:</label>
+                        <textarea id="outputText" class="output-textarea" placeholder="여기에 변환된 결과가 표시됩니다. 더블클릭하면 복사됩니다."></textarea>
+                    </div>
                 </div>
                 <div id="splitOutputContainer" style="display: none;"></div>
                 <div id="keyValueTableContainer" style="display: none;"></div>
@@ -1847,6 +1800,12 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             
             // 입력 필드에 포커스
             document.getElementById('inputText').focus();
+            
+            // If the current selection was 럭스, re-enable the agency select
+            if (currentTelecom === 'SK' && currentAgency === '럭스') {
+                updateAgencies();
+                document.getElementById('agency').value = '럭스';
+            }
         }
         // 대리점 정보 팝업 함수
         function showAgencyInfo() {
