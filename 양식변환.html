@@ -500,6 +500,22 @@
                             <textarea id="luxStockText" class="output-textarea compact-textarea"></textarea>
                         </div>
                     </div>
+                    
+                    <!-- 드블랙 전용 추가 textarea (신조/재고/개통) -->
+                    <div id="dblackExtraOutputs" style="display:none;">
+                        <div class="form-group">
+                            <label for="dblackRequestText">신조요청양식:</label>
+                            <textarea id="dblackRequestText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="dblackStockText">재고요청양식:</label>
+                            <textarea id="dblackStockText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="dblackMemoText">개통요청양식:</label>
+                            <textarea id="dblackMemoText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                    </div>
                     <style>
                         #luxRequestText {
                             height: 130px !important;
@@ -1030,7 +1046,94 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                     
                     return { stockRequest, openRequest };
                 }, 
-                '드블랙': (info) => `[드블랙] ${info.고객명} / ${info.모델명} / ${info.색상} / ${info.요금제} / ${info.가입유형} / ${info.할부현금여부} ${info.최종구매가}원`,
+                '드블랙': (info) => {
+                    // 기본 정보 처리
+                    const name = info['고객명'] || '';
+                    const regNum = info['주민번호'] || info['생년월일'] || '';
+                    const contact = info['전화번호'] || info['개통번호'] || info['연락처'] || '';
+                    const model = info['모델명'] || '';
+                    const color = info['색상'] || '';
+                    const plan = info['요금제'] || '';
+                    const subscriptionType = info['가입유형'] || '';
+                    const serialNum = info['단말기일련번호'] || '';
+                    const usimNum = info['유심일련번호'] || info['유심'] || '';
+                    const addonService = info['부가서비스'] || '';
+                    const insurance = info['보험'] || '';
+                    
+                    // 할부 정보 처리
+                    let installment = '';
+                    if (info['할부현금여부'] === '할부') {
+                        installment = `${info['할부개월수'] || '24'}`;
+                    } else if (info['할부현금여부'] === '현금') {
+                        installment = '0';
+                    }
+                    
+                    // 할부원금 정보
+                    let principal = '0';
+                    if (info['할부현금여부'] === '할부') {
+                        principal = info['최종구매가'] || '0';
+                    }
+                    
+                    // 현금완납 정보
+                    const cashPayment = info['할부현금여부'] === '현금' ? 'O' : '';
+                    
+                    // 선약 & 공시 정보
+                    let contractInfo = '';
+                    if (info['공시선약여부'] === '공시지원') {
+                        contractInfo = `공시 ${info['약정개월수'] || '24'}`;
+                    } else if (info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') {
+                        contractInfo = `선약 ${info['약정개월수'] || '24'}`;
+                    }
+                    
+                    // 1. 신조요청
+                    const request = `[드블랙 신조요청]
+고객명: ${name}
+연락처: ${contact}
+모델: ${model}
+색상: ${color}
+요금제: ${plan}
+가입유형: ${subscriptionType}
+할부: ${installment}개월
+할부원금: ${principal}원
+현금완납: ${cashPayment}
+선약&공시: ${contractInfo}`;
+
+                    // 2. 재고요청
+                    const stock = `[드블랙 재고요청]
+고객명: ${name}
+연락처: ${contact}
+모델: ${model}
+색상: ${color}
+일련번호: ${serialNum}
+요금제: ${plan}
+할부: ${installment}개월
+할부원금: ${principal}원
+현금완납: ${cashPayment}
+선약&공시: ${contractInfo}`;
+
+                    // 3. 개통요청
+                    const memo = `[드블랙 개통요청]
+고객명: ${name}
+주민번호: ${regNum}
+개통번호: ${contact}
+단말정보: ${model} ${color}
+일련번호: ${serialNum}
+요금제: ${plan}
+할부: ${installment}개월
+프리: ${info['프리할부'] || '0'}
+할부원금: ${principal}원
+현금완납: ${cashPayment}
+선약&공시: ${contractInfo}
+유심: ${usimNum}
+부가: ${addonService}
+보험가입여부: ${insurance}`;
+
+                    return {
+                        request: request,
+                        stock: stock,
+                        memo: memo
+                    };
+                }, 
                 '장천': (info) => `[장천] ${info.고객명} - ${info.모델명} ${info.색상} - ${info.요금제} - ${info.가입유형} - ${info.할부현금여부} ${info.최종구매가}원`,
                 '삼보/엠디도매': (info) => `[삼보/엠디도매]\n${info.고객명}\n${info.모델명}\n${info.색상}\n${info.요금제}\n${info.가입유형}\n${info.할부현금여부} ${info.최종구매가}원`,
                 '코웨어': (info) => {
@@ -1451,6 +1554,15 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                 const isSpecialAgency = (selectedTelecom === 'KT' && selectedAgency === '재희') || 
                                       (selectedTelecom === 'LG' && selectedAgency === '소리');
                 const isLuxAgency = (selectedTelecom === 'SK' && selectedAgency === '럭스');
+                const isDblackAgency = (selectedTelecom === 'SK' && selectedAgency === '드블랙');
+                
+                // 드블랙 대리점 정보 추가
+                if (isDblackAgency) {
+                    // 필요한 필드가 없을 경우 기본값 설정
+                    if (!customerInfo.할부현금여부) customerInfo.할부현금여부 = '현금';
+                    if (!customerInfo.할부개월수 && customerInfo.할부현금여부 === '할부') customerInfo.할부개월수 = '24';
+                    if (!customerInfo.최종구매가) customerInfo.최종구매가 = '0';
+                }
                 
                 // 템플릿 가져오기 및 실행
                 const template = templates[selectedTelecom]?.[selectedAgency];
@@ -1465,18 +1577,34 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                 saveToHistory(customerInfo, selectedTelecom, selectedAgency);
                 
                 // 대리점 유형에 따른 처리
-                if (isLuxAgency) {
-                    // 럭스 대리점인 경우 3개의 텍스트에리어 표시
-                    if (luxExtraOutputs) {
-                        luxExtraOutputs.style.display = 'block';
+                if (isLuxAgency || isDblackAgency) {
+                    // 럭스 또는 드블랙 대리점인 경우 3개의 텍스트에리어 표시
+                    const outputDivId = isLuxAgency ? 'luxExtraOutputs' : 'dblackExtraOutputs';
+                    const outputDiv = document.getElementById(outputDivId);
+                    
+                    if (outputDiv) {
+                        outputDiv.style.display = 'block';
                         // 템플릿 결과에서 값 설정
-                        const luxRequestText = document.getElementById('luxRequestText');
-                        const luxStockText = document.getElementById('luxStockText');
-                        const luxMemoText = document.getElementById('luxMemoText');
+                        const requestField = isLuxAgency ? 'luxRequestText' : 'dblackRequestText';
+                        const stockField = isLuxAgency ? 'luxStockText' : 'dblackStockText';
+                        const memoField = isLuxAgency ? 'luxMemoText' : 'dblackMemoText';
                         
-                        if (luxRequestText) luxRequestText.value = result.request || '';
-                        if (luxStockText) luxStockText.value = result.stock || '';
-                        if (luxMemoText) luxMemoText.value = result.memo || '';
+                        const requestText = document.getElementById(requestField);
+                        const stockText = document.getElementById(stockField);
+                        const memoText = document.getElementById(memoField);
+                        
+                        if (requestText) requestText.value = result.request || '';
+                        if (stockText) stockText.value = result.stock || '';
+                        if (memoText) memoText.value = result.memo || '';
+                        
+                        // 다른 대리점의 텍스트에리어는 숨기기
+                        if (isLuxAgency) {
+                            const dblackOutputs = document.getElementById('dblackExtraOutputs');
+                            if (dblackOutputs) dblackOutputs.style.display = 'none';
+                        } else {
+                            const luxOutputs = document.getElementById('luxExtraOutputs');
+                            if (luxOutputs) luxOutputs.style.display = 'none';
+                        }
                     }
                     
                     // 다른 컨테이너들 숨기기
@@ -2065,7 +2193,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             const outputContainer = document.getElementById('outputContainer');
             outputContainer.style.display = 'block';
             
-            // Reset to the original structure with proper Lux agency labels
+            // Reset to the original structure with proper agency labels for both 럭스 and 드블랙
             outputContainer.innerHTML = `
                 <!-- 럭스 전용 추가 textarea (신조/재고/개통) -->
                 <div id="luxExtraOutputs" style="display:none;">
@@ -2082,18 +2210,35 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                         <textarea id="luxMemoText" class="output-textarea compact-textarea" placeholder="개통 요청 양식이 여기에 표시됩니다."></textarea>
                     </div>
                 </div>
+                
+                <!-- 드블랙 전용 추가 textarea (신조/재고/개통) -->
+                <div id="dblackExtraOutputs" style="display:none;">
+                    <div class="form-group">
+                        <label for="dblackRequestText">신조요청양식:</label>
+                        <textarea id="dblackRequestText" class="output-textarea compact-textarea" placeholder="신조 요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dblackStockText">재고요청양식:</label>
+                        <textarea id="dblackStockText" class="output-textarea compact-textarea" placeholder="재고 요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dblackMemoText">개통요청양식:</label>
+                        <textarea id="dblackMemoText" class="output-textarea compact-textarea" placeholder="개통 요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                </div>
                 <style>
-                    #luxRequestText {
+                    /* 럭스 텍스트에리어 스타일 */
+                    #luxRequestText, #dblackRequestText {
                         height: 130px !important;
                         min-height: 130px;
                         resize: vertical;
                     }
-                    #luxStockText {
+                    #luxStockText, #dblackStockText {
                         height: 220px !important;
                         min-height: 220px;
                         resize: vertical;
                     }
-                    #luxMemoText {
+                    #luxMemoText, #dblackMemoText {
                         height: 150px !important;
                         min-height: 150px;
                         resize: vertical;
@@ -2124,10 +2269,10 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             // 입력 필드에 포커스
             document.getElementById('inputText').focus();
             
-            // If the current selection was 럭스, re-enable the agency select
-            if (currentTelecom === 'SK' && currentAgency === '럭스') {
+            // If the current selection was 럭스 or 드블랙, re-enable the agency select
+            if (currentTelecom === 'SK' && (currentAgency === '럭스' || currentAgency === '드블랙')) {
                 updateAgencies();
-                document.getElementById('agency').value = '럭스';
+                document.getElementById('agency').value = currentAgency;
             }
         }
         // 대리점 정보 팝업 함수
