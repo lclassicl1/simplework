@@ -654,30 +654,30 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                     // 재고요청 양식
                     const stockRequest = `★재고요청(SK3)
 택배or퀵 :	
-이름:	${name}
-연락처 :	${contact}
-주소 :	${address}
-유심 :	${info['유심'] || ''}
-모델명 :	${info['모델명'] || ''}
-색상 :	${info['색상'] || ''}`;
+이름: ${name}
+연락처 : ${contact}
+주소 : ${address}
+유심 : ${info['유심'] || ''}
+모델명 : ${info['모델명'] || ''}
+색상 : ${info['색상'] || ''}`;
                     
                     // 개통요청 양식
                     const openRequest = `■SK3 개통요청		
-◎ 고객명 / 번호 :	${name} / ${contact}	
-◎ 주민번호 :	${info['주민번호'] || info['생년월일'] || ''}	
-◎ 통신사/인증 :	${telecom}	
-◎ 모델/색상 :	${info['모델명'] || ''} / ${info['색상'] || ''}	
-◎ 일련번호 :	${info['단말기일련번호'] || ''}	
-◎ 유심 일련번호 :	${info['유심일련번호'] || ''}	
+◎ 고객명 / 번호 : ${name} / ${contact}	
+◎ 주민번호 : ${info['주민번호'] || info['생년월일'] || ''}	
+◎ 통신사/인증 : ${telecom}	
+◎ 모델/색상 : ${info['모델명'] || ''} / ${info['색상'] || ''}	
+◎ 일련번호 : ${info['단말기일련번호'] || ''}	
+◎ 유심 일련번호 : ${info['유심일련번호'] || ''}	
 ◎ 유심비용:	${info['유심'] || ''}	
-◎ 요금제 / 혜택 :	${info['요금제'] || ''}	
-◎ 공시지원금 :	${info['공시'] || '0'}	
-◎ 추지(15%) :	${info['추지'] || '0'}	${info['전환지원금'] && info['전환지원금'] !== '0' ? `
-◎ 전환지원금 :	${info['전환지원금']}	` : ''}
-◎ 고객선납 :	${info['프리할부'] || '0'}	
+◎ 요금제 / 혜택 : ${info['요금제'] || ''}	
+◎ 공시지원금 : ${info['공시'] || '0'}	
+◎ 추지(15%) : ${info['추지'] || '0'}	${info['전환지원금'] && info['전환지원금'] !== '0' ? `
+◎ 전환지원금 : ${info['전환지원금']}	` : ''}
+◎ 고객선납 : ${info['프리할부'] || '0'}	
 ◎ 할부원금 : ${paymentInfo}		
-◎ 약정유형 :	${info['공시선약여부'] || ''} ${info['약정개월수'] || ''}	
-◎ 부가서비스 :	${info['부가서비스'] || ''}`;
+◎ 약정유형 : ${info['공시선약여부'] || ''} ${info['약정개월수'] || ''}	
+◎ 부가서비스 : ${info['부가서비스'] || ''}`;
                     
                     return { stockRequest, openRequest };
                 },
@@ -831,11 +831,11 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                     // 배송요청 양식 (첫 번째 textarea)
                     const naStockRequest = `택배요청	
 	
-주소 :	${naAddress}
-수취인 :	${naName}
-연락처 :	${naContact}
-기종/색상:	${naModel} / ${naColor}
-유심 :	${info['유심일련번호'] || ''}`;
+주소 : ${naAddress}
+수취인 : ${naName}
+연락처 : ${naContact}
+기종/색상: ${naModel} / ${naColor}
+유심 : ${info['유심일련번호'] || ''}`;
                     
                     // 개통요청 양식 (두 번째 textarea)
                     // 약정 정보 처리 (공시지원 또는 선택약정 + 개월수)
@@ -862,18 +862,18 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                     
                     const naOpenRequest = `개통요청 / 전문화	
 유형: ${naSubscriptionType}
-고객명 :	${naName}
-생년월일 :	${birthOrRegNum}
-번호 :	${naContact}
-기종/색상 :	${naModel} / ${naColor}
-일련번호 :	${info['단말기일련번호'] || ''}
-유심 :	${info['유심일련번호'] || ''}
-요금제 :	${naPlan}
-약정 :	${contractInfo}
-선납 :	${prepayInfo}
+고객명 : ${naName}
+생년월일 : ${birthOrRegNum}
+번호 : ${naContact}
+기종/색상 : ${naModel} / ${naColor}
+일련번호 : ${info['단말기일련번호'] || ''}
+유심 : ${info['유심일련번호'] || ''}
+요금제 : ${naPlan}
+약정 : ${contractInfo}
+선납 : ${prepayInfo}
 원금 : ${principalInfo}	
-개월 :	${monthsInfo}
-부가 :	${info['부가서비스'] || ''}
+개월 : ${monthsInfo}
+부가 : ${info['부가서비스'] || ''}
 보험 :	`;
                     
                     return { naStockRequest, naOpenRequest };
