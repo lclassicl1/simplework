@@ -114,6 +114,13 @@
         .output-textarea {
             min-height: 300px;
         }
+        
+        /* 드블랙 신조요청 전용 textarea 스타일 */
+        .drblack-request-textarea {
+            min-height: 150px;  /* 기존 높이의 절반 */
+            height: 150px;      /* 고정 높이 설정 */
+            resize: vertical;   /* 세로 크기 조절만 가능하도록 */
+        }
 
         .button-group {
             display: flex;
@@ -528,6 +535,12 @@
                             resize: vertical;
                         }
                         #luxMemoText {
+                            height: 150px !important;
+                            min-height: 150px;
+                            resize: vertical;
+                        }
+                        /* 드블랙 신조요청 textarea 스타일 */
+                        #dblackRequestText {
                             height: 150px !important;
                             min-height: 150px;
                             resize: vertical;
@@ -1085,31 +1098,68 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                         contractInfo = `선약 ${info['약정개월수'] || '24'}`;
                     }
                     
-                    // 1. 신조요청
-                    const request = `[드블랙 신조요청]
-고객명: ${name}
-연락처: ${contact}
-모델: ${model}
-색상: ${color}
-요금제: ${plan}
-가입유형: ${subscriptionType}
-할부: ${installment}개월
-할부원금: ${principal}원
-현금완납: ${cashPayment}
-선약&공시: ${contractInfo}`;
+                    // 1. 신조요청 (가입유형 및 미성년자여부에 따라 다른 형식으로 출력)
+                    let request = '';
+                    const isDeviceChange = ['기기변경', '기변'].includes(subscriptionType);
+                    const isNumberPortability = ['번호이동', '번이'].includes(subscriptionType);
+                    const isMinor = info['미성년자여부'] === 'Y';
+                    
+                    if (isMinor && (isDeviceChange || isNumberPortability)) {
+                        // 미성년자 번호이동 & 기변 신조요청
+                        request = `■미성년자 번호이동 & 기변 신조요청■
+
+＃고객명 ${name}
+＃연락처 ${contact}
+＃주민번호 ${regNum}
+＃법대 성함 / 주민번호 ${info['법정대리인이름'] || ''} / ${info['법정대리인주민번호'] || ''}`;
+                    } else if (isDeviceChange) {
+                        // 기변 신조요청
+                        request = `■기변 신조요청■
+
+＃고객명 ${name}
+＃연락처 ${contact}
+＃생년월일 ${regNum}`; // 생년월일만 추출 (앞 6자리)
+                    } else if (isNumberPortability) {
+                        // 번호이동 신조요청
+                        request = `■번호이동 신조요청■
+
+＃고객명 ${name}
+＃연락처 ${contact}
+＃주민번호 ${regNum}`;
+                    } else {
+                        // 기본 신조요청
+                        request = `[드블랙 신조요청]
+
+＃고객명	${name}
+＃연락처	${contact}
+＃모델	${model}
+＃색상	${color}
+＃요금제	${plan}
+＃가입유형	${subscriptionType}
+＃할부	${installment}개월
+＃할부원금	${principal}원
+＃현금완납	${cashPayment}
+＃선약&공시	${contractInfo}`;
+                    }
 
                     // 2. 재고요청
-                    const stock = `[드블랙 재고요청]
-고객명: ${name}
-연락처: ${contact}
-모델: ${model}
-색상: ${color}
-일련번호: ${serialNum}
-요금제: ${plan}
-할부: ${installment}개월
-할부원금: ${principal}원
-현금완납: ${cashPayment}
-선약&공시: ${contractInfo}`;
+                    // 유심 발송 여부 결정 (유심 항목에 '기존', '재활용', 'e심', '이심'이 포함되어 있으면 'N', 아니면 'Y')
+                    const usimValue = info['유심'] || '';
+                    const usimStatus = (usimValue.includes('기존') || 
+                                      usimValue.includes('재활용') || 
+                                      usimValue.includes('e심') || 
+                                      usimValue.includes('이심')) ? 'N' : 'Y';
+                    
+                    const stock = `■ 택배 배송 요청 양식		
+* 개통유형 : ${subscriptionType}
+* 매장명 : 라온아이
+＊담당자명 : 
+＊개통자명 : ${name}
+＊고객명 : ${name}
+＊연락처 : ${contact}
+＊주소 : ${info['택배주소'] || info['배송주소지'] || ''}
+＊모델(색상 및 용량) :	${model} ${color}
+＊유심 발송 여부 : ${usimStatus}`;
 
                     // 3. 개통요청
                     const memo = `[드블랙 개통요청]
