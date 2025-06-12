@@ -5,6 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>통신사 양식 변환기</title>
     <style>
+        /* 모델 검색 결과 스타일 */
+        .model-result:hover {
+            background-color: #f5f5f5;
+        }
+
+        /* 검색 결과 스크롤바 스타일 */
+        #modelSearchResults::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #modelSearchResults::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        #modelSearchResults::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        #modelSearchResults::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
         /* Toast Notification Styles */
         .toast {
             position: fixed;
@@ -435,11 +459,27 @@
     <div class="container">
         <h1>어드민 양식 변환기</h1>
         
-        <div class="url-container">
-            <select id="usefulUrls" onchange="openSelectedUrl()">
-                <option value="">유용한 사이트 목록</option>
-                <!-- 사이트 목록은 이곳에 추가됩니다 -->
-            </select>
+        <div class="url-container" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; flex-wrap: nowrap; width: 100%;">
+            <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
+                <label for="usefulUrls" style="font-size: 14px; color: #555;">유용한 사이트:</label>
+                <select id="usefulUrls" onchange="openSelectedUrl()" style="min-width: 200px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    <option value="">선택하세요</option>
+                    <!-- 사이트 목록은 이곳에 추가됩니다 -->
+                </select>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-left: auto;">
+                <label for="modelSearch" style="font-size: 14px; color: #555;">모델 검색:</label>
+                <div style="position: relative; min-width: 250px;">
+                    <input type="text" id="modelSearch" 
+                           placeholder="예: S24, 아이폰" 
+                           style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    <div id="modelSearchResults" style="display: none; position: absolute; top: 100%; left: 0; right: 0; 
+                          background: white; border: 1px solid #ddd; border-radius: 4px; max-height: 300px; 
+                          overflow-y: auto; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+            </div>
         </div>
         
         <div class="layout-container">
@@ -2696,9 +2736,269 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             }
         }
         
+        // 모델 데이터베이스 설정
+        const MODEL_STORAGE_KEY = 'deviceModelDatabase_v1'; // 변경이력관리와 구분되는 고유 키
+        let deviceModelDatabase = {};
+        
+        // 기본 모델 데이터 (초기값으로 사용)
+        const defaultDeviceModels = {
+            // 삼성
+            "SM-S921N": { name: "갤럭시S24", brand: "삼성" },
+            "SM-S926N": { name: "갤럭시S24+", brand: "삼성" },
+            "SM-S928N": { name: "갤럭시S24 Ultra", brand: "삼성" },
+            "SM-F946N": { name: "갤럭시Z폴드5", brand: "삼성" },
+            "SM-F731N": { name: "갤럭시Z플립5", brand: "삼성" },
+            "SM-S911N": { name: "갤럭시S23", brand: "삼성" },
+            "SM-S916N": { name: "갤럭시S23+", brand: "삼성" },
+            "SM-S918N": { name: "갤럭시S23 Ultra", brand: "삼성" },
+            "SM-S931N": { name: "갤럭시S25", brand: "삼성"},
+            "SM-S936N": { name: "갤럭시S25+", brand: "삼성"},
+            "SM-S938N": { name: "갤럭시S25 Ultra", brand: "삼성"},
+            
+            // 애플
+            "A2892": { name: "아이폰15", brand: "애플" },
+            "A2846": { name: "아이폰15 Pro", brand: "애플" },
+            "A2890": { name: "아이폰15 Pro Max", brand: "애플" },
+            "A2882": { name: "아이폰14", brand: "애플" },
+            "A2893": { name: "아이폰14 Pro", brand: "애플" },
+            "A2895": { name: "아이폰14 Pro Max", brand: "애플" }
+        };
+        
+        // localStorage에서 모델 데이터 로드
+        function loadModelsFromStorage() {
+            try {
+                const savedData = localStorage.getItem(MODEL_STORAGE_KEY);
+                if (savedData) {
+                    return JSON.parse(savedData);
+                }
+            } catch (e) {
+                console.error('모델 데이터 로드 중 오류 발생:', e);
+            }
+            return null;
+        }
+        
+        // 모델 데이터를 localStorage에 저장
+        function saveModelsToStorage() {
+            try {
+                localStorage.setItem(MODEL_STORAGE_KEY, JSON.stringify(deviceModelDatabase));
+                return true;
+            } catch (e) {
+                console.error('모델 데이터 저장 중 오류 발생:', e);
+                return false;
+            }
+        }
+        
+        // 기본 모델로 초기화하는 함수
+        function resetToDefaultModels() {
+            deviceModelDatabase = JSON.parse(JSON.stringify(defaultDeviceModels));
+            saveModelsToStorage();
+            console.log('모델 데이터가 기본값으로 초기화되었습니다.');
+            return true;
+        }
+
+        // 모델 데이터베이스 초기화 (저장된 데이터가 없으면 기본값 사용)
+        function initializeModelDatabase() {
+            const savedModels = loadModelsFromStorage();
+            if (savedModels && Object.keys(savedModels).length > 0) {
+                deviceModelDatabase = savedModels;
+                console.log('저장된 모델 데이터를 불러왔습니다.');
+            } else {
+                resetToDefaultModels();
+                console.log('기본 모델 데이터를 사용합니다.');
+            }
+        }
+
+        // 모델 검색 함수
+        function searchDeviceModel(query) {
+            if (!query) return [];
+            
+            query = query.toLowerCase().trim();
+            const results = [];
+            
+            // 모델명, 모델번호, 브랜드명으로 검색
+            for (const [modelNumber, model] of Object.entries(deviceModelDatabase)) {
+                if (modelNumber.toLowerCase().includes(query) || 
+                    model.name.toLowerCase().includes(query) ||
+                    model.brand.toLowerCase().includes(query)) {
+                    results.push({ modelNumber, ...model });
+                }
+            }
+            
+            return results;
+        }
+
+        // 검색 결과 표시 함수
+        function displayDeviceSearchResults(results) {
+            const resultsContainer = document.getElementById('modelSearchResults');
+            resultsContainer.innerHTML = '';
+            
+            if (results.length === 0) {
+                resultsContainer.innerHTML = '<div style="padding: 10px; color: #888;">검색 결과가 없습니다.</div>';
+                resultsContainer.style.display = 'block';
+                return;
+            }
+            
+            results.forEach(model => {
+                const item = document.createElement('div');
+                item.className = 'model-result';
+                item.style.padding = '10px';
+                item.style.borderBottom = '1px solid #eee';
+                item.style.cursor = 'pointer';
+                item.innerHTML = `
+                    <div style="font-weight: bold;">${model.name}</div>
+                    <div style="font-size: 0.9em; color: #666;">
+                        <span>${model.brand}</span> · 
+                        <span>${model.modelNumber}</span>
+                    </div>
+                `;
+                
+                // 클릭 이벤트 - 선택한 모델의 번호를 클립보드에 복사
+                item.addEventListener('click', (event) => {
+                    // 기본 동작 방지 (링크 이동 등 방지)
+                    event.preventDefault();
+                    
+                    // 모델 번호를 클립보드에 복사
+                    navigator.clipboard.writeText(model.modelNumber).then(() => {
+                        // 검색창에는 모델명을 유지
+                        document.getElementById('modelSearch').value = model.name;
+                        resultsContainer.style.display = 'none';
+                        
+                        // 성공 메시지 표시 (모델명과 함께 모델 번호도 표시)
+                        showToast(`모델 번호가 복사되었습니다: ${model.modelNumber} (${model.name})`);
+                    }).catch(err => {
+                        console.error('클립보드 복사 실패:', err);
+                        showToast('모델 번호 복사에 실패했습니다.');
+                    });
+                });
+                
+                resultsContainer.appendChild(item);
+            });
+            
+            resultsContainer.style.display = 'block';
+        }
+
+        // 모델 데이터 관리 함수 (콘솔에서 사용)
+        const modelManagement = {
+            // 모델 추가/수정
+            add: function(modelNumber, name, brand) {
+                if (!modelNumber || !name) {
+                    console.error('모델 번호와 이름은 필수입니다.');
+                    return false;
+                }
+                
+                deviceModelDatabase[modelNumber] = {
+                    name: name,
+                    brand: brand || '기타'
+                };
+                
+                // 변경사항 저장
+                saveModelsToStorage();
+                console.log(`모델이 추가/수정되었습니다: ${modelNumber} - ${name}`);
+                return true;
+            },
+            
+            // 모델 삭제
+            remove: function(modelNumber) {
+                if (deviceModelDatabase[modelNumber]) {
+                    const modelName = deviceModelDatabase[modelNumber].name;
+                    delete deviceModelDatabase[modelNumber];
+                    
+                    // 변경사항 저장
+                    saveModelsToStorage();
+                    console.log(`모델이 삭제되었습니다: ${modelNumber} - ${modelName}`);
+                    return true;
+                }
+                console.error('해당 모델을 찾을 수 없습니다.');
+                return false;
+            },
+            
+            // 모든 모델 목록 보기
+            list: function() {
+                console.log('=== 등록된 모델 목록 ===');
+                for (const [modelNumber, model] of Object.entries(deviceModelDatabase)) {
+                    console.log(`[${modelNumber}] ${model.brand} ${model.name}`);
+                }
+                console.log('======================');
+                return deviceModelDatabase;
+            },
+            
+            // 저장소 초기화 (기본 모델로 초기화)
+            reset: function() {
+                return this.resetToDefaults();
+            },
+            
+            // 저장소 비우기 (기본 모델로 초기화)
+            clear: function() {
+                return this.resetToDefaults();
+            },
+            
+            // 기본 모델로 초기화
+            resetToDefaults: function() {
+                if (confirm('모든 모델 데이터를 기본값으로 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                    return resetToDefaultModels();
+                }
+                return false;
+            },
+            
+            // 별칭 도움말
+            help: function() {
+                console.log('=== 모델 관리 명령어 도움말 ===');
+                console.log('추가: model.add("모델번호", "모델이름", "제조사") 또는 model.a(...)');
+                console.log('삭제: model.remove("모델번호") 또는 model.r(...)');
+                console.log('목록: model.list() 또는 model.l()');
+                console.log('초기화: model.reset() 또는 model.rs() (빈 데이터로 초기화)');
+                console.log('기본값 복원: model.resetToDefaults() (기본 모델로 초기화)');
+                console.log('전체삭제: model.clear() 또는 model.c() (모든 데이터 삭제)');
+                console.log('도움말: model.help()');
+                console.log('======================================');
+                return true;
+            }
+        };
+
+        // 모델 데이터베이스 초기화 실행
+        initializeModelDatabase();
+        
+        // window 객체에 등록
+        window.model = window.manageDeviceModels = modelManagement;
+        
+        // 별칭 등록
+        window.model.a = modelManagement.add;
+        window.model.r = modelManagement.remove;
+        window.model.l = modelManagement.list;
+        window.model.rs = modelManagement.reset;
+        window.model.c = modelManagement.clear;
+        
+        console.log('모델 관리 명령어가 등록되었습니다. model.help()로 도움말을 확인하세요.');
+        
         document.addEventListener('DOMContentLoaded', function() {
             // 초기 텍스트에리어에 더블클릭 이벤트 설정
             setupDoubleClickCopy();
+            
+            // 모델 검색 이벤트 리스너 추가
+            const searchInput = document.getElementById('modelSearch');
+            const searchResults = document.getElementById('modelSearchResults');
+            
+            if (searchInput) {
+                // 입력 이벤트
+                searchInput.addEventListener('input', (e) => {
+                    const results = searchDeviceModel(e.target.value);
+                    displayDeviceSearchResults(results);
+                });
+                
+                // 포커스 아웃 시 약간의 지연 후 결과창 숨기기
+                searchInput.addEventListener('blur', () => {
+                    setTimeout(() => {
+                        searchResults.style.display = 'none';
+                    }, 200);
+                });
+                
+                // 외부 클릭 시 결과창 숨기기
+                document.addEventListener('click', (e) => {
+                    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                        searchResults.style.display = 'none';
+                    }
+                });
+            }
             
             // 초기화 메시지 추가
             const outputText = document.getElementById('outputText');
