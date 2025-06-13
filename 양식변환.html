@@ -453,6 +453,25 @@
                 width: 100%;
             }
         }
+
+        /* 기존 스타일 */
+        .output-textarea {
+            width: 100%;
+            min-height: 200px;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: 'Nanum Gothic', sans-serif;
+            font-size: 14px;
+            resize: vertical;
+        }
+        
+        /* ACT 택배용 작은 textarea */
+        .act-stock-textarea {
+            min-height: 100px !important;
+            height: 100px !important;
+        }
     </style>
 </head>
 <body>
@@ -602,6 +621,18 @@
                     <div id="splitOutputContainer" style="display: none;">
                     </div>
                     
+                    <!-- ACT(택배) 전용 추가 textarea (접수확인/개통요청) -->
+                    <div id="actExtraOutputs" style="display:none;">
+                        <div class="form-group">
+                            <label for="actStockText">접수확인양식:</label>
+                            <textarea id="actStockText" class="output-textarea compact-textarea act-stock-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="actOpenText">개통요청양식:</label>
+                            <textarea id="actOpenText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                    </div>
+                    
                     <div id="keyValueTableContainer" style="display: none;">
                     </div>
                 </div>
@@ -660,7 +691,7 @@
     <script>
         // 통신사별 대리점 목록
         const agencies = {
-            'SK': ['큐브', '럭스', '나텔', '밀리언', '드블랙', '카파', '장천', '삼보/엠디도매', '코웨어'],
+            'SK': ['큐브', '럭스', '나텔', '밀리언', '드블랙', '카파', '장천', '삼보/엠디도매', '코웨어', 'ACT(택배)'],
             'KT': ['오앤티', '재희', '안산/이스턴'],
             'LG': ['소리', '제이/휴넷']
         };
@@ -761,7 +792,12 @@ dodam8989!
 티게이트 접수건은 개통처에서 신조 해줌 // 티게이트 메모 보면 알수 있음
 
 우주패스링크				
-https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
+https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
+                'ACT(택배)': `[ACT(택배) 업무 메모]
+1. 개통 요청 시간: 평일 9:00 ~ 18:00
+2. 단말기 배송: 전국 익일 배송
+3. 문의 연락처: 02-123-4567 (담당자: 택배팀)
+4. 특이사항: 택배 배송 시 주소 정확히 기재`
             },
             'KT': {
                 '오앤티': `[오앤티 업무 메모]
@@ -1067,6 +1103,29 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                     return { naStockRequest, naOpenRequest };
                 },
                 '밀리언': (info) => `[밀리언]\n고객명: ${info.고객명}\n모델: ${info.모델명}\n색상: ${info.색상}\n요금제: ${info.요금제}\n가입유형: ${info.가입유형}\n${info.할부현금여부}: ${info.최종구매가}원`,
+                'ACT(택배)': (info) => {
+                    // 기본 정보 처리
+                    const name = info['고객명'] || '';
+                    const contact = info['전화번호'] || '';
+                    const address = info['택배주소'] || info['배송주소지'] || '';
+                    const model = info['모델명'] || '';
+                    const color = info['색상'] || '';
+                    
+                    // 접수확인양식
+                    const stockRequest = `ACT / ${model} / ${info['가입유형'] || ''}
+${name} / ${contact} / ${info['생년월일'] || info['주민번호'] || ''}
+접수 확인 부탁드립니다.`;
+                    
+                    // 개통요청양식
+                    const openRequest = `[개통요청양식]
+고객명: ${name}
+연락처: ${contact}
+주소: ${address}
+모델명: ${model}
+색상: ${color}`;
+                    
+                    return { stockRequest, openRequest };
+                },
                 '카파': (info) => {
                     // 배송요청 양식 (첫 번째 textarea)
                     const stockRequest = `★ 단말기 배정요청 ★		
@@ -1100,7 +1159,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
 번호이동인증>	`;
                     
                     return { stockRequest, openRequest };
-                }, 
+                },
                 '드블랙': (info) => {
                     // 기본 정보 처리
                     const name = info['고객명'] || '';
@@ -1337,23 +1396,23 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
             
             // 정규식 패턴으로 각 항목 추출
             const patterns = {
-                '전화번호': /\*{1,2}\s*전화번호?\s*[-:：]\s*([^\n]+)/i,
-                '개통번호': /\*{1,2}\s*개통(?:번호)?\s*[-:：]\s*([^\n]+)/i,
-                '모델명': /\*{1,2}\s*모델명?\s*[-:：]\s*([^\n]+)/i,
-                '색상': /\*{1,2}\s*색상?\s*[-:：]\s*([^\n]+)/i,
-                '고객명': /\*{1,2}\s*고객명?\s*[-:：]\s*([^\n]+)/i,
-                '가입자명': /\*{1,2}\s*가입자명?\s*[-:：]\s*([^\n]+)/i,
-                '주민번호': /\*{1,2}\s*주민(?:번호)?\s*[-:：]\s*([^\n]+)/i,
-                '생년월일': /\*{1,2}\s*생년월일?\s*[-:：]\s*([^\n]+)/i,
-                '택배주소': /\*{1,2}\s*택배(?:\s*주소?|\S*주소\S*)?\s*[-:：]\s*([^\n]+)/i,
-                '배송주소지': /\*{1,2}\s*배송(?:\s*주소?지|\S*주소지\S*)?\s*[-:：]\s*([^\n]+)/i,
-                '현재통신사': /\*{1,2}\s*현재통신사?\s*[-:：]\s*([^\n]+)/i,
-                '요금제': /\*{1,2}\s*요금제?\s*[-:：]\s*([^\n]+)/i,
-                '가입유형': /\*{1,2}\s*가입유형?\s*[-:：]\s*([^\n]+)/i,
-                '할인유형': /\*{1,2}\s*할인유형?\s*[-:：]\s*([^\n]+)/i,
-                '유심': /\*{1,2}\s*유심(?:\s*비용)?\s*[-:：]\s*([^\n]+)/i,
-                '부가서비스': /\*{1,2}\s*부가서비스?\s*[-:：]\s*([^\n]+)/i,
-                '법대정보': /\*{1,2}\s*법대정보?\s*[-:：]\s*([^/]+)\s*\/\s*([\d-]+)\s*\/\s*([\d-]+)/i
+                '전화번호': /\*{2}(?:전\s*화\s*번\s*호|개\s*통\s*번\s*호)\s*[-:：]\s*([^\n]+)/i,
+                '개통번호': /\*{2}(?:전\s*화\s*번\s*호|개\s*통\s*번\s*호)\s*[-:：]\s*([^\n]+)/i,
+                '모델명': /\*{2}모\s*델\s*명\s*[-:：]\s*([^\n]+)/i,
+                '색상': /\*{2}색\s*상\s*[-:：]\s*([^\n]+)/i,
+                '고객명': /\*{2}(?:고\s*객\s*명|가\s*입\s*자\s*명)\s*[-:：]\s*([^\n]+)/i,
+                '가입자명': /\*{2}(?:고\s*객\s*명|가\s*입\s*자\s*명)\s*[-:：]\s*([^\n]+)/i,
+                '주민번호': /\*{2}(?:주\s*민\s*번\s*호|생\s*년\s*월\s*일)\s*[-:：]\s*([^\n]+)/i,
+                '생년월일': /\*{2}(?:주\s*민\s*번\s*호|생\s*년\s*월\s*일)\s*[-:：]\s*([^\n]+)/i,
+                '택배주소': /\*{2}택\s*배\s*(?:주\s*소|주\s*소\s*지)?\s*[-:：]\s*([^\n]+)/i,
+                '배송주소지': /\*{2}(?:택\s*배|배\s*송)\s*(?:주\s*소|주\s*소\s*지)?\s*[-:：]\s*([^\n]+)/i,
+                '현재통신사': /\*{2}현\s*재\s*통\s*신\s*사\s*[-:：]\s*([^\n]+)/i,
+                '요금제': /\*{2}요\s*금\s*제\s*[-:：]\s*([^\n]+)/i,
+                '가입유형': /\*{2}가\s*입\s*유\s*형\s*[-:：]\s*([^\n]+)/i,
+                '할인유형': /\*{2}할\s*인\s*유\s*형\s*[-:：]\s*([^\n]+)/i,
+                '유심': /\*{2}유\s*심\s*(?:비\s*용)?\s*[-:：]\s*([^\n]+)/i,
+                '부가서비스': /\*{2}부\s*가\s*서\s*비\s*스\s*[-:：]\s*([^\n]+)/i,
+                '법대정보': /\*{2}법\s*대\s*정\s*보\s*[-:：]\s*([^/]+)\s*\/\s*([\d-]+)\s*\/\s*([\d-]+)/i
             };
             
             // 각 패턴에 맞게 정보 추출
@@ -1688,6 +1747,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                                       (selectedTelecom === 'LG' && selectedAgency === '소리');
                 const isLuxAgency = (selectedTelecom === 'SK' && selectedAgency === '럭스');
                 const isDblackAgency = (selectedTelecom === 'SK' && selectedAgency === '드블랙');
+                const isActAgency = (selectedTelecom === 'SK' && selectedAgency === 'ACT(택배)');
                 
                 // 드블랙 대리점 정보 추가
                 if (isDblackAgency) {
@@ -1710,33 +1770,59 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                 saveToHistory(customerInfo, selectedTelecom, selectedAgency);
                 
                 // 대리점 유형에 따른 처리
-                if (isLuxAgency || isDblackAgency) {
-                    // 럭스 또는 드블랙 대리점인 경우 3개의 텍스트에리어 표시
-                    const outputDivId = isLuxAgency ? 'luxExtraOutputs' : 'dblackExtraOutputs';
-                    const outputDiv = document.getElementById(outputDivId);
-                    
-                    if (outputDiv) {
-                        outputDiv.style.display = 'block';
-                        // 템플릿 결과에서 값 설정
-                        const requestField = isLuxAgency ? 'luxRequestText' : 'dblackRequestText';
-                        const stockField = isLuxAgency ? 'luxStockText' : 'dblackStockText';
-                        const memoField = isLuxAgency ? 'luxMemoText' : 'dblackMemoText';
-                        
-                        const requestText = document.getElementById(requestField);
-                        const stockText = document.getElementById(stockField);
-                        const memoText = document.getElementById(memoField);
-                        
-                        if (requestText) requestText.value = result.request || '';
-                        if (stockText) stockText.value = result.stock || '';
-                        if (memoText) memoText.value = result.memo || '';
-                        
-                        // 다른 대리점의 텍스트에리어는 숨기기
-                        if (isLuxAgency) {
-                            const dblackOutputs = document.getElementById('dblackExtraOutputs');
-                            if (dblackOutputs) dblackOutputs.style.display = 'none';
-                        } else {
+                if (isLuxAgency || isDblackAgency || isActAgency) {
+                    // ACT(택배) 대리점인 경우
+                    if (isActAgency) {
+                        const actOutputs = document.getElementById('actExtraOutputs');
+                        if (actOutputs) {
+                            actOutputs.style.display = 'block';
+                            
+                            // ACT(택배) 텍스트에리어에 값 설정
+                            const stockText = document.getElementById('actStockText');
+                            const openText = document.getElementById('actOpenText');
+                            
+                            if (stockText) stockText.value = result.stockRequest || '';
+                            if (openText) openText.value = result.openRequest || '';
+                            
+                            // 다른 대리점의 텍스트에리어는 숨기기
                             const luxOutputs = document.getElementById('luxExtraOutputs');
+                            const dblackOutputs = document.getElementById('dblackExtraOutputs');
                             if (luxOutputs) luxOutputs.style.display = 'none';
+                            if (dblackOutputs) dblackOutputs.style.display = 'none';
+                        }
+                    } 
+                    // 럭스 또는 드블랙 대리점인 경우
+                    else {
+                        const outputDivId = isLuxAgency ? 'luxExtraOutputs' : 'dblackExtraOutputs';
+                        const outputDiv = document.getElementById(outputDivId);
+                        
+                        if (outputDiv) {
+                            outputDiv.style.display = 'block';
+                            // 템플릿 결과에서 값 설정
+                            const requestField = isLuxAgency ? 'luxRequestText' : 'dblackRequestText';
+                            const stockField = isLuxAgency ? 'luxStockText' : 'dblackStockText';
+                            const memoField = isLuxAgency ? 'luxMemoText' : 'dblackMemoText';
+                            
+                            const requestText = document.getElementById(requestField);
+                            const stockText = document.getElementById(stockField);
+                            const memoText = document.getElementById(memoField);
+                            
+                            if (requestText) requestText.value = result.request || '';
+                            if (stockText) stockText.value = result.stock || '';
+                            if (memoText) memoText.value = result.memo || '';
+                            
+                            // 다른 대리점의 텍스트에리어는 숨기기
+                            if (isLuxAgency) {
+                                const dblackOutputs = document.getElementById('dblackExtraOutputs');
+                                if (dblackOutputs) dblackOutputs.style.display = 'none';
+                            } else {
+                                const luxOutputs = document.getElementById('luxExtraOutputs');
+                                if (luxOutputs) luxOutputs.style.display = 'none';
+                            }
+                            
+                            // ACT(택배) 텍스트에리어 숨기기
+                            const actOutputs = document.getElementById('actExtraOutputs');
+                            if (actOutputs) actOutputs.style.display = 'none';
                         }
                     }
                     
@@ -2713,7 +2799,8 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`
                 { name: 'SK 티게이트 조회', url: 'https://tgateplus.sktelecom.com/scrb/frontList.do' },
                 { name: 'GTS', url: 'https://gts.bizmax.net/' },
                 { name: '밀리언 접수 사이트', url: 'http://www.inbangpan.co.kr' },
-                { name: 'SK 큐브 재고표(SK3 탭 확인)', url: 'https://docs.google.com/spreadsheets/d/1BlrYaOOqMFEb-TLVnvI6KXCjMJvUWT7UipUAUgvqI5g/edit#gid=1994358026' }
+                { name: 'SK 큐브 재고표(SK3 탭 확인)', url: 'https://docs.google.com/spreadsheets/d/1BlrYaOOqMFEb-TLVnvI6KXCjMJvUWT7UipUAUgvqI5g/edit#gid=1994358026' },
+                { name: '럭스 재고표 확인', url: 'https://docs.google.com/spreadsheets/d/1kYLutrHNPLBbjA9YNcGDVmi0kys0nK2QBPNccyu1Skc/edit#gid=2040945696'}
             ]},
             { name: '휴대폰 요금관련 정보', sites: [
                 { name: '레인보우컨설팅', url: 'https://goodmorningrainbow.com/renew/index.php' },
