@@ -1,0 +1,4 @@
+[[redirects]]
+from = "/*"
+to = "/양식변환.html"
+status = 200
