@@ -489,10 +489,11 @@
                 </select>
             </div>
             
-            <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-left: 20px;">
-                <label for="excelFile" style="font-size: 14px; color: #555;">어드민 엑셀 첨부 후 접수확인/신조요청 양식 만들기:</label>
-                <input type="file" id="excelFile" accept=".xlsx, .xls" style="font-size: 14px;"/>
-            </div>
+                          <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-left: 20px;">
+                  <label for="excelFile" style="font-size: 14px; color: #555;">어드민 엑셀 첨부 후 접수확인/신조요청 양식 만들기:</label>
+                  <input type="file" id="excelFile" accept=".xlsx, .xls" style="font-size: 14px;"/>
+                  <span id="extractCount" style="font-size: 14px; color: #2196F3; margin-left: 10px; font-weight: bold;"></span>
+              </div>
             
             <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-left: auto;">
                 <label for="modelSearch" style="font-size: 14px; color: #555;">모델 검색:</label>
@@ -2538,6 +2539,7 @@ ${name} / ${contact} / ${info['생년월일'] || info['주민번호'] || ''}
             
             // 엑셀 파일 입력 초기화
             document.getElementById('excelFile').value = '';
+            document.getElementById('extractCount').textContent = '';
             
             // 통신사 및 대리점 선택 초기화
             const telecomSelect = document.getElementById('telecom');
@@ -3807,6 +3809,10 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                     
                     // textarea에 결과 출력
                     document.getElementById('outputText').value = outputText;
+                    
+                    // 추출 건수 표시
+                    const extractCount = extractedData.length;
+                    document.getElementById('extractCount').textContent = `${extractCount}건 추출 완료`;
                     
                     // 성공 메시지 표시
                     alert('엑셀 파일이 성공적으로 변환되었습니다.');
