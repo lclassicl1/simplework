@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>통신사 양식 변환기</title>
+    <!-- SheetJS 라이브러리 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         /* 모델 검색 결과 스타일 */
         .model-result:hover {
@@ -485,6 +487,11 @@
                     <option value="">선택하세요</option>
                     <!-- 사이트 목록은 이곳에 추가됩니다 -->
                 </select>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-left: 20px;">
+                <label for="excelFile" style="font-size: 14px; color: #555;">어드민 엑셀 첨부 후 접수확인/신조요청 양식 만들기:</label>
+                <input type="file" id="excelFile" accept=".xlsx, .xls" style="font-size: 14px;"/>
             </div>
             
             <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-left: auto;">
@@ -2529,6 +2536,9 @@ ${name} / ${contact} / ${info['생년월일'] || info['주민번호'] || ''}
             document.getElementById('deviceSerial').value = '';
             document.getElementById('simSerial').value = '';
             
+            // 엑셀 파일 입력 초기화
+            document.getElementById('excelFile').value = '';
+            
             // 통신사 및 대리점 선택 초기화
             const telecomSelect = document.getElementById('telecom');
             const agencySelect = document.getElementById('agency');
@@ -3700,6 +3710,120 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
         }
 
         // ... 기존 코드 ...
+        // 엑셀 파일 처리
+        document.getElementById('excelFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const data = e.target.result;
+                    const workbook = XLSX.read(data, {
+                        type: 'binary',
+                        cellDates: true,
+                        cellNF: true,
+                        cellText: false,
+                        WTF: false
+                    });
+                    
+                    // 워크북 정보 출력
+                    console.log('=== 엑셀 파일 분석 결과 ===');
+                    console.log('워크북 정보:', {
+                        '시트 이름들': workbook.SheetNames,
+                        '전체 워크북 데이터': workbook
+                    });
+                    
+                    // 첫 번째 시트 데이터 가져오기
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    
+                    // 시트 데이터를 배열로 변환
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+                        header: 1,
+                        raw: false,
+                        defval: '',
+                        blankrows: false
+                    });
+                    
+                    // 중요 열 데이터 추출 (10번, 75번 열)
+                    console.log('=== 중요 열 데이터 분석 ===');
+                    
+                    // 헤더 정보 출력
+                    console.log('1. 중요 열 헤더 정보:');
+                    console.log('10번 열:', {
+                        '헤더1': jsonData[0][9] || '빈 값',  // 0-based index이므로 9
+                        '헤더2': jsonData[1][9] || '빈 값'
+                    });
+                    console.log('75번 열:', {
+                        '헤더1': jsonData[0][74] || '빈 값',  // 0-based index이므로 74
+                        '헤더2': jsonData[1][74] || '빈 값'
+                    });
+                    
+                    // 정규식 패턴 정의
+                    const patterns = {
+                        '전화번호': /\*{1,2}(?:전화번호|개통번호)\s*[-\s:：]+\s*(010-\d{3,4}-\d{4})/,
+                        '모델명': /\*{1,2}모델명\s*[-\s:：]+\s*([^*\n]+?)(?=\s+\*{1,2}|$)/,
+                        '색상': /\*{1,2}색상\s*[-\s:：]+\s*([^*\n\/]+?)(?=\s+\*{1,2}|$)/,
+                        '고객명': /\*{1,2}고객명\s*[-\s:：]+\s*([^*\n\/]+?)(?=\s+\*{1,2}|$)/,
+                        '주민번호': /\*{1,2}(?:주민번호|생년월일)\s*[-\s:：]+\s*([^*\n\/]+?)(?=\s+\*{1,2}|$)/
+                        //'가입유형': /\*{1,2}가입유형\s*[-\s:：]+\s*([^*\n\/]+?)(?=\s+\*{1,2}|$)/
+                    };
+
+                    // 실제 데이터 추출 및 가공 (3행부터)
+                    const extractedData = jsonData.slice(2)
+                        .filter(row => row[74]) // 75번 열에 데이터가 있는 행만 필터링
+                        .map((row, index) => {
+                            const text = row[74] || '';
+                            const info = {};
+                            
+                            // 각 패턴에 맞게 정보 추출
+                            Object.entries(patterns).forEach(([key, pattern]) => {
+                                const match = text.match(pattern);
+                                if (match && match[1]) {
+                                    info[key] = match[1].trim();
+                                }
+                            });
+                            
+                            // 템플릿 형식으로 출력
+                            const formattedResult = `${info['고객명'] || ''} / ${info['전화번호'] || ''} / ${info['주민번호'] || ''} / ${info['모델명'] || ''} / ${info['색상'] || ''} / ${row[9] || ''}`;
+                            
+                            return {
+                                '행번호': index + 3,
+                                '추출결과': formattedResult
+                            };
+                        });
+                    
+                    console.log('2. 추출된 데이터:', extractedData);
+                    
+                    // 데이터 요약
+                    console.log('3. 데이터 요약:', {
+                        '총 데이터 행 수': extractedData.length,
+                        '빈 값이 아닌 10번열 데이터 수': extractedData.filter(row => row['10번열']).length,
+                        '빈 값이 아닌 75번열 데이터 수': extractedData.length
+                    });
+                    
+                    // 추출 결과만 따로 출력
+                    console.log('4. 추출 결과 목록:');
+                    const outputText = extractedData.map(row => row['추출결과']).join('\n');
+                    
+                    // textarea에 결과 출력
+                    document.getElementById('outputText').value = outputText;
+                    
+                    // 성공 메시지 표시
+                    alert('엑셀 파일이 성공적으로 변환되었습니다.');
+                    
+                } catch (error) {
+                    console.error('엑셀 파일 처리 중 오류 발생:', error);
+                    alert('엑셀 파일 처리 중 오류가 발생했습니다: ' + error.message);
+                }
+            };
+            
+            reader.onerror = function(error) {
+                console.error('파일 읽기 오류:', error);
+                alert('파일을 읽는 중 오류가 발생했습니다.');
+            };
+            
+            reader.readAsBinaryString(file);
+        });
     </script>
 </body>
 </html>
