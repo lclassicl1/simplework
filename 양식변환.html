@@ -641,6 +641,18 @@
                         </div>
                     </div>
                     
+                    <!-- 비앤컴 전용 추가 textarea (접수확인&신조요청/개통요청) -->
+                    <div id="bncomExtraOutputs" style="display:none;">
+                        <div class="form-group">
+                            <label for="bncomStockText">비앤컴 접수확인&신조요청:</label>
+                            <textarea id="bncomStockText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="bncomOpenText">비앤컴 개통요청:</label>
+                            <textarea id="bncomOpenText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                    </div>
+                    
                     <div id="keyValueTableContainer" style="display: none;">
                     </div>
                 </div>
@@ -699,7 +711,7 @@
     <script>
         // 통신사별 대리점 목록
         const agencies = {
-            'SK': ['큐브', '럭스', '나텔', '밀리언', '드블랙', '카파', '장천', '삼보/엠디도매', '코웨어', 'ACT(택배)'],
+            'SK': ['큐브', '럭스', '나텔', '밀리언', '드블랙', '카파', '장천', '삼보/엠디도매', '코웨어', 'ACT(택배)', '비앤컴'],
             'KT': ['오앤티', '재희', '안산/이스턴','신청서연장양식'],
             'LG': ['소리', '제이/휴넷','신청서연장양식']
         };
@@ -805,7 +817,12 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
 1. 개통 요청 시간: 평일 9:00 ~ 18:00
 2. 단말기 배송: 전국 익일 배송
 3. 문의 연락처: 02-123-4567 (담당자: 택배팀)
-4. 특이사항: 택배 배송 시 주소 정확히 기재`
+4. 특이사항: 택배 배송 시 주소 정확히 기재`,
+
+                '비앤컴': `[비앤컴 업무 메모]
+1. 주소 :서울 성동구 아차산로7나길18, 706호  / 1522-0689
+2. 미성년자는 가족관계증명서가 필요 / 만 65세이상 고연령 진행불가/택배만 가능(우체국) / 외국인 / 법인 개통 불가
+3. 티게이트 공식신청서 접수 확인O/카톡O (신조는 카톡으로/카톡으로 접수확인/신조 둘다 가능)`
             },
             'KT': {
                 '오앤티': `[오앤티 업무 메모]
@@ -1373,6 +1390,80 @@ ${name} / ${contact} / ${info['생년월일'] || info['주민번호'] || ''}
 유심 - ${usim}	
 부가 - ${addon}	
 보험가입여부 - ${insurance}`;
+                },
+                '비앤컴': (info) => {
+                    // 비앤컴 템플릿
+                    const name = info['가입자명'] || info['고객명'] || '';
+                    const jumin = info['주민번호'] || info['생년월일'] || '';
+                    const phone = info['전화번호'] || info['개통번호'] || '';
+                    const subscriptionType = info['가입유형'] || '';
+                    
+                    // 접수확인&신조요청 양식
+                    const stockRequest = `- ${subscriptionType}
+ㅁSK조회양식
+고객명 : ${name}
+주민번호 : ${jumin}
+전화번호 : ${phone}`;
+                    
+                    // 개통요청 양식을 위한 데이터 처리
+                    const openName = info['고객명'] || info['가입자명'] || '';
+                    const openJumin = info['주민번호'] || info['생년월일'] || '';
+                    const openPhone = info['개통번호'] || info['전화번호'] || '';
+                    const openSubscriptionType = info['가입유형'] || '';
+                    const model = info['모델명'] || '';
+                    const color = info['색상'] || '';
+                    const serialNumber = info['단말기일련번호'] || '';
+                    const usimNumber = info['유심일련번호'] || info['유심'] || '';
+                    const plan = info['요금제'] || '';
+                    const discountType = info['할인유형'] || '';
+                    const contractMonths = info['약정개월수'] || '';
+                    const addon = info['부가서비스'] || '';
+                    
+                    // 할부원금/개월수 처리
+                    let installmentInfo = '';
+                    if (info['할부현금여부'] === '현금') {
+                        installmentInfo = `★현금완납 / ${info['최종구매가'] || ''}`;
+                    } else if (info['할부현금여부'] === '할부') {
+                        installmentInfo = `${info['최종구매가'] || ''} / ${info['할부개월수'] || ''}`;
+                    } else {
+                        installmentInfo = `${info['최종구매가'] || ''}`;
+                    }
+                    
+                    // 선납금 계산 (숫자 형태로 처리 후 콤마 포맷)
+                    let prepayment = '0';
+                    if (info['공시선약여부'] === '공시지원') {
+                        // 콤마 제거 후 숫자로 변환
+                        const gongsi = parseInt((info['공시'] || '0').replace(/,/g, '')) || 0;
+                        const chuji = parseInt((info['추지'] || '0').replace(/,/g, '')) || 0;
+                        const jeonhwan = parseInt((info['전환지원금'] || '0').replace(/,/g, '')) || 0;
+                        const preFree = parseInt((info['프리할부'] || '0').replace(/,/g, '')) || 0;
+                        
+                        const total = gongsi + chuji + jeonhwan + preFree;
+                        // 숫자를 콤마 형태로 포맷
+                        prepayment = total.toLocaleString();
+                    } else if (info['공시선약여부'] === '선택약정') {
+                        prepayment = '0';
+                    }
+                    
+                    // 개통요청 양식
+                    const openRequest = `ㅇ 개통요청 (제휴)/케이뱅크
+고객명 : ${openName}
+생년월일 : ${openJumin}
+개통번호 : ${openPhone}
+가입유형 : ${openSubscriptionType}
+모델명 : ${model} / ${color}
+일련번호 : ${serialNumber}
+유심번호 : ${usimNumber}
+요금제 : ${plan}
+약정유형(공시/선약)/개월수 : ${discountType} / ${contractMonths}
+할부원금/개월수 : ${installmentInfo}
+선납금 : ${prepayment}
+부가서비스/보험 : ${addon}`;
+                    
+                    return {
+                        stockRequest: stockRequest, // 접수확인&신조요청
+                        openRequest: openRequest    // 개통요청
+                    };
                 }
             },
             'KT': {
@@ -1945,6 +2036,7 @@ ${name} / ${contact} / ${info['생년월일'] || info['주민번호'] || ''}
             const luxExtraOutputs = document.getElementById('luxExtraOutputs');
             const dblackExtraOutputs = document.getElementById('dblackExtraOutputs');
             const actExtraOutputs = document.getElementById('actExtraOutputs');
+            const bncomExtraOutputs = document.getElementById('bncomExtraOutputs');
             const keyValueTableContainer = document.getElementById('keyValueTableContainer');
             
             // 모든 출력 컨테이너 숨기기
@@ -1952,6 +2044,7 @@ ${name} / ${contact} / ${info['생년월일'] || info['주민번호'] || ''}
             if (luxExtraOutputs) luxExtraOutputs.style.display = 'none';
             if (dblackExtraOutputs) dblackExtraOutputs.style.display = 'none';
             if (actExtraOutputs) actExtraOutputs.style.display = 'none';
+            if (bncomExtraOutputs) bncomExtraOutputs.style.display = 'none';
             if (keyValueTableContainer) keyValueTableContainer.style.display = 'none';
             
             // 기본 출력 컨테이너 표시
@@ -2013,6 +2106,7 @@ ${name} / ${contact} / ${info['생년월일'] || info['주민번호'] || ''}
                     const isLuxAgency = (selectedTelecom === 'SK' && selectedAgency === '럭스');
                     const isDblackAgency = (selectedTelecom === 'SK' && selectedAgency === '드블랙');
                     const isActAgency = (selectedTelecom === 'SK' && selectedAgency === 'ACT(택배)');
+                    const isBncomAgency = (selectedTelecom === 'SK' && selectedAgency === '비앤컴');
                     
                     // 기존 템플릿 시스템 사용
                     const template = templates[selectedTelecom]?.[selectedAgency];
@@ -2023,13 +2117,25 @@ ${name} / ${contact} / ${info['생년월일'] || info['주민번호'] || ''}
                     result = template(customerInfo);
                     
                     // 기존 출력 로직 사용
-                    if (isLuxAgency || isDblackAgency || isActAgency) {
+                    if (isLuxAgency || isDblackAgency || isActAgency || isBncomAgency) {
+                        // 특수 대리점의 경우 기본 출력 컨테이너 숨기기
+                        if (singleOutputContainer) singleOutputContainer.style.display = 'none';
+                        
                         if (isActAgency) {
                             const actOutputs = document.getElementById('actExtraOutputs');
                             if (actOutputs) {
                                 actOutputs.style.display = 'block';
                                 const stockText = document.getElementById('actStockText');
                                 const openText = document.getElementById('actOpenText');
+                                if (stockText) stockText.value = result.stockRequest || '';
+                                if (openText) openText.value = result.openRequest || '';
+                            }
+                        } else if (isBncomAgency) {
+                            const bncomOutputs = document.getElementById('bncomExtraOutputs');
+                            if (bncomOutputs) {
+                                bncomOutputs.style.display = 'block';
+                                const stockText = document.getElementById('bncomStockText');
+                                const openText = document.getElementById('bncomOpenText');
                                 if (stockText) stockText.value = result.stockRequest || '';
                                 if (openText) openText.value = result.openRequest || '';
                             }
@@ -2048,7 +2154,9 @@ ${name} / ${contact} / ${info['생년월일'] || info['주민번호'] || ''}
                             }
                         }
                     } else if (isSpecialAgency) {
-                        // 특수 대리점 처리 (재희, 소리)
+                        // 특수 대리점 처리 (재희, 소리) - 기본 컨테이너 숨기기
+                        if (singleOutputContainer) singleOutputContainer.style.display = 'none';
+                        
                         const container = document.getElementById('keyValueTableContainer');
                         if (container) {
                             container.style.display = 'block';
