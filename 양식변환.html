@@ -1201,131 +1201,7 @@ ${name} / ${contact} / ${info['생년월일'] || info['주민번호'] || ''}
                     
                     return { stockRequest, openRequest };
                 },
-                '드블랙': (info) => {
-                    // 기본 정보 처리
-                    const name = info['고객명'] || '';
-                    const regNum = info['주민번호'] || info['생년월일'] || '';
-                    const contact = info['전화번호'] || info['개통번호'] || info['연락처'] || '';
-                    const model = info['모델명'] || '';
-                    const color = info['색상'] || '';
-                    const plan = info['요금제'] || '';
-                    const subscriptionType = info['가입유형'] || '';
-                    const serialNum = info['단말기일련번호'] || '';
-                    const usimNum = info['유심일련번호'] || info['유심'] || '';
-                    const addonService = info['부가서비스'] || '';
-                    const insurance = info['보험'] || '';
-                    
-                    // 할부 정보 처리
-                    let installment = '';
-                    if (info['할부현금여부'] === '할부') {
-                        installment = `${info['할부개월수'] || '24'}`;
-                    } else if (info['할부현금여부'] === '현금') {
-                        installment = '0';
-                    }
-                    
-                    // 할부원금 정보
-                    let principal = '0';
-                    if (info['할부현금여부'] === '할부') {
-                        principal = info['최종구매가'] || '0';
-                    }
-                    
-                    // 현금완납 정보
-                    const cashPayment = info['할부현금여부'] === '현금' ? 'O' : '';
-                    
-                    // 선약 & 공시 정보
-                    let contractInfo = '';
-                    if (info['공시선약여부'] === '공시지원') {
-                        contractInfo = `공시 ${info['약정개월수'] || '24'}`;
-                    } else if (info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') {
-                        contractInfo = `선약 ${info['약정개월수'] || '24'}`;
-                    }
-                    
-                    // 1. 신조요청 (가입유형 및 미성년자여부에 따라 다른 형식으로 출력)
-                    let request = '';
-                    const isDeviceChange = ['기기변경', '기변'].includes(subscriptionType);
-                    const isNumberPortability = ['번호이동', '번이'].includes(subscriptionType);
-                    const isMinor = info['미성년자여부'] === 'Y';
-                    
-                    if (isMinor && (isDeviceChange || isNumberPortability)) {
-                        // 미성년자 번호이동 & 기변 신조요청
-                        request = `■미성년자 번호이동 & 기변 신조요청■
 
-＃고객명 ${name}
-＃연락처 ${contact}
-＃주민번호 ${regNum}
-＃법대 성함 / 주민번호 ${info['법정대리인이름'] || ''} / ${info['법정대리인주민번호'] || ''}`;
-                    } else if (isDeviceChange) {
-                        // 기변 신조요청
-                        request = `■기변 신조요청■
-
-＃고객명 ${name}
-＃연락처 ${contact}
-＃생년월일 ${regNum}`; // 생년월일만 추출 (앞 6자리)
-                    } else if (isNumberPortability) {
-                        // 번호이동 신조요청
-                        request = `■번호이동 신조요청■
-
-＃고객명 ${name}
-＃연락처 ${contact}
-＃주민번호 ${regNum}`;
-                    } else {
-                        // 기본 신조요청
-                        request = `[드블랙 신조요청]
-
-＃고객명	${name}
-＃연락처	${contact}
-＃모델	${model}
-＃색상	${color}
-＃요금제	${plan}
-＃가입유형	${subscriptionType}
-＃할부	${installment}개월
-＃할부원금	${principal}원
-＃현금완납	${cashPayment}
-＃선약&공시	${contractInfo}`;
-                    }
-
-                    // 2. 재고요청
-                    // 유심 발송 여부 결정 (유심 항목에 '기존', '재활용', 'e심', '이심'이 포함되어 있으면 'N', 아니면 'Y')
-                    const usimValue = info['유심'] || '';
-                    const usimStatus = (usimValue.includes('기존') || 
-                                      usimValue.includes('재활용') || 
-                                      usimValue.includes('e심') || 
-                                      usimValue.includes('이심')) ? 'N' : 'Y';
-                    
-                    const stock = `■ 택배 배송 요청 양식		
-* 개통유형 : ${subscriptionType}
-* 매장명 : 라온아이
-＊담당자명 : 
-＊개통자명 : ${name}
-＊고객명 : ${name}
-＊연락처 : ${contact}
-＊주소 : ${info['택배주소'] || info['배송주소지'] || ''}
-＊모델(색상 및 용량) :	${model} ${color}
-＊유심 발송 여부 : ${usimStatus}`;
-
-                    // 3. 개통요청
-                    const memo = `[드블랙 개통요청]
-고객명: ${name}
-주민번호: ${regNum}
-개통번호: ${contact}
-단말정보: ${model} ${color}
-일련번호: ${serialNum}
-요금제: ${plan}
-할부: ${installment}개월
-프리: ${info['프리할부'] || '0'}
-할부원금: ${principal}원
-현금완납: ${cashPayment}
-선약&공시: ${contractInfo}
-유심: ${usimNum}
-부가: ${addonService}
-보험가입여부: ${insurance}`;
-
-                    return {
-                        request: request,
-                        stock: stock,
-                        memo: memo
-                    };
-                }, 
                 '장천': (info) => `[장천] ${info.고객명} - ${info.모델명} ${info.색상} - ${info.요금제} - ${info.가입유형} - ${info.할부현금여부} ${info.최종구매가}원`,
                 '삼보/엠디도매': (info) => `[삼보/엠디도매]\n${info.고객명}\n${info.모델명}\n${info.색상}\n${info.요금제}\n${info.가입유형}\n${info.할부현금여부} ${info.최종구매가}원`,
                 '코웨어': (info) => {
@@ -3418,21 +3294,48 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                         templates: {
                             request: (info) => {
                                 const subscriptionType = info.가입유형 || '';
-                                const jumin = info.주민번호 || info.생년월일 || '';
-                                let juminError = '';
+                                const name = info.고객명 || info.가입자명 || '';
+                                const contact = info.개통번호 || info.전화번호 || '';
+                                const isMinor = info.미성년자여부 === 'Y';
                                 
-                                if (['번호이동', '번이', '신규가입', '신규'].includes(subscriptionType)) {
-                                    const juminRegex = /^\d{6}-?\d{7}$/;
-                                    if (!juminRegex.test(jumin)) {
-                                        juminError = '\n※ 번호이동/신규가입시 주민번호 전체가 필요합니다.';
-                                    }
+                                // 미성년자인 경우 특별 양식 사용
+                                if (isMinor) {
+                                    const idInfo = info.주민번호 || info.생년월일 || '';
+                                    const legalGuardianName = info.법정대리인이름 || '';
+                                    const legalGuardianContact = info.법정대리인연락처 || '';
+                                    
+                                    return `■미성년자 번호이동 & 기변 신조요청■
+＃고객명	${name}
+# 연락처	${contact}
+＃주민번호	${idInfo}
+# 법대 성함 / 주민번호	${legalGuardianName} / ${legalGuardianContact}`;
                                 }
                                 
-                                return `[${info.가입유형 || ''} 신조요청후 유키반려]
-업체명: 에이치엘
-고객명: ${info.고객명 || ''}
-전화번호: ${info.전화번호 || ''}
-주민번호: ${jumin}${juminError}`;
+                                // 미성년자가 아닌 경우 기존 로직 사용
+                                const isDeviceChange = ['기기변경', '기변'].includes(subscriptionType);
+                                const isNumberPortability = ['번호이동', '번이'].includes(subscriptionType);
+                                
+                                // 가입유형에 따른 주민번호/생년월일 선택
+                                let idInfo = '';
+                                let idLabel = '';
+                                if (isDeviceChange) {
+                                    // 기기변경인 경우 생년월일 사용
+                                    idInfo = info.생년월일 || info.주민번호 || '';
+                                    idLabel = '생년월일';
+                                } else if (isNumberPortability) {
+                                    // 번호이동인 경우 주민번호 사용
+                                    idInfo = info.주민번호 || info.생년월일 || '';
+                                    idLabel = '주민번호';
+                                } else {
+                                    // 기타의 경우 주민번호 우선
+                                    idInfo = info.주민번호 || info.생년월일 || '';
+                                    idLabel = '주민번호';
+                                }
+                                
+                                return `■${subscriptionType} 신조요청■
+＃고객명	${name}
+＃연락처	${contact}
+＃${idLabel}	${idInfo}`;
                             },
                             stock: (info) => {
                                 const modelColor = `${info.모델명 || ''} / ${info.색상 || ''} / ${info.단말기일련번호 || ''}`;
@@ -3481,20 +3384,70 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                 }
                             },
                             memo: (info) => {
-                                const simIncluded = ['번호이동', '번이', '신규가입', '신규'].includes(info.가입유형 || '') ? 'Y' : 'N';
-                                return `□재고 요청서□
-매장상호 : 에이치엘
-고객명: ${info.고객명 || ''}
-연락처: ${info.전화번호 || ''}
-받을 주소: ${info.택배주소 || info.배송주소지 || ''}
-퀵/택배: 택배
-기종/색상: ${info.모델명 || ''} / ${info.색상 || ''}
-유심포함여부: ${simIncluded}
-요금제: ${info.요금제 || ''}
-가입유형: ${info.가입유형 || ''}
-할부/현금: ${info.할부현금여부 || ''}
-할부기간: ${info.할부현금여부 === '할부' ? (info.할부개월수 || '24') : '0'}개월
-최종금액: ${info.최종구매가 || ''}원`;
+                                const subscriptionType = info.가입유형 || '';
+                                const currentTelecom = info.현재통신사 || '';
+                                const name = info.고객명 || info.가입자명 || '';
+                                const birthDate = info.생년월일 || info.주민번호 || '';
+                                const phone = info.개통번호 || info.전화번호 || '';
+                                const model = info.모델명 || '';
+                                const color = info.색상 || '';
+                                const serialNumber = info.단말기일련번호 || '';
+                                // 유심 정보 처리 (유심일련번호 우선, 없으면 유심 값 사용)
+                                const usim = info.유심일련번호 || info.유심 || '';
+                                const plan = info.요금제 || '';
+                                
+                                // 약정 정보 처리 (할인유형 / 약정개월수)
+                                const discountType = info.할인유형 || '';
+                                const contractMonths = info.약정개월수 || '';
+                                const contractInfo = discountType && contractMonths ? `${discountType}${contractMonths}` : (discountType || contractMonths);
+                                
+                                // 할부 개월 & 현금완납 처리
+                                let installmentInfo = '';
+                                if (info.할부현금여부 === '현금') {
+                                    installmentInfo = '현금완납';
+                                } else if (info.할부현금여부 === '할부') {
+                                    installmentInfo = `${info.할부개월수 || '24'}개월`;
+                                }
+                                
+                                // 할부원금 처리 (기재 안할시 현금완납)
+                                let installmentPrincipal = '';
+                                if (info.할부현금여부 === '할부') {
+                                    installmentPrincipal = info.최종구매가 || '';
+                                } else {
+                                    installmentPrincipal = '현금완납';
+                                }
+                                
+                                // 전환지원금 (MNP만 적용)
+                                let transferSupport = '';
+                                if (['번호이동', '번이'].includes(subscriptionType)) {
+                                    transferSupport = info.전환지원금 || '';
+                                }
+                                
+                                // 보험/부가/복지 정보 통합
+                                const insurance = info.보험 || '';
+                                const addon = info.부가서비스 || '';
+                                const welfare = info.복지 || '';
+                                let benefitInfo = [insurance, addon, welfare].filter(item => item).join(' / ');
+                                
+                                return `▶가입유형 / 전통신사 : ${subscriptionType} / ${currentTelecom}
+▶고객명 : ${name}
+▶생년월일 : ${birthDate}
+▶개통번호 : ${phone}
+▶모델명 / 색상 : ${model} / ${color}
+▶일련번호 : ${serialNumber}
+▶유심 (후청구여부 / 기재 없을시 후납) : ${usim}
+▶요금제 / 요금제혜택 : ${plan}
+▶약정 (공시 or 선약12 or 선약24) : ${contractInfo}
+▶할부 개월 & 현금완납 : ${installmentInfo}
+▶출고가 : ${info.출고가 || ''}
+▶공시 지원금 : ${info.공시 || ''}
+▶추가 지원금 : ${info.추지 || ''}
+▶프리 금액 : ${info.프리할부 || ''}
+▶전환 지원금 (MNP만 적용) : ${transferSupport}
+▶할부원금 (기재 안할시 현금완납) : ${installmentPrincipal}
+▶*보험 / *부가 / *복지 : ${benefitInfo}
+▶클럽기변 진행 여부 : X
+▶판매처 / 연락처 : 라온아이/010-4671-4834`;
                             }
                         }
                     },
