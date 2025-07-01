@@ -1076,29 +1076,6 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                     };
                 },
                 '밀리언': (info) => `[밀리언]\n고객명: ${info.고객명}\n모델: ${info.모델명}\n색상: ${info.색상}\n요금제: ${info.요금제}\n가입유형: ${info.가입유형}\n${info.할부현금여부}: ${info.최종구매가}원`,
-                'ACT(택배)': (info) => {
-                    // 기본 정보 처리
-                    const name = info['고객명'] || '';
-                    const contact = info['전화번호'] || '';
-                    const address = info['택배주소'] || info['배송주소지'] || '';
-                    const model = info['모델명'] || '';
-                    const color = info['색상'] || '';
-                    
-                    // 접수확인양식
-                    const stockRequest = `ACT / ${model} / ${info['가입유형'] || ''}
-${name} / ${contact} / ${info['생년월일'] || info['주민번호'] || ''}
-접수 확인 부탁드립니다.`;
-                    
-                    // 개통요청양식
-                    const openRequest = `[개통요청양식]
-고객명: ${name}
-연락처: ${contact}
-주소: ${address}
-모델명: ${model}
-색상: ${color}`;
-                    
-                    return { stockRequest, openRequest };
-                },
                 '카파': (info) => {
                     // 배송요청 양식 (첫 번째 textarea)
                     const stockRequest = `★ 단말기 배정요청 ★		
@@ -3203,18 +3180,36 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 접수 확인 부탁드립니다.`;
                             },
                             openRequest: (info) => {
-                                return `[개통요청양식]
-고객명: ${info.고객명 || ''}
-연락처: ${info.전화번호 || ''}
-주소: ${info.택배주소 || info.배송주소지 || ''}
-모델명: ${info.모델명 || ''}
-색상: ${info.색상 || ''}
-일련번호: ${info.단말기일련번호 || ''}
-유심번호: ${info.유심일련번호 || info.유심 || ''}
-요금제: ${info.요금제 || ''}
-가입유형: ${info.가입유형 || ''}
-할인유형: ${info.할인유형 || ''}
-부가서비스: ${info.부가서비스 || ''}`;
+                                // 최종할부원금/개월수 처리
+                                let installmentInfo = '';
+                                if (info.할부현금여부 === '현금') {
+                                    installmentInfo = '현금완납';
+                                } else if (info.할부현금여부 === '할부') {
+                                    installmentInfo = `${info.최종구매가 || ''}/${info.할부개월수 || '24'}개월`;
+                                } else {
+                                    installmentInfo = info.최종구매가 || '';
+                                }
+                                
+                                return `도매c
+1. 고객명 : ${info.고객명 || info.가입자명 || ''}
+2. 전화번호 : ${info.전화번호 || info.개통번호 || ''}
+3. 주민번호전체 : ${info.주민번호 || info.생년월일 || ''}
+4. 법대명 : ${info.법정대리인이름 || ''}
+5. 법대주민번호전체 : ${info.법정대리인주민번호 || ''}
+6. 법대연락처 : ${info.법정대리인연락처 || ''}
+7. 전통신사 : ${info.현재통신사 || ''}
+8. 모델명 : ${info.모델명 || ''}
+9. 일련번호 : ${info.단말기일련번호 || ''}
+10. 유심번호(13자리) : ${info.유심일련번호 || info.유심 || ''}
+11. 요금제 : ${info.요금제 || ''}
+12. 공시/선약 : ${info.공시선약여부 || info.할인유형 || ''} ${info.약정개월수 || ''}
+13. 현금/할부 : ${info.할부현금여부 || ''}
+14. 공시지원금 : ${info.공시 || ''}
+15. 추가지원금 : ${info.추지 || ''}
+16. 프리할부 : ${info.프리할부 || ''}
+17. 최종할부원금/개월수 : ${installmentInfo}
+18. 기타특이사항 : 도매C
+19. 판매점명 : 도담`;
                             }
                         }
                     },
