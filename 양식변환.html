@@ -1075,74 +1075,6 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                         memo: memo
                     };
                 },
-                '나텔': (info) => {
-                    // 기본 정보 처리
-                    const naName = info['가입자명'] || info['고객명'] || '';
-                    const naContact = info['개통번호'] || info['전화번호'] || '';
-                    const naAddress = info['택배주소'] || info['배송주소지'] || '';
-                    const naModel = info['모델명'] || '';
-                    const naColor = info['색상'] || '';
-                    const naPlan = info['요금제'] || '';
-                    const naSubscriptionType = info['가입유형'] || '';
-                    const naTelecom = info['현재통신사'] || '';
-                    const naAuth = info['인증방법'] || '';
-                    
-                    // 할부 정보 처리
-                    let naPaymentInfo = info['할부현금여부'] || '';
-                    if (naPaymentInfo === '할부' && info['할부개월수']) {
-                        naPaymentInfo += info['할부개월수'];
-                    }
-                    
-                    // 배송요청 양식 (첫 번째 textarea)
-                    const naStockRequest = `택배요청	
-	
-주소 : ${naAddress}
-수취인 : ${naName}
-연락처 : ${naContact}
-기종/색상: ${naModel} / ${naColor}
-유심 : ${info['유심일련번호'] || ''}`;
-                    
-                    // 개통요청 양식 (두 번째 textarea)
-                    // 약정 정보 처리 (공시지원 또는 선택약정 + 개월수)
-                    let contractInfo = '';
-                    if (info['공시선약여부'] === '공시지원') {
-                        contractInfo = `공시지원 ${info['약정개월수'] || '24개월'}`;
-                    } else if (info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') {
-                        contractInfo = `선택약정 ${info['약정개월수'] || '24개월'}`;
-                    } else {
-                        contractInfo = `약정없음`;
-                    }
-                    
-                    // 선납 정보 처리 (프리할부 있으면 기재, 없으면 0)
-                    const prepayInfo = info['프리할부'] && info['프리할부'] !== '0' ? info['프리할부'] : '0';
-                    
-                    // 원금 정보 처리 (할부면 최종구매가, 현금이면 0(현금완납))
-                    const principalInfo = info['할부현금여부'] === '할부' ? info['최종구매가'] || '0' : '0(현금완납)';
-                    
-                    // 개월 정보 처리 (할부면 할부개월수, 현금이면 0)
-                    const monthsInfo = info['할부현금여부'] === '할부' ? info['할부개월수'] || '24개월' : '0';
-                    
-                    // 생년월일 또는 주민번호 처리
-                    const birthOrRegNum = info['생년월일'] || info['주민번호'] || '';
-                    
-                    const naOpenRequest = `개통요청 / 전문화	
-유형: ${naSubscriptionType}
-고객명 : ${naName}
-생년월일 : ${birthOrRegNum}
-번호 : ${naContact}
-기종/색상 : ${naModel} / ${naColor}
-일련번호 : ${info['단말기일련번호'] || ''}
-유심 : ${info['유심일련번호'] || ''}
-요금제 : ${naPlan}
-약정 : ${contractInfo}
-선납 : ${prepayInfo}
-원금 : ${principalInfo}	
-개월 : ${monthsInfo}
-부가 : ${info['부가서비스'] || ''}
-보험 :	`;
-                    
-                    return { naStockRequest, naOpenRequest };
-                },
                 '밀리언': (info) => `[밀리언]\n고객명: ${info.고객명}\n모델: ${info.모델명}\n색상: ${info.색상}\n요금제: ${info.요금제}\n가입유형: ${info.가입유형}\n${info.할부현금여부}: ${info.최종구매가}원`,
                 'ACT(택배)': (info) => {
                     // 기본 정보 처리
@@ -3498,38 +3430,67 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                         memo: agencyMemos['SK']['나텔'],
                         templates: {
                             stockRequest: (info) => {
+                                // 기본 정보 처리
+                                const naName = info['가입자명'] || info['고객명'] || '';
+                                const naContact = info['개통번호'] || info['전화번호'] || '';
+                                const naAddress = info['택배주소'] || info['배송주소지'] || '';
+                                const naModel = info['모델명'] || '';
+                                const naColor = info['색상'] || '';
+                                
+                                // 배송요청 양식 (첫 번째 textarea)
                                 return `택배요청	
 	
-주소 : ${info.택배주소 || info.배송주소지 || ''}
-수취인 : ${info.고객명 || ''}
-연락처 : ${info.전화번호 || ''}
-기종/색상: ${info.모델명 || ''} / ${info.색상 || ''}`;
+주소 : ${naAddress}
+수취인 : ${naName}
+연락처 : ${naContact}
+기종/색상: ${naModel} / ${naColor}
+유심 : ${info['유심일련번호'] || ''}`;
                             },
                             openRequest: (info) => {
-                                const contractInfo = info.공시선약여부 || '';
-                                const prepayInfo = info.선납금액 || '0';
-                                let principalInfo = '0';
-                                let monthsInfo = '0';
+                                // 기본 정보 처리
+                                const naName = info['가입자명'] || info['고객명'] || '';
+                                const naContact = info['개통번호'] || info['전화번호'] || '';
+                                const naModel = info['모델명'] || '';
+                                const naColor = info['색상'] || '';
+                                const naPlan = info['요금제'] || '';
+                                const naSubscriptionType = info['가입유형'] || '';
                                 
-                                if (info.할부현금여부 === '할부') {
-                                    principalInfo = info.최종구매가 || '0';
-                                    monthsInfo = info.할부개월수 || '24';
+                                // 약정 정보 처리 (공시지원 또는 선택약정 + 개월수)
+                                let contractInfo = '';
+                                if (info['공시선약여부'] === '공시지원') {
+                                    contractInfo = `공시지원 ${info['약정개월수'] || '24개월'}`;
+                                } else if (info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') {
+                                    contractInfo = `선택약정 ${info['약정개월수'] || '24개월'}`;
+                                } else {
+                                    contractInfo = `약정없음`;
                                 }
                                 
-                                return `[개통요청]
-고객명 : ${info.고객명 || ''}
-연락처 : ${info.전화번호 || ''}
-주민번호 : ${info.주민번호 || info.생년월일 || ''}
-모델명 : ${info.모델명 || ''}
-색상 : ${info.색상 || ''}
-일련번호 : ${info.단말기일련번호 || ''}
-유심 : ${info.유심일련번호 || ''}
-요금제 : ${info.요금제 || ''}
+                                // 선납 정보 처리 (프리할부 있으면 기재, 없으면 0)
+                                const prepayInfo = info['프리할부'] && info['프리할부'] !== '0' ? info['프리할부'] : '0';
+                                
+                                // 원금 정보 처리 (할부면 최종구매가, 현금이면 0(현금완납))
+                                const principalInfo = info['할부현금여부'] === '할부' ? info['최종구매가'] || '0' : '0(현금완납)';
+                                
+                                // 개월 정보 처리 (할부면 할부개월수, 현금이면 0)
+                                const monthsInfo = info['할부현금여부'] === '할부' ? info['할부개월수'] || '24개월' : '0';
+                                
+                                // 생년월일 또는 주민번호 처리
+                                const birthOrRegNum = info['생년월일'] || info['주민번호'] || '';
+                                
+                                return `개통요청 / 전문화	
+유형: ${naSubscriptionType}
+고객명 : ${naName}
+생년월일 : ${birthOrRegNum}
+번호 : ${naContact}
+기종/색상 : ${naModel} / ${naColor}
+일련번호 : ${info['단말기일련번호'] || ''}
+유심 : ${info['유심일련번호'] || ''}
+요금제 : ${naPlan}
 약정 : ${contractInfo}
 선납 : ${prepayInfo}
 원금 : ${principalInfo}	
 개월 : ${monthsInfo}
-부가 : ${info.부가서비스 || ''}
+부가 : ${info['부가서비스'] || ''}
 보험 :	`;
                             }
                         }
