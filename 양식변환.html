@@ -489,10 +489,17 @@
                 </select>
             </div>
             
-                          <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-left: 20px;">
-                  <label for="excelFile" style="font-size: 14px; color: #555;">어드민 엑셀 첨부 후 접수확인/신조요청 양식 만들기:</label>
-                  <input type="file" id="excelFile" accept=".xlsx, .xls" style="font-size: 14px;"/>
-                  <span id="extractCount" style="font-size: 14px; color: #2196F3; margin-left: 10px; font-weight: bold;"></span>
+                          <div style="display: flex; flex-direction: column; gap: 8px; margin-left: 20px;">
+                  <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
+                      <label for="excelFile" style="font-size: 14px; color: #555;">어드민 엑셀 첨부로 접수확인/신조요청 양식 만들기:</label>
+                      <input type="file" id="excelFile" accept=".xlsx, .xls" style="font-size: 14px;"/>
+                      <span id="extractCount" style="font-size: 14px; color: #2196F3; margin-left: 10px; font-weight: bold;"></span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
+                      <label for="excelFile2" style="font-size: 14px; color: #555;">어드민 엑셀 첨부로 배송요청 양식 만들기</label>
+                      <input type="file" id="excelFile2" accept=".xlsx, .xls" style="font-size: 14px;"/>
+                      <span id="extractCount2" style="font-size: 14px; color: #e91e63; margin-left: 10px; font-weight: bold;"></span>
+                  </div>
               </div>
             
             <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-left: auto;">
@@ -3781,7 +3788,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                     const patterns = {
                         '전화번호': /\*{1,2}(?:전화번호|개통번호)\s*[-\s:：]+\s*(010-\d{3,4}-\d{4})/,
                         '모델명': /\*{1,2}모델명\s*[-\s:：]+\s*([^*\n]+?)(?=\s+\*{1,2}|$)/,
-                        '색상': /\*{1,2}색상\s*[-\s:：]+\s*([^*\n\/]+?)(?=\s+\*{1,2}|$)/,
+                        '색상': /\*{1,2}색상\s*[-\s:：]+\s*([^\n\/]+?)(?=\s*\/|\s+\*{1,2}|$)/,
                         '고객명': /\*{1,2}고객명\s*[-\s:：]+\s*([^*\n\/]+?)(?=\s+\*{1,2}|$)/,
                         '주민번호': /\*{1,2}(?:주민번호|생년월일)\s*[-\s:：]+\s*([^*\n\/]+?)(?=\s+\*{1,2}|$)/
                         //'가입유형': /\*{1,2}가입유형\s*[-\s:：]+\s*([^*\n\/]+?)(?=\s+\*{1,2}|$)/
@@ -3840,6 +3847,75 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                 } catch (error) {
                     console.error('엑셀 파일 처리 중 오류 발생:', error);
                     alert('엑셀 파일 처리 중 오류가 발생했습니다: ' + error.message);
+                }
+            };
+            
+            reader.onerror = function(error) {
+                console.error('파일 읽기 오류:', error);
+                alert('파일을 읽는 중 오류가 발생했습니다.');
+            };
+            
+            reader.readAsBinaryString(file);
+        });
+
+        // 새로운 엑셀 파일 처리 로직
+        document.getElementById('excelFile2').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const data = e.target.result;
+                    const workbook = XLSX.read(data, {
+                        type: 'binary',
+                        cellDates: true,
+                        cellNF: true,
+                        cellText: false,
+                        WTF: false
+                    });
+                    
+                    // 워크북 정보 출력
+                    console.log('=== 새로운 엑셀 파일 분석 결과 ===');
+                    console.log('워크북 정보:', {
+                        '시트 이름들': workbook.SheetNames,
+                        '전체 워크북 데이터': workbook
+                    });
+                    
+                    // 첫 번째 시트 데이터 가져오기
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    
+                    // 시트 데이터를 배열로 변환
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+                        header: 1,
+                        raw: false,
+                        defval: '',
+                        blankrows: false
+                    });
+                    
+                    // 새로운 로직 - 여기에서 다른 처리를 구현
+                    console.log('=== 새로운 로직으로 처리 중 ===');
+                    console.log('전체 시트 데이터:', jsonData);
+                    
+                    // 예시: 다른 열들을 처리하거나 다른 형식으로 출력
+                    const processedData = jsonData.slice(1) // 헤더 제외
+                        .filter(row => row.length > 0) // 빈 행 제외
+                        .map((row, index) => {
+                            return `새로운 형식 ${index + 1}: ${row.join(' | ')}`;
+                        });
+                    
+                    // 결과를 textarea에 출력
+                    document.getElementById('outputText').value = processedData.join('\n');
+                    
+                    // 추출 건수 표시 (다른 색상으로)
+                    const extractCount = processedData.length;
+                    document.getElementById('extractCount2').textContent = `${extractCount}건 새로운 로직으로 처리 완료`;
+                    
+                    // 성공 메시지 표시
+                    alert('새로운 로직으로 엑셀 파일이 성공적으로 처리되었습니다.');
+                    
+                } catch (error) {
+                    console.error('새로운 엑셀 파일 처리 중 오류 발생:', error);
+                    alert('새로운 엑셀 파일 처리 중 오류가 발생했습니다: ' + error.message);
                 }
             };
             
