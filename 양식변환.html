@@ -1616,6 +1616,90 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             }
         }
 
+        // 펫네임을 실제 모델명으로 변환하는 매핑 테이블
+        const MODEL_NAME_MAPPING = {
+            // 갤럭시 S 시리즈  
+            '갤럭시S25울트라': 'S938',
+            '갤럭시S25+': 'S936', 
+            '갤럭시S25': 'S931',
+            'S25울트라': 'S938',
+            'S25+': 'S936',
+            'S25': 'S931',
+            '갤럭시S24울트라': 'S928',
+            '갤럭시S24+': 'S926', 
+            '갤럭시S24': 'S921',
+            'S24울트라': 'S928',
+            'S24+': 'S926',
+            'S24': 'S921',
+            '갤럭시S23': 'S911',
+            '갤럭시S23+': 'S916',
+            '갤럭시S23울트라': 'S918',
+            '갤럭시S22': 'S901',
+            '갤럭시S22+': 'S906',
+            '갤럭시S22울트라': 'S908',
+            
+            // 갤럭시 A 시리즈
+            '갤럭시퀀텀5': 'A556',
+            '갤럭시와이드8': 'M166',
+            
+            // 갤럭시 Z 시리즈 (폴드)
+            '갤럭시Z폴드6': 'F956',
+            '갤럭시Z폴드5': 'F946',
+            '갤럭시Z폴드4': 'F936',
+            '갤럭시Z플립6': 'F741',
+            '갤럭시Z플립5': 'F731',
+            '갤럭시Z플립4': 'F721',
+            // 추가적인 매핑은 여기에 계속 추가 가능
+        };
+
+        // 모델명 변환 함수
+        function convertModelName(modelName) {
+            if (!modelName) return modelName;
+            
+            // 입력된 모델명에서 공백과 특수문자 제거하여 정규화
+            const normalizedInput = modelName.replace(/[\s\-_]/g, '').toLowerCase();
+            
+            // 용량 정보 미리 추출 (예: 256G, 512GB, 1TB 등)
+            const capacityMatch = modelName.match(/(\d+(?:GB?|TB?))/i);
+            const capacity = capacityMatch ? ' ' + capacityMatch[1] : '';
+            
+            // 매핑 테이블의 키들을 길이순으로 정렬 (긴 것부터 매칭하여 정확도 향상)
+            const sortedMappings = Object.entries(MODEL_NAME_MAPPING)
+                .sort(([a], [b]) => b.length - a.length);
+            
+            // 매핑 테이블에서 일치하는 펫네임 찾기
+            for (const [petName, realModelName] of sortedMappings) {
+                const normalizedPetName = petName.replace(/[\s\-_]/g, '').toLowerCase();
+                
+                // 정확한 매칭을 위해 다양한 방식으로 확인
+                // 1. 완전 일치
+                if (normalizedInput === normalizedPetName) {
+                    console.log(`모델명 변환 (완전일치): ${modelName} → ${realModelName}${capacity}`);
+                    return realModelName + capacity;
+                }
+                
+                // 2. 용량 제거 후 완전 일치
+                const inputWithoutCapacity = normalizedInput.replace(/\d+(?:gb?|tb?)/i, '');
+                if (inputWithoutCapacity === normalizedPetName) {
+                    console.log(`모델명 변환 (용량제외일치): ${modelName} → ${realModelName}${capacity}`);
+                    return realModelName + capacity;
+                }
+                
+                // 3. 시작 부분 매칭 (더 정확한 매칭을 위해)
+                if (normalizedInput.startsWith(normalizedPetName)) {
+                    // 시작 매칭 후 남은 부분이 용량 정보인지 확인
+                    const remaining = normalizedInput.slice(normalizedPetName.length);
+                    if (!remaining || /^\d+(?:gb?|tb?)?$/i.test(remaining)) {
+                        console.log(`모델명 변환 (시작매칭): ${modelName} → ${realModelName}${capacity}`);
+                        return realModelName + capacity;
+                    }
+                }
+            }
+            
+            console.log(`모델명 변환 실패: ${modelName} (매핑되지 않음)`);
+            return modelName; // 매핑되지 않은 경우 원본 반환
+        }
+
         // 텍스트에서 고객 정보 추출
         function extractCustomerInfo(text) {
             const customerInfo = {};
@@ -1897,6 +1981,11 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                         }
                     }
                 }
+            }
+            
+            // 모델명 변환 적용 (펫네임 → 실제 모델명)
+            if (customerInfo['모델명']) {
+                customerInfo['모델명'] = convertModelName(customerInfo['모델명']);
             }
             
             return customerInfo;
@@ -3893,6 +3982,13 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                 }
                             });
                             
+                            // 모델명 변환 적용 (펫네임 → 실제 모델명)
+                            if (info['모델명']) {
+                                const originalModelName = info['모델명'];
+                                info['모델명'] = convertModelName(info['모델명']);
+                                console.log(`엑셀 처리 - 모델명 변환: ${originalModelName} → ${info['모델명']}`);
+                            }
+                            
                             // 10번 열 데이터 처리 (보상기변 -> 기기변경)
                             const col10Value = row[9] === '보상기변' ? '기기변경' : (row[9] || '');
                             
@@ -3976,26 +4072,75 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                         blankrows: false
                     });
                     
-                    // 새로운 로직 - 여기에서 다른 처리를 구현
-                    console.log('=== 새로운 로직으로 처리 중 ===');
+                    // 새로운 로직 - 배송요청 양식 생성을 위한 처리
+                    console.log('=== 배송요청 양식 처리 중 ===');
                     console.log('전체 시트 데이터:', jsonData);
                     
-                    // 예시: 다른 열들을 처리하거나 다른 형식으로 출력
-                    const processedData = jsonData.slice(1) // 헤더 제외
-                        .filter(row => row.length > 0) // 빈 행 제외
+                    // 정규식 패턴 정의 (첫 번째와 동일하지만 배송용으로 확장 가능)
+                    const deliveryPatterns = {
+                        '전화번호': /\*{1,2}(?:전화번호|개통번호)\s*[-\s:：]+\s*(010-\d{3,4}-\d{4})/,
+                        '모델명': /\*{1,2}모델명\s*[-\s:：]+\s*([^*\n]+?)(?=\s+\*{1,2}|$)/,
+                        '색상': /\*{1,2}색상\s*[-\s:：]+\s*([^\n\/]+?)(?=\s*\/|\s+\*{1,2}|$)/,
+                        '고객명': /\*{1,2}고객명\s*[-\s:：]+\s*([^*\n\/]+?)(?=\s+\*{1,2}|$)/,
+                        '주민번호': /\*{1,2}(?:주민번호|생년월일)\s*[-\s:：]+\s*([^*\n\/]+?)(?=\s+\*{1,2}|$)/,
+                        '택배주소': /\*{1,2}택\s*배\s*(?:주\s*소|주\s*소\s*지)?\s*[-:：]\s*([^\n]+)/i,
+                        '배송주소지': /\*{1,2}(?:택\s*배|배\s*송)\s*(?:주\s*소|주\s*소\s*지)?\s*[-:：]\s*([^\n]+)/i
+                    };
+
+                    // 배송요청 데이터 추출 및 가공 (2행부터 - 헤더 1행 제외)
+                    const processedData = jsonData.slice(1)
+                        .filter(row => row.length > 0 && row.some(cell => cell && cell.toString().trim())) // 빈 행 제외
                         .map((row, index) => {
-                            return `새로운 형식 ${index + 1}: ${row.join(' | ')}`;
-                        });
+                            let formattedResult = '';
+                            
+                            // 특정 열에 고객 정보가 있는지 확인 (75번열 또는 다른 열)
+                            const textColumn = row[74] || row.find(cell => cell && cell.toString().includes('**모델명')) || '';
+                            
+                            if (textColumn && textColumn.toString().includes('**')) {
+                                // 패턴 매칭을 통한 정보 추출
+                                const info = {};
+                                const text = textColumn.toString();
+                                
+                                Object.entries(deliveryPatterns).forEach(([key, pattern]) => {
+                                    const match = text.match(pattern);
+                                    if (match && match[1]) {
+                                        info[key] = match[1].trim();
+                                    }
+                                });
+                                
+                                // 모델명 변환 적용 (펫네임 → 실제 모델명)
+                                if (info['모델명']) {
+                                    const originalModelName = info['모델명'];
+                                    info['모델명'] = convertModelName(info['모델명']);
+                                    console.log(`배송 처리 - 모델명 변환: ${originalModelName} → ${info['모델명']}`);
+                                }
+                                
+                                // 택배주소와 배송주소지 통합 처리
+                                const address = info['택배주소'] || info['배송주소지'] || '';
+                                
+                                // 배송요청 양식으로 포맷 (예시)
+                                formattedResult = `${info['고객명'] || ''} / ${info['전화번호'] || ''} / ${info['모델명'] || ''} / ${info['색상'] || ''} / ${address}`;
+                            } else {
+                                // 패턴이 없는 경우 기본 처리
+                                const validCells = row.filter(cell => cell && cell.toString().trim());
+                                if (validCells.length > 0) {
+                                    formattedResult = `행 ${index + 2}: ${validCells.join(' | ')}`;
+                                }
+                            }
+                            
+                            return formattedResult;
+                        })
+                        .filter(result => result.trim()); // 빈 결과 제외
                     
                     // 결과를 textarea에 출력
                     document.getElementById('outputText').value = processedData.join('\n');
                     
                     // 추출 건수 표시 (다른 색상으로)
                     const extractCount = processedData.length;
-                    document.getElementById('extractCount2').textContent = `${extractCount}건 새로운 로직으로 처리 완료`;
+                    document.getElementById('extractCount2').textContent = `${extractCount}건 배송요청 양식으로 처리 완료`;
                     
                     // 성공 메시지 표시
-                    alert('새로운 로직으로 엑셀 파일이 성공적으로 처리되었습니다.');
+                    alert('배송요청 양식으로 엑셀 파일이 성공적으로 처리되었습니다.');
                     
                 } catch (error) {
                     console.error('새로운 엑셀 파일 처리 중 오류 발생:', error);
@@ -4064,12 +4209,19 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
             }
         });
 
-        // 숫자만 입력 가능하도록 제한
+        // 숫자만 입력 가능하도록 제한 + 4자리 입력 시 자동 확인
         document.getElementById('passwordInput').addEventListener('input', function(e) {
             const value = e.target.value;
             const numericValue = value.replace(/[^0-9]/g, '');
             if (value !== numericValue) {
                 e.target.value = numericValue;
+            }
+            
+            // 4자리가 입력되면 자동으로 비밀번호 확인
+            if (numericValue.length === 4) {
+                setTimeout(() => {
+                    checkPassword();
+                }, 100); // 약간의 지연을 두어 UI 업데이트 후 실행
             }
         });
     </script>
