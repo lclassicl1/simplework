@@ -474,10 +474,93 @@
             min-height: 100px !important;
             height: 100px !important;
         }
+
+        /* 비밀번호 인증 모달 스타일 */
+        #passwordModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .password-modal-content {
+            background-color: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            min-width: 300px;
+        }
+
+        .password-modal-content h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .password-input {
+            width: 200px;
+            padding: 15px;
+            font-size: 18px;
+            text-align: center;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            letter-spacing: 3px;
+        }
+
+        .password-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .password-submit {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        .password-submit:hover {
+            background-color: #45a049;
+        }
+
+        .password-error {
+            color: #f44336;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- 비밀번호 인증 모달 -->
+    <div id="passwordModal">
+        <div class="password-modal-content">
+            <h2>🔒 접근 인증</h2>
+            <p>4자리 비밀번호를 입력하세요</p>
+            <input type="password" id="passwordInput" class="password-input" maxlength="4" placeholder="****" autocomplete="off">
+            <br>
+            <button onclick="checkPassword()" class="password-submit">확인</button>
+            <div id="passwordError" class="password-error" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- 메인 콘텐츠 -->
+    <div class="main-content">
+        <div class="container">
         <h1>어드민 양식 변환기</h1>
         
         <div class="url-container" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; flex-wrap: nowrap; width: 100%;">
@@ -3926,6 +4009,69 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
             
             reader.readAsBinaryString(file);
         });
+
+        // 비밀번호 인증 기능
+        const CORRECT_PASSWORD = '5577'; // 원하는 4자리 비밀번호로 변경하세요
+
+        function checkPassword() {
+            const inputPassword = document.getElementById('passwordInput').value;
+            const errorDiv = document.getElementById('passwordError');
+            
+            if (inputPassword.length !== 4) {
+                showPasswordError('4자리 숫자를 입력해주세요.');
+                return;
+            }
+            
+            if (inputPassword === CORRECT_PASSWORD) {
+                // 비밀번호가 맞으면 모달 숨기고 메인 콘텐츠 표시
+                document.getElementById('passwordModal').style.display = 'none';
+                document.querySelector('.main-content').style.display = 'block';
+                
+                // 페이지 초기화 함수 호출 (기존에 있다면)
+                if (typeof initializePage === 'function') {
+                    initializePage();
+                }
+            } else {
+                showPasswordError('비밀번호가 올바르지 않습니다.');
+            }
+        }
+
+        function showPasswordError(message) {
+            const errorDiv = document.getElementById('passwordError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            // 입력 필드 초기화 및 포커스
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordInput').focus();
+            
+            // 3초 후 에러 메시지 숨기기
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        // 페이지 로드 시 비밀번호 입력 필드에 포커스
+        window.addEventListener('load', function() {
+            document.getElementById('passwordInput').focus();
+        });
+
+        // Enter 키로 비밀번호 확인
+        document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+
+        // 숫자만 입력 가능하도록 제한
+        document.getElementById('passwordInput').addEventListener('input', function(e) {
+            const value = e.target.value;
+            const numericValue = value.replace(/[^0-9]/g, '');
+            if (value !== numericValue) {
+                e.target.value = numericValue;
+            }
+        });
     </script>
+    </div> <!-- main-content 닫는 태그 -->
 </body>
 </html>
