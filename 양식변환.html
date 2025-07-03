@@ -1199,41 +1199,6 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                     };
                 },
                 '밀리언': (info) => `[밀리언]\n고객명: ${info.고객명}\n모델: ${info.모델명}\n색상: ${info.색상}\n요금제: ${info.요금제}\n가입유형: ${info.가입유형}\n${info.할부현금여부}: ${info.최종구매가}원`,
-                '카파': (info) => {
-                    // 배송요청 양식 (첫 번째 textarea)
-                    const stockRequest = `★ 단말기 배정요청 ★		
-		
-* 배송방법 (택배or퀵) :	
-* 고객명 (수취인) : ${info['고객명'] || ''}
-* 연락처 : ${info['전화번호'] || info['연락처'] || ''}
-* 주소 : ${info['택배주소'] || info['배송주소지'] || ''}	 
-* 모델명 : ${info['모델명'] || ''}
-* 용량 : ${info['용량'] || ''}	 
-* 색상 : ${info['색상'] || ''}
-* 판매유형 : 
-* USIM 발송여부 : ${info['유심'] ? 'Y' : 'N'}`;
-                    
-                    // 개통요청 양식 (두 번째 textarea)
-                    const openRequest = `★판매점명★	에이치엘
-개통유형>${info['가입유형'] || ''}
-고객명>${info['고객명'] || ''}
-개통번호>${info['전화번호'] || info['연락처'] || ''}
-주민번호>${info['주민번호'] || info['생년월일'] || ''}
-단말모델명>	${info['모델명'] || ''}	
-단말색상>${info['색상'] || ''}
-일련번호>${info['단말기일련번호'] || ''}
-유심번호>${info['유심일련번호'] || ''}
-요금제>${info['요금제'] || ''}
-부가서비스>${info['부가서비스'] || ''}
-약정유형>${info['공시선약여부'] || ''}
-할부개월수>${info['할부현금여부'] === '할부' ? (info['할부개월수'] || '24') : '0'}
-프리할부>${info['프리할부'] || ''}
-할부원금>${info['할부현금여부'] === '할부' ? (info['최종구매가'] || '0') : '0'}
-번호이동인증>	`;
-                    
-                    return { stockRequest, openRequest };
-                },
-
                 '장천': (info) => `[장천] ${info.고객명} - ${info.모델명} ${info.색상} - ${info.요금제} - ${info.가입유형} - ${info.할부현금여부} ${info.최종구매가}원`,
                 '삼보/엠디도매': (info) => `[삼보/엠디도매]\n${info.고객명}\n${info.모델명}\n${info.색상}\n${info.요금제}\n${info.가입유형}\n${info.할부현금여부} ${info.최종구매가}원`,
                 '코웨어': (info) => {
@@ -1555,10 +1520,13 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                 const agencySelect = document.getElementById('agency');
                 const selectedAgency = agencySelect ? agencySelect.value : '';
 
+                // 카파일 때만 배송요청으로 표시, 나머지는 접수확인
+                const firstLabel = selectedAgency === '카파' ? '배송요청' : '접수확인';
+
                 container.style.display = 'block';
                 container.innerHTML = `
                     <div class="form-group">
-                        <label for="outputText1">${selectedAgency} 접수확인:</label>
+                        <label for="outputText1">${selectedAgency} ${firstLabel}:</label>
                         <textarea id="outputText1" class="output-textarea">${result.stockRequest || ''}</textarea>
                     </div>
                     <div class="form-group">
@@ -1761,6 +1729,104 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
             return modelName; // 매핑되지 않은 경우 원본 반환
         }
 
+        // 부가서비스와 보험 분리 함수
+        function parseAddonAndInsurance(addonText) {
+            if (!addonText) {
+                return { 보험: '', 부가서비스: '' };
+            }
+            
+            // 보험 관련 키워드 정의
+            const insuranceKeywords = [
+                'T All케어플러스',
+                'T All케어',
+                '케어플러스',
+                '단말보험',
+                '보험',
+                '스마트케어',
+                '안심케어',
+                '케어서비스',
+                '보장서비스',
+                '분실보험',
+                '파손보험'
+            ];
+            
+            // 부가서비스 관련 키워드 정의  
+            const addonKeywords = [
+                '마이스마트콜',
+                '스마트콜',
+                '벨소리',
+                '컬러링',
+                '네이버플러스',
+                '멜론',
+                '지니뮤직',
+                '플로',
+                '티맵',
+                '네비게이션',
+                '클라우드',
+                '백업',
+                '바이브',
+                '카카오VIP',
+                '모바일TV',
+                'DMB',
+                '데이터쉐어링',
+                '패밀리플러스',
+                '아이들나라',
+                '키즈랜드'
+            ];
+            
+            // 텍스트를 "/" 또는 "," 또는 ";" 또는 줄바꿈으로 분할
+            const items = addonText.split(/[\/,;\n]/).map(item => item.trim()).filter(item => item);
+            
+            const insuranceItems = [];
+            const addonItems = [];
+            const unclassifiedItems = [];
+            
+            for (const item of items) {
+                let isInsurance = false;
+                let isAddon = false;
+                
+                // 보험 키워드 확인
+                for (const keyword of insuranceKeywords) {
+                    if (item.toLowerCase().includes(keyword.toLowerCase())) {
+                        insuranceItems.push(item);
+                        isInsurance = true;
+                        break;
+                    }
+                }
+                
+                // 보험이 아닌 경우 부가서비스 키워드 확인
+                if (!isInsurance) {
+                    for (const keyword of addonKeywords) {
+                        if (item.toLowerCase().includes(keyword.toLowerCase())) {
+                            addonItems.push(item);
+                            isAddon = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // 둘 다 아닌 경우 미분류로 처리
+                if (!isInsurance && !isAddon) {
+                    // 길이가 짧거나 특정 패턴이면 부가서비스로 분류
+                    if (item.length <= 10 || /M\+\d+/.test(item) || /총\s*\d+개월/.test(item)) {
+                        addonItems.push(item);
+                    } else {
+                        unclassifiedItems.push(item);
+                    }
+                }
+            }
+            
+            // 미분류 항목은 일단 부가서비스에 추가 (사용자가 수동으로 조정할 수 있도록)
+            if (unclassifiedItems.length > 0) {
+                addonItems.push(...unclassifiedItems);
+            }
+            
+            return {
+                보험: insuranceItems.join(' / '),
+                부가서비스: addonItems.join(' / ')
+            };
+        }
+
         // 텍스트에서 고객 정보 추출
         function extractCustomerInfo(text) {
             const customerInfo = {};
@@ -1783,6 +1849,7 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                 '할인유형': /\*{1,2}할\s*인\s*유\s*형\s*[-:：]\s*([^\n]+)/i,
                 '유심': /\*{1,2}유\s*심\s*(?:비\s*용)?\s*[-:：]\s*([^\n]+)/i,
                 '부가서비스': /\*{1,2}부\s*가\s*서\s*비\s*스\s*[-:：]\s*([^\n]+)/i,
+                '보험': /\*{1,2}보\s*험\s*[-:：]\s*([^\n]+)/i,
                 '법대정보': /\*{1,2}법\s*대\s*정\s*보\s*[-:：]\s*([^/]+)\s*\/\s*([\d-]+)\s*\/\s*([\d-]+)/i
             };
             
@@ -2044,9 +2111,39 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                 }
             }
             
-            // 모델명 변환 적용 (펫네임 → 실제 모델명)
+            // 부가서비스와 보험 분리 처리
+            if (customerInfo['부가서비스']) {
+                const originalAddon = customerInfo['부가서비스'];
+                const { 보험, 부가서비스 } = parseAddonAndInsurance(customerInfo['부가서비스']);
+                customerInfo['보험'] = 보험;
+                customerInfo['부가서비스'] = 부가서비스;
+                
+                console.log('부가서비스 분리 결과:', {
+                    '원본': originalAddon,
+                    '분리된 보험': 보험,
+                    '분리된 부가서비스': 부가서비스
+                });
+            }
+            
+            // 모델명 변환 및 용량 정보 추출
             if (customerInfo['모델명']) {
-                customerInfo['모델명'] = convertModelName(customerInfo['모델명']);
+                // 모델명 변환 적용 (펫네임 → 실제 모델명)
+                const convertedModelName = convertModelName(customerInfo['모델명']);
+                
+                // 변환된 모델명에서 용량 정보 추출 (예: S936 256G → 용량: 256G)
+                const capacityMatch = convertedModelName.match(/(\d+(?:GB?|TB?))/i);
+                if (capacityMatch) {
+                    customerInfo['용량'] = capacityMatch[1];
+                    // 모델명에서 용량 부분 제거 (S936 256G → S936)
+                    customerInfo['모델명'] = convertedModelName.replace(/\s*\d+(?:GB?|TB?)/i, '').trim();
+                    console.log(`용량 추출 및 모델명 정리: ${convertedModelName} → 모델명: ${customerInfo['모델명']}, 용량: ${customerInfo['용량']}`);
+                } else {
+                    customerInfo['모델명'] = convertedModelName;
+                    customerInfo['용량'] = '';
+                    console.log(`용량 없음: ${convertedModelName} → 모델명: ${customerInfo['모델명']}`);
+                }
+            } else {
+                customerInfo['용량'] = '';
             }
             
             return customerInfo;
@@ -3433,7 +3530,7 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                         memo: agencyMemos['SK']['ACT(택배)'],
                         templates: {
                             stockRequest: (info) => {
-                                return `ACT / ${info.모델명 || ''} / ${info.가입유형 || ''}
+                                return `ACT / ${info.모델명 || ''} ${info.용량 || ''} / ${info.가입유형 || ''}
 ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || info.주민번호 || ''}
 접수 확인 부탁드립니다.`;
                             },
@@ -3456,7 +3553,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 5. 법대주민번호전체 : ${info.법정대리인주민번호 || ''}
 6. 법대연락처 : ${info.법정대리인연락처 || ''}
 7. 전통신사 : ${info.현재통신사 || ''}
-8. 모델명 : ${info.모델명 || ''}
+8. 모델명 : ${info.모델명 || ''} ${info.용량 || ''}
 9. 일련번호 : ${info.단말기일련번호 || ''}
 10. 유심번호(13자리) : ${info.유심일련번호 || info.유심 || ''}
 11. 요금제 : ${info.요금제 || ''}
@@ -3523,18 +3620,18 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 ＃${idLabel}	${idInfo}`;
                             },
                             stock: (info) => {
-                                const modelColor = `${info.모델명 || ''} / ${info.색상 || ''} / ${info.단말기일련번호 || ''}`;
+                                const modelColor = `${info.모델명 || ''} ${info.용량 || ''} / ${info.색상 || ''} / ${info.단말기일련번호 || ''}`;
                                 const plan = info.요금제 || '';
                                 const subscriptionType = info.가입유형 || '';
                                 
                                 if (info.공시선약여부 === '공시지원' && info.할부현금여부 === '현금') {
-                                    return `판매점명 :	 에이치엘
-고객명 :	${info.고객명 || ''}	
-개통번호 :	${info.전화번호 || ''}	
-모델명 / 색상 / 일련번호 :	${modelColor}	
+                                    return `판매점명 : 에이치엘
+고객명 : ${info.고객명 || ''}	
+개통번호 : ${info.전화번호 || ''}	
+모델명 / 색상 / 일련번호 : ${modelColor}	
 유심 일련번호 :	${info.유심일련번호 || ''}	
 요금제명(혜택) :	${plan}	
-개통유형 :	${subscriptionType}	
+개통유형 : ${subscriptionType}	
 공시 ${info.약정개월수 || '24개월'}		
 현금완납		
 		
@@ -3546,13 +3643,13 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 		
 보험 / 부가서비스 : ${info.부가서비스 || ''}`;
                                 } else if (info.공시선약여부 === '공시지원' && info.할부현금여부 === '할부') {
-                                    return `판매점명 :	 에이치엘
+                                    return `판매점명 : 에이치엘
 고객명 :	${info.고객명 || ''}	
 개통번호 :	${info.전화번호 || ''}	
 모델명 / 색상 / 일련번호 :	${modelColor}	
 유심 일련번호 :	${info.유심일련번호 || ''}	
-요금제명(혜택) :	${plan}	
-개통유형 :	${subscriptionType}	
+요금제명(혜택) : ${plan}	
+개통유형 : ${subscriptionType}	
 공시 ${info.약정개월수 || '24개월'}		
 할부 ${info.할부개월수 || '24개월'}		
 		
@@ -3574,7 +3671,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                 const name = info.고객명 || info.가입자명 || '';
                                 const birthDate = info.생년월일 || info.주민번호 || '';
                                 const phone = info.개통번호 || info.전화번호 || '';
-                                const model = info.모델명 || '';
+                                const model = info.모델명 || '' + info.용량 || '';
                                 const color = info.색상 || '';
                                 const serialNumber = info.단말기일련번호 || '';
                                 // 유심 정보 처리 (유심일련번호 우선, 없으면 유심 값 사용)
@@ -3718,14 +3815,14 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                     contractInfo = `약정없음`;
                                 }
                                 
-                                // 선납 정보 처리 (프리할부 있으면 기재, 없으면 0)
-                                const prepayInfo = info['프리할부'] && info['프리할부'] !== '0' ? info['프리할부'] : '0';
+                                // 선납 정보 처리 (프리할부 있으면 기재, 없거나 0이면 X)
+                                const prepayInfo = info['프리할부'] && info['프리할부'] !== '0' ? info['프리할부'] : 'X';
                                 
-                                // 원금 정보 처리 (할부면 최종구매가, 현금이면 0(현금완납))
-                                const principalInfo = info['할부현금여부'] === '할부' ? info['최종구매가'] || '0' : '0(현금완납)';
+                                // 원금 정보 처리 (할부면 최종구매가, 현금이면 최종구매가(★현금완납))
+                                const principalInfo = info['할부현금여부'] === '할부' ? info['최종구매가'] || '0' : `${info['최종구매가'] || '0'}(★현금완납)`;
                                 
-                                // 개월 정보 처리 (할부면 할부개월수, 현금이면 0)
-                                const monthsInfo = info['할부현금여부'] === '할부' ? info['할부개월수'] || '24개월' : '0';
+                                // 개월 정보 처리 (할부면 할부개월수, 현금이면 X)
+                                const monthsInfo = info['할부현금여부'] === '할부' ? info['할부개월수'] || '24개월' : 'X';
                                 
                                 // 생년월일 또는 주민번호 처리
                                 const birthOrRegNum = info['생년월일'] || info['주민번호'] || '';
@@ -3743,8 +3840,8 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 선납 : ${prepayInfo}
 원금 : ${principalInfo}	
 개월 : ${monthsInfo}
-부가 : ${info['부가서비스'] || ''}
-보험 :	`;
+부가 : ${info['부가서비스'] && info['부가서비스'] !== '무' ? info['부가서비스'] : 'X'}
+보험 : ${info['보험'] || 'X'}`;
                             }
                         }
                     },
@@ -3755,8 +3852,12 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                         memo: agencyMemos['SK']['카파'],
                         templates: {
                             stockRequest: (info) => {
-                                return `★ 단말기 배정요청 ★		
-		
+                                // 유심 값에 '이심' 또는 '기존유심' 키워드가 있으면 N, 그렇지 않으면 Y
+                                const usimValue = info.유심 || '';
+                                const hasESim = /이심|기존유심/i.test(usimValue);
+                                const usimRequest = hasESim ? 'X' : 'O';
+                                
+                                return `★ 단말기 배정요청 ★	
 * 배송방법 (택배or퀵) :	
 * 고객명 (수취인) : ${info.고객명 || ''}
 * 연락처 : ${info.전화번호 || info.연락처 || ''}
@@ -3765,10 +3866,10 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 * 용량 : ${info.용량 || ''}	 
 * 색상 : ${info.색상 || ''}
 * 판매유형 : 
-* USIM 발송여부 : ${info.유심 ? 'Y' : 'N'}`;
+* USIM 발송여부 : ${usimRequest}`;
                             },
                             openRequest: (info) => {
-                                return `★판매점명★	에이치엘
+                                return `★판매점명★에이치엘
 개통유형>${info.가입유형 || ''}
 고객명>${info.고객명 || ''}
 개통번호>${info.전화번호 || info.연락처 || ''}
@@ -3942,10 +4043,10 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 ▶전환지원금: ${info.전환지원금 && info.전환지원금 !== '0' ? info.전환지원금 : 'X'}
 ▶할부(개월)/현금 : ${info.할부현금여부 === '할부' ? `할부(${info.할부개월수 || '24개월'})` : info.할부현금여부 === '현금' ? '현금' : ''}
 ▶출고가 : ${info.출고가 || ''}
-▶프리(고객선납) : ${info.프리할부 || ''}
+▶프리(고객선납) : ${info.프리할부 && info.프리할부 !== '0' ? info.프리할부 : 'X'}
 ▶할부원금 : ${info.최종구매가 || ''}
-▶부가서비스 : ${info.부가서비스 || ''}
-▶보험유무 : ${info.보험 || '무'}`
+▶부가서비스 : ${info.부가서비스 && info.부가서비스 !== '무' ? info.부가서비스 : 'X'}
+▶보험유무 : ${info.보험 || 'X'}`
                         }
                     },
                     '신청서연장양식': {
