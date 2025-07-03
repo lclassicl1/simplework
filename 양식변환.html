@@ -834,7 +834,7 @@
     <script>
         // 통신사별 대리점 목록
         const agencies = {
-            'SK': ['큐브', '럭스', '나텔', '밀리언', '드블랙', '카파', '장천', '삼보/엠디도매', '코웨어', 'ACT(택배)', '비앤컴'],
+            'SK': ['큐브', '럭스', '나텔', '밀리언', '드블랙', '카파', '삼보(온라인)', '장천', '삼보/엠디도매', '코웨어', 'ACT(택배)', '비앤컴'],
             'KT': ['오앤티', '재희', '안산/이스턴','신청서연장양식'],
             'LG': ['소리', '제이/휴넷','신청서연장양식']
         };
@@ -906,6 +906,11 @@
 3. 프로모션 코드: SK-KAP-2025
 4. 문의 연락처: 02-567-8901 (담당자: 정카파)
 5. 특이사항: 법인 고객 전용 할인 프로그램 운영 중`,
+
+                '삼보(온라인)': `[삼보(온라인) 업무 메모]
+1. 티게이트 아이디 / 비번
+   D135420001
+   dlwnsghks1!(이준환1!)`,
 
                 '장천': `[장천 업무 메모]
 1. 개통 요청 마감: 평일 17:00
@@ -1520,8 +1525,13 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                 const agencySelect = document.getElementById('agency');
                 const selectedAgency = agencySelect ? agencySelect.value : '';
 
-                // 카파일 때만 배송요청으로 표시, 나머지는 접수확인
-                const firstLabel = selectedAgency === '카파' ? '배송요청' : '접수확인';
+                // 카파와 삼보(온라인)일 때만 특별 라벨 사용
+                let firstLabel = '접수확인';
+                if (selectedAgency === '카파') {
+                    firstLabel = '배송요청';
+                } else if (selectedAgency === '삼보(온라인)') {
+                    firstLabel = '재고요청';
+                }
 
                 container.style.display = 'block';
                 container.innerHTML = `
@@ -3184,7 +3194,8 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                 { name: '밀리언 접수 사이트', url: 'http://www.inbangpan.co.kr' },
                 { name: 'SK 큐브 재고표(SK3 탭 확인)', url: 'https://docs.google.com/spreadsheets/d/1BlrYaOOqMFEb-TLVnvI6KXCjMJvUWT7UipUAUgvqI5g/edit?gid=634535474#gid=634535474' },
                 { name: '럭스 재고표 확인', url: 'https://docs.google.com/spreadsheets/d/1kYLutrHNPLBbjA9YNcGDVmi0kys0nK2QBPNccyu1Skc/edit#gid=2040945696'},
-                { name: '비앤컴 배송요청 구글시트', url: 'https://docs.google.com/spreadsheets/d/1KjUUeRSXYM_isXf6daxfSyhO9yFJUryoHHLxhOfxhoQ/edit?gid=1068685658#gid=1068685658'}
+                { name: '비앤컴 배송요청 구글시트', url: 'https://docs.google.com/spreadsheets/d/1KjUUeRSXYM_isXf6daxfSyhO9yFJUryoHHLxhOfxhoQ/edit?gid=1068685658#gid=1068685658'},
+                { name: 'SK 삼보/큐브인증번호확인사이트', url: 'http://partner.tgateapp.com/'}
             ]},
             { name: '휴대폰 요금관련 정보', sites: [
                 { name: '레인보우컨설팅', url: 'https://goodmorningrainbow.com/renew/index.php' },
@@ -3885,6 +3896,77 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 프리할부>${info.프리할부 || ''}
 할부원금>${info.할부현금여부 === '할부' ? (info.최종구매가 || '0') : '0'}
 번호이동인증>	`;
+                            }
+                        }
+                    },
+                    '삼보(온라인)': {
+                        name: '삼보(온라인)',
+                        type: 'special',
+                        outputType: 'split',
+                        memo: agencyMemos['SK']['삼보(온라인)'],
+                        templates: {
+                            stockRequest: (info) => {
+                                // 유심 값에 '이심' 또는 '기존유심' 키워드가 있으면 X, 그렇지 않으면 O
+                                const usimValue = info.유심 || '';
+                                const hasESim = /이심|기존유심/i.test(usimValue);
+                                const usimRequest = hasESim ? 'X' : 'O';
+                                
+                                return `★재고요청(삼보)
+택배or퀵 : 택배
+이름: ${info.고객명 || ''}
+연락처 : ${info.전화번호 || ''}
+주소 : ${info.택배주소 || info.배송주소지 || ''}
+유심 : ${usimRequest}	
+모델명 : ${info.모델명 || ''} ${info.용량 || ''}
+색상 : ${info.색상 || ''}`;
+                            },
+                            openRequest: (info) => {
+                                // 기타특이사항 구성
+                                let specialNotes = '';
+                                
+                                // 할인유형 / 약정개월수
+                                const discountType = info.할인유형 || info.공시선약여부 || '';
+                                const contractMonths = info.약정개월수 || '';
+                                if (discountType && contractMonths) {
+                                    specialNotes += `${discountType} ${contractMonths}`;
+                                } else if (discountType) {
+                                    specialNotes += discountType;
+                                }
+                                
+                                // 요금제
+                                const plan = info.요금제 || '';
+                                if (plan) {
+                                    specialNotes += specialNotes ? ` / ${plan}` : plan;
+                                }
+                                
+                                // 할부/현금 정보
+                                let paymentInfo = '';
+                                if (info.할부현금여부 === '현금') {
+                                    paymentInfo = `현금완납(${info.최종구매가 || ''})`;
+                                } else if (info.할부현금여부 === '할부') {
+                                    paymentInfo = `할부${info.할부개월수 || '24개월'} (${info.최종구매가 || ''})`;
+                                }
+                                
+                                if (paymentInfo) {
+                                    specialNotes += specialNotes ? ` / ${paymentInfo}` : paymentInfo;
+                                }
+                                
+                                return `1. 고객명: ${info.고객명 || ''}
+2. 전화번호: ${info.전화번호 || ''}
+3. 주민번호(13자리): ${info.주민번호 || info.생년월일 || ''}
+4. 법정대리인: ${info.법정대리인이름 || 'X'}
+5. 법대주민번호(13자리): ${info.법정대리인주민번호 || 'X'}
+6. 법대연락처: ${info.법정대리인연락처 || 'X'}
+
+7. 전통신사 : ${info.현재통신사 || ''}
+8. 모델명: ${info.모델명 || ''} ${info.용량 || ''}
+9. 일련번호: ${info.단말기일련번호 || ''}
+10. 유심번호(13자리): ${info.유심일련번호 || ''}
+11.유심 선납/후납: ${info.유심 || ''}
+
+12. 기타특이사항 : ${specialNotes}
+13. 판매점명: 에이치엠씨
+14. P코드: 에이치엠씨`;
                             }
                         }
                     },
