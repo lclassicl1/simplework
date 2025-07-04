@@ -3878,14 +3878,19 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                 const naModel = info['모델명'] || '';
                                 const naColor = info['색상'] || '';
                                 
+                                // 유심 값에 '이심' 또는 '기존유심' 키워드가 있으면 X, 그렇지 않으면 O
+                                const usimValue = info.유심 || '';
+                                const hasESim = /이심|기존유심/i.test(usimValue);
+                                const usimRequest = hasESim ? 'X' : 'O';
+                                
                                 // 배송요청 양식 (첫 번째 textarea)
                                 return `택배요청	
 	
 주소 : ${naAddress}
 수취인 : ${naName}
 연락처 : ${naContact}
-기종/색상: ${naModel} / ${naColor}
-유심 : ${info['유심일련번호'] || ''}`;
+기종/색상: ${naModel} ${info.용량 || ''} / ${naColor}
+유심 : ${usimRequest}`;
                             },
                             openRequest: (info) => {
                                 // 기본 정보 처리
