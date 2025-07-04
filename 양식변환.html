@@ -1951,6 +1951,12 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                             value = value.replace(/\s*-\s*/g, '-');
                         }
                         
+                        // 배송주소/택배주소에서 "/" 이후의 전화번호 부분 제거
+                        if ((key === '택배주소' || key === '배송주소지') && value) {
+                            // "/" 이후의 전화번호 패턴 제거 (예: / 010-8316-1294)
+                            value = value.replace(/\s*\/\s*010-\d{3,4}-\d{4}.*$/, '').trim();
+                        }
+                        
                         customerInfo[key] = value;
                     } else {
                         customerInfo[key] = '';
@@ -4138,19 +4144,38 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 ▶유심(구매/비구매) : ${usimStatus}`;
                             },
                             openRequest: (info) => {
-                                return `[이앤티 개통요청 - 테스트용]
-고객명: ${info.고객명 || ''}
-전화번호: ${info.전화번호 || ''}
-주민번호: ${info.주민번호 || info.생년월일 || ''}
-모델명: ${info.모델명 || ''} ${info.용량 || ''}
-색상: ${info.색상 || ''}
-일련번호: ${info.단말기일련번호 || ''}
-유심번호: ${info.유심일련번호 || ''}
-요금제: ${info.요금제 || ''}
-가입유형: ${info.가입유형 || ''}
-할부현금여부: ${info.할부현금여부 || ''}
-최종구매가: ${info.최종구매가 || ''}
-※ 템플릿 추후 지정 예정`;
+                                // 지정번호 처리 (신규가입이 아니면 X)
+                                const subscriptionType = info.가입유형 || '';
+                                const designatedNumber = ['신규가입', '신규'].includes(subscriptionType) ? '' : 'X';
+                                
+                                // 할부선할인 처리 (프리할부가 있으면 프리할부 값, 없으면 X)
+                                const installmentDiscount = (info.프리할부 && info.프리할부 !== '0') ? info.프리할부 : 'X';
+                                
+                                // 유심 처리 (즉납/후납/기존)
+                                const usimType = info.유심 || '';
+                                
+                                // 공시/선약 처리
+                                const contractType = info.공시선약여부 || info.할인유형 || '';
+                                
+                                // 현금/할부 처리
+                                const paymentType = info.할부현금여부 || '';
+                                
+                                return `★정책명
+▶판매점 : 신풍
+▶고객명 : ${info.고객명 || ''}
+▶개통번호 : ${info.전화번호 || ''}
+▶주민번호 : ${info.주민번호 || info.생년월일 || ''}
+▶전통신사 : ${info.현재통신사 || ''}
+▶모델/색상 : ${info.모델명 || ''} ${info.용량 || ''} / ${info.색상 || ''}
+▶단말일련번호 : ${info.단말기일련번호 || ''}
+▶유심(즉납/후납/기존) : ${usimType}
+▶유심일련번호 : ${info.유심일련번호 || ''}
+▶공시/선약 : ${contractType} ${info.약정개월수 || ''}
+▶현금/할부 : ${paymentType}
+▶할부선할인 : ${installmentDiscount}
+▶요금제 : ${info.요금제 || ''}
+▶지정번호 : ${designatedNumber}
+▶부가 : ${info.부가서비스 && info.부가서비스 !== '무' ? info.부가서비스 : ''}`;
                             }
                         }
                     }
