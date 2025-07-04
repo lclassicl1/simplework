@@ -4037,7 +4037,11 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                     specialNotes += specialNotes ? ` / ${paymentInfo}` : paymentInfo;
                                 }
                                 
-                                return `1. 고객명: ${info.고객명 || ''}
+                                // 현재 월을 2자리 형식으로 가져오기 (01, 02, ..., 12)
+                                const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+                                
+                                return `[T-GATE 무선 접수 양식 ${currentMonth}월 ★ ]
+1. 고객명: ${info.고객명 || ''}
 2. 전화번호: ${info.전화번호 || ''}
 3. 주민번호(13자리): ${info.주민번호 || info.생년월일 || ''}
 4. 법정대리인: ${info.법정대리인이름 || 'X'}
