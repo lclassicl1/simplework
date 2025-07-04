@@ -834,7 +834,7 @@
     <script>
         // 통신사별 대리점 목록
         const agencies = {
-            'SK': ['큐브', '럭스', '나텔', '밀리언', '드블랙', '카파', '삼보(온라인)', '장천', '삼보/엠디도매', '코웨어', 'ACT(택배)', '비앤컴'],
+            'SK': ['큐브', '럭스', '나텔', '밀리언', '드블랙', '카파', '삼보(온라인)', '장천', '삼보/엠디도매', '코웨어', 'ACT(택배)', '비앤컴', '이앤티'],
             'KT': ['오앤티', '재희', '안산/이스턴','신청서연장양식'],
             'LG': ['소리', '제이/휴넷','신청서연장양식']
         };
@@ -950,7 +950,13 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                 '비앤컴': `[비앤컴 업무 메모]
 1. 주소 :서울 성동구 아차산로7나길18, 706호  / 1522-0689
 2. 미성년자는 가족관계증명서가 필요 / 만 65세이상 고연령 진행불가/택배만 가능(우체국) / 외국인 / 법인 개통 불가
-3. 티게이트 공식신청서 접수 확인O/카톡O (신조는 카톡으로/카톡으로 접수확인/신조 둘다 가능)`
+3. 티게이트 공식신청서 접수 확인O/카톡O (신조는 카톡으로/카톡으로 접수확인/신조 둘다 가능)`,
+
+                '이앤티': `[이앤티 업무 메모]
+1. 개통 요청 시간: 평일 9:00 ~ 18:00
+2. 배송 방법: 택배 배송 (전국 가능)
+3. 문의 연락처: 02-XXX-XXXX (담당자: 이앤티)
+4. 특이사항: 템플릿 추후 지정 예정`
             },
             'KT': {
                 '오앤티': `[오앤티 업무 메모]
@@ -3267,7 +3273,7 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                 { name: 'SK 티게이트 조회', url: 'https://tgateplus.sktelecom.com/scrb/frontList.do' },
                 { name: 'GTS', url: 'https://gts.bizmax.net/' },
                 { name: '밀리언 접수 사이트', url: 'http://www.inbangpan.co.kr' },
-                { name: 'SK 큐브 재고표(SK3 탭 확인)', url: 'https://docs.google.com/spreadsheets/d/1BlrYaOOqMFEb-TLVnvI6KXCjMJvUWT7UipUAUgvqI5g/edit?gid=634535474#gid=634535474' },
+                { name: 'SK 삼보/큐브 재고표(SK3 탭 확인)', url: 'https://docs.google.com/spreadsheets/d/1BlrYaOOqMFEb-TLVnvI6KXCjMJvUWT7UipUAUgvqI5g/edit?gid=634535474#gid=634535474' },
                 { name: '럭스 재고표 확인', url: 'https://docs.google.com/spreadsheets/d/1kYLutrHNPLBbjA9YNcGDVmi0kys0nK2QBPNccyu1Skc/edit#gid=2040945696'},
                 { name: '비앤컴 배송요청 구글시트', url: 'https://docs.google.com/spreadsheets/d/1KjUUeRSXYM_isXf6daxfSyhO9yFJUryoHHLxhOfxhoQ/edit?gid=1068685658#gid=1068685658'},
                 { name: 'SK 삼보/큐브인증번호확인사이트', url: 'http://partner.tgateapp.com/'}
@@ -4107,6 +4113,43 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                             
                             result += `유심 - ${info.유심일련번호 || info.유심 || ''}\n`;
                             return result;
+                        }
+                    },
+                    '이앤티': {
+                        name: '이앤티',
+                        type: 'special',
+                        outputType: 'split',
+                        memo: agencyMemos['SK']['이앤티'],
+                        templates: {
+                            stockRequest: (info) => {
+                                // 유심 값에 '이심' 또는 '기존유심' 키워드가 있으면 비구매, 그렇지 않으면 구매
+                                const usimValue = info.유심 || '';
+                                const hasESim = /이심|기존유심/i.test(usimValue);
+                                const usimStatus = hasESim ? '비구매' : '구매';
+                                
+                                return `▶배송방법(택배/퀵/내방) : 택배   
+- 받는분 : ${info.고객명 || ''}
+- 연락처 : ${info.전화번호 || ''}
+- 주 소 : ${info.택배주소 || info.배송주소지 || ''}
+▶모델명/색상 : ${info.모델명 || ''} ${info.용량 || ''} / ${info.색상 || ''}
+▶기기일련 : ${info.단말기일련번호 || ''}
+▶유심(구매/비구매) : ${usimStatus}`;
+                            },
+                            openRequest: (info) => {
+                                return `[이앤티 개통요청 - 테스트용]
+고객명: ${info.고객명 || ''}
+전화번호: ${info.전화번호 || ''}
+주민번호: ${info.주민번호 || info.생년월일 || ''}
+모델명: ${info.모델명 || ''} ${info.용량 || ''}
+색상: ${info.색상 || ''}
+일련번호: ${info.단말기일련번호 || ''}
+유심번호: ${info.유심일련번호 || ''}
+요금제: ${info.요금제 || ''}
+가입유형: ${info.가입유형 || ''}
+할부현금여부: ${info.할부현금여부 || ''}
+최종구매가: ${info.최종구매가 || ''}
+※ 템플릿 추후 지정 예정`;
+                            }
                         }
                     }
                 }
