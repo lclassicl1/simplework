@@ -3934,7 +3934,14 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                 const monthsInfo = info['할부현금여부'] === '할부' ? info['할부개월수'] || '24개월' : 'X';
                                 
                                 // 생년월일 또는 주민번호 처리
-                                const birthOrRegNum = info['생년월일'] || info['주민번호'] || '';
+                                // const birthOrRegNum = info['생년월일'] || info['주민번호'] || '';
+                                
+                                // 생년월일/주민번호를 yymmdd 형태로 변환 (- 제거)
+                                let birthOrRegNum = info['생년월일'] || info['주민번호'] || '';
+                                if (birthOrRegNum) {
+                                    // - 제거하고 앞 6자리만 추출 (yymmdd)
+                                    birthOrRegNum = birthOrRegNum.replace(/-/g, '').substring(0, 6);
+                                }
                                 
                                 return `개통요청 / 전문화	
 유형: ${naSubscriptionType}
