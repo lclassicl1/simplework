@@ -3913,13 +3913,17 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                 const naPlan = info['요금제'] || '';
                                 const naSubscriptionType = info['가입유형'] || '';
                                 
+                                // 나텔 선택약정 12개월 체크
+                                if (info['공시선약여부'] === '선택약정' && info['약정개월수'] === '12개월') {
+                                    alert('나텔은 선택약정 24개월만 진행 가능합니다. 어드민 메모를 확인하세요. \n도우미 양식은 24개월로 자동 변환됩니다.');
+                                }
                                 
                                 // 약정 정보 처리 (공시지원 또는 선택약정 + 개월수)
                                 let contractInfo = '';
                                 if (info['공시선약여부'] === '공시지원') {
                                     contractInfo = `공시지원 ${info['약정개월수'] || '24개월'}`;
                                 } else if (info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') {
-                                    contractInfo = `선택약정 ${info['약정개월수'] || '24개월'}`;
+                                    contractInfo = `선택약정24개월`;
                                 } else {
                                     contractInfo = `약정없음`;
                                 }
