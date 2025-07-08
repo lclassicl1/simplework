@@ -829,6 +829,18 @@
                         </div>
                     </div>
                     
+                    <!-- 장천 전용 추가 textarea (배송요청/개통요청) -->
+                    <div id="jangcheonExtraOutputs" style="display:none;">
+                        <div class="form-group">
+                            <label for="jangcheonDeliveryText">장천 배송요청:</label>
+                            <textarea id="jangcheonDeliveryText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="jangcheonOpenText">장천 개통요청:</label>
+                            <textarea id="jangcheonOpenText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                    </div>
+                    
                     <div id="keyValueTableContainer" style="display: none;">
                     </div>
                 </div>
@@ -1265,7 +1277,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                     };
                 },
                 '밀리언': (info) => `[밀리언]\n고객명: ${info.고객명}\n모델: ${info.모델명}\n색상: ${info.색상}\n요금제: ${info.요금제}\n가입유형: ${info.가입유형}\n${info.할부현금여부}: ${info.최종구매가}원`,
-                '장천': (info) => `[장천] ${info.고객명} - ${info.모델명} ${info.색상} - ${info.요금제} - ${info.가입유형} - ${info.할부현금여부} ${info.최종구매가}원`,
+
                 '삼보/엠디도매': (info) => `[삼보/엠디도매]\n${info.고객명}\n${info.모델명}\n${info.색상}\n${info.요금제}\n${info.가입유형}\n${info.할부현금여부} ${info.최종구매가}원`,
                 '코웨어': (info) => {
                     // 기본 정보 처리
@@ -1491,6 +1503,11 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                                 delivery: template.delivery(customerInfo),
                                 open: template.open(customerInfo)
                             };
+                        } else if (agency === '장천') {
+                            return {
+                                delivery: template.delivery(customerInfo),
+                                open: template.open(customerInfo)
+                            };
                         } else {
                             return {
                                 request: template.request(customerInfo),
@@ -1538,7 +1555,8 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                     'bncomExtraOutputs',
                     'hunetExtraOutputs',
                     'millionExtraOutputs',
-                    'ontExtraOutputs'
+                    'ontExtraOutputs',
+                    'jangcheonExtraOutputs'
                 ];
                 
                 containers.forEach(id => {
@@ -1590,6 +1608,8 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                     container = document.getElementById('millionExtraOutputs');
                 } else if (agency === '오앤티') {
                     container = document.getElementById('ontExtraOutputs');
+                } else if (agency === '장천') {
+                    container = document.getElementById('jangcheonExtraOutputs');
                 } else {
                     container = document.getElementById('luxExtraOutputs');
                 }
@@ -1640,6 +1660,13 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                     if (requestText) requestText.value = result.request || '';
                     if (stockText) stockText.value = result.delivery || '';
                     if (memoText) memoText.value = result.open || '';
+                } else if (agency === '장천') {
+                    // 장천 대리점용 출력 처리
+                    const deliveryText = document.getElementById('jangcheonDeliveryText');
+                    const openText = document.getElementById('jangcheonOpenText');
+                    
+                    if (deliveryText) deliveryText.value = result.delivery || '';
+                    if (openText) openText.value = result.open || '';
                 } else {
                     // 럭스 대리점용 출력 처리
                     container.innerHTML = `
@@ -2292,6 +2319,8 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
             if (hunetExtraOutputs) hunetExtraOutputs.style.display = 'none';
             if (millionExtraOutputs) millionExtraOutputs.style.display = 'none';
             if (ontExtraOutputs) ontExtraOutputs.style.display = 'none';
+            const jangcheonExtraOutputs = document.getElementById('jangcheonExtraOutputs');
+            if (jangcheonExtraOutputs) jangcheonExtraOutputs.style.display = 'none';
             if (keyValueTableContainer) keyValueTableContainer.style.display = 'none';
             
             // 기본 출력 컨테이너 표시
@@ -4112,7 +4141,6 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 4. 법정대리인: ${info.법정대리인이름 || 'X'}
 5. 법대주민번호(13자리): ${info.법정대리인주민번호 || 'X'}
 6. 법대연락처: ${info.법정대리인연락처 || 'X'}
-
 7. 전통신사 : ${info.현재통신사 || ''}
 8. 모델명: ${info.모델명 || ''} ${info.용량 || ''}
 9. 일련번호: ${info.단말기일련번호 || ''}
@@ -4207,10 +4235,88 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
                     },
                     '장천': {
                         name: '장천',
-                        type: 'normal',
-                        outputType: 'single',
+                        type: 'special',
+                        outputType: 'multi',
                         memo: agencyMemos['SK']['장천'],
-                        template: (info) => `[장천] ${info.고객명} - ${info.모델명} ${info.색상} - ${info.요금제} - ${info.가입유형} - ${info.할부현금여부} ${info.최종구매가}원`
+                        templates: {
+                            delivery: (info) => {
+                                // 유심 여부 결정 (기존, 기존유심 텍스트가 포함되어 있으면 X, 그렇지 않으면 O)
+                                const usimValue = info.유심 || '';
+                                const hasExistingUsim = /기존|기존유심/i.test(usimValue);
+                                const usimStatus = hasExistingUsim ? 'X' : 'O';
+                                
+                                return `■ 배송요청(택배)
+▶고객명 : ${info.가입자명 || info.고객명 || ''}
+▶모델 : ${info.모델명 || ''}${info.용량 ? info.용량 : ''} ${info.색상 || ''}
+▶유심여부 : ${usimStatus}
+▶배송지 : ${info.배송주소지 || info.택배주소 || ''}
+▶연락처: ${info.개통번호 || info.전화번호 || ''}`;
+                            },
+                            open: (info) => {
+                                // 미성년자 여부 확인
+                                const isMinor = info.미성년자여부 === 'Y';
+                                
+                                // 현금/할부 정보 처리
+                                let paymentInfo = '';
+                                if (info.할부현금여부 === '현금') {
+                                    paymentInfo = `현금 ${info.최종구매가 || ''}`;
+                                } else if (info.할부현금여부 === '할부') {
+                                    paymentInfo = `할부 ${info.할부개월수 || ''} ${info.최종구매가 || ''}`;
+                                } else {
+                                    paymentInfo = info.할부현금여부 || '';
+                                }
+                                
+                                // 약정 정보 처리
+                                const contractInfo = info.공시선약여부 || info.할인유형 || '';
+                                
+                                // 현재통신사 인증값 처리
+                                const carrierAuth = info.현재통신사 ? `${info.현재통신사} & 인증값` : '';
+                                
+                                if (isMinor) {
+                                    // 미성년자 (청소년) 양식
+                                    return `[ 청소년개통요청 양식 ]
+ㅇ고객명 : ${info.고객명 || info.가입자명 || ''}
+ㅇ개통번호 : ${info.개통번호 || info.전화번호 || ''}
+ㅇ주민번호(풀로) : ${info.주민번호 || info.생년월일 || ''}
+ㅇ전통신사&인증값 : ${carrierAuth}
+ㅇ법대이름 : ${info.법정대리인명 || info.보호자명 || ''}
+ㅇ법대 연락처 : ${info.법정대리인연락처 || info.보호자연락처 || ''}
+ㅇ법대 주민번호 : ${info.법정대리인주민번호 || info.보호자주민번호 || ''}
+ㅇ고객청구주소 : ${info.청구주소 || info.배송주소지 || info.택배주소 || ''}
+ㅇ자동이체 : ${info.자동이체 || ''}
+ㅇ요금제 : ${info.요금제 || ''}
+ㅇ약정(공시or선약) : ${contractInfo}
+ㅇ할부 or 현금 : ${paymentInfo}
+ㅇ고객선납 : ${info.프리할부 || 'X'}
+ㅇ모델명 : ${info.모델명 || ''} ${info.용량 || ''} ${info.색상 || ''}
+ㅇ일련번호 : ${info.단말기일련번호 || ''}
+ㅇ유심번호 : ${info.유심일련번호 || ''}
+ㅇ부가서비스 : ${info.부가서비스 || 'X'}
+ㅇ보험가입 : ${info.보험 || 'X'}
+ㅇ지정번호 : X
+ㅇ복지 : X`;
+                                } else {
+                                    // 성인 양식
+                                    return `[ 성인개통요청 양식 ]
+ㅇ고객명 : ${info.고객명 || info.가입자명 || ''}
+ㅇ개통번호 : ${info.개통번호 || info.전화번호 || ''}
+ㅇ주민번호(풀로) : ${info.주민번호 || info.생년월일 || ''}
+ㅇ전통신사&인증값 : ${carrierAuth}
+ㅇ고객청구주소 : ${info.청구주소 || info.배송주소지 || info.택배주소 || ''}
+ㅇ자동이체 : ${info.자동이체 || ''}
+ㅇ요금제 : ${info.요금제 || ''}
+ㅇ약정(공시or선약) : ${contractInfo}
+ㅇ할부 or 현금 : ${paymentInfo}
+ㅇ고객선납 : ${info.프리할부 || 'X'}
+ㅇ모델명 : ${info.모델명 || ''} ${info.용량 || ''} ${info.색상 || ''}
+ㅇ일련번호 : ${info.단말기일련번호 || ''}
+ㅇ유심번호 : ${info.유심일련번호 || ''}
+ㅇ부가서비스 : ${info.부가서비스 || 'X'}
+ㅇ보험가입 : ${info.보험 || 'X'}
+ㅇ복지 : X`;
+                                }
+                            }
+                        }
                     },
                     '삼보/엠디도매': {
                         name: '삼보/엠디도매',
