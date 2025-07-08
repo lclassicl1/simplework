@@ -4190,7 +4190,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 ▶할부선할인 : ${installmentDiscount}
 ▶요금제 : ${info.요금제 || ''}
 ▶지정번호 : ${designatedNumber}
-▶부가 : ${info.부가서비스 && info.부가서비스 !== '무' ? info.부가서비스 : ''}`;
+▶부가 : ${info.부가서비스 && info.부가서비스 !== '무' ? info.부가서비스 : ''}${info.보험 ? '\n▶보험 : ' + info.보험 : ''}`;
                             }
                         }
                     }
