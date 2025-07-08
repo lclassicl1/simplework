@@ -4162,6 +4162,16 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                 // 공시/선약 처리
                                 const contractType = info.공시선약여부 || info.할인유형 || '';
                                 
+                                // 공시지원인 경우 추가 정보 표시
+                                let contractDisplayText = contractType;
+                                if (contractType === '공시지원') {
+                                    contractDisplayText = `${contractType} ${info.약정개월수 || ''} (공시 ${info.공시 || ''} / 추지 ${info.추지 || ''})`;
+                                } else if (contractType === '선택약정') {
+                                    contractDisplayText = `${contractType} ${info.약정개월수 || ''}`;
+                                } else {
+                                    contractDisplayText = `${contractType} ${info.약정개월수 || ''}`;
+                                }
+                                
                                 // 현금/할부 처리
                                 const paymentType = info.할부현금여부 || '';
                                 
@@ -4175,7 +4185,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 ▶단말일련번호 : ${info.단말기일련번호 || ''}
 ▶유심(즉납/후납/기존) : ${usimType}
 ▶유심일련번호 : ${info.유심일련번호 || ''}
-▶공시/선약 : ${contractType} ${info.약정개월수 || ''}
+▶공시/선약 : ${contractDisplayText}
 ▶현금/할부 : ${paymentType}
 ▶할부선할인 : ${installmentDiscount}
 ▶요금제 : ${info.요금제 || ''}
