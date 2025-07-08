@@ -148,6 +148,13 @@
             resize: vertical;   /* 세로 크기 조절만 가능하도록 */
         }
 
+        /* 오앤티 신조요청 전용 textarea 스타일 */
+        #ontRequestText {
+            height: 120px !important;
+            min-height: 120px;
+            resize: vertical;
+        }
+
         .button-group {
             display: flex;
             gap: 10px;
@@ -725,6 +732,13 @@
                             min-height: 150px;
                             resize: vertical;
                         }
+                        
+                        /* 밀리언 textarea 스타일 */
+                        #millionRequestText {
+                            height: 100px !important;
+                            min-height: 100px;
+                            resize: vertical;
+                        }
                     </style>
                     <div id="singleOutputContainer">
                         <div class="form-group">
@@ -773,6 +787,38 @@
                         <div class="form-group">
                             <label for="hunetOpenText">휴넷 개통요청양식:</label>
                             <textarea id="hunetOpenText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- 밀리언 전용 추가 textarea (신조요청/배정요청/개통요청) -->
+                    <div id="millionExtraOutputs" style="display:none;">
+                        <div class="form-group">
+                            <label for="millionRequestText">밀리언 신조요청:</label>
+                            <textarea id="millionRequestText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="millionStockText">밀리언 배정요청:</label>
+                            <textarea id="millionStockText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="millionMemoText">밀리언 개통요청:</label>
+                            <textarea id="millionMemoText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- 오앤티 전용 추가 textarea (신조요청/배정요청/개통요청) -->
+                    <div id="ontExtraOutputs" style="display:none;">
+                        <div class="form-group">
+                            <label for="ontRequestText">오앤티 신조요청:</label>
+                            <textarea id="ontRequestText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="ontStockText">오앤티 배정요청:</label>
+                            <textarea id="ontStockText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="ontMemoText">오앤티 개통요청:</label>
+                            <textarea id="ontMemoText" class="output-textarea compact-textarea"></textarea>
                         </div>
                     </div>
                     
@@ -873,12 +919,16 @@
 비번 : qwerqwer!!`,
 
                 '나텔': `[나텔 업무 메모]
-1. 개통 요청 마감: 평일 17:30, 토요일 12:30
-2. 택배 발송 시간: 오전 11시, 오후 3시 (하루 2회)
-3. 유심 발송 요청은 별도 양식으로 전달
-4. 전환지원금 신청 시 이전 통신사 가입 증빙 필요
-5. 문의 연락처: 02-234-5678 (담당자: 박나텔)
-6. 특이사항: 택배 요청 시 주소 정확히 기재 필수`,
+1. 티게이트 아이디 비번
+    아이디 : NATEL12345		
+    비밀번호 aa2580@@		
+    인증번호 확인:라온아이 통해서 확인
+2. ★택배 4시 마감 / CJ 택배
+3. ★개통요청은 5시 30분까지
+4. 나텔주소:서울 강남구 청담동 55-10 단독 / 1670-6993
+5. ★선약 24개월만 개통가능(12개월불가)
+6. ★안드로메다는 전모델 나텔로 접수 불가
+7. 어드민 대리점 지정 : SK나텔`,
 
                 '밀리언': `[밀리언 업무 메모]
 1. 사이트 ID/PW
@@ -1359,55 +1409,6 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                     };
                 }
             },
-            'KT': {
-                name: 'KT',
-                agencies: {
-                    '재희': {
-                        name: '재희',
-                        type: 'special',
-                        outputType: 'table',
-                        memo: agencyMemos['KT']['재희'],
-                        template: (info) => {
-                            const additionalOutput = `${info.모델명 || ''} / ${info.가입유형 || ''}\n` +
-                                `${info.고객명 || ''} / ${info.주민번호 || info.생년월일 || ''} / ${info.개통번호 || info.전화번호 || info.연락처 || ''}\n` +
-                                `접수 확인 부탁드립니다.`;
-                            return {
-                                tableData: info,
-                                additionalText: additionalOutput
-                            };
-                        }
-                    },
-                    '오앤티': {
-                        name: '오앤티',
-                        type: 'normal',
-                        outputType: 'single',
-                        memo: agencyMemos['KT']['오앤티'],
-                        template: (info) => `[오앤티] ${info.고객명 || ''} / ${info.모델명 || ''} ${info.색상 || ''} / ${info.요금제 || ''} / ${info.가입유형 || ''} / ${info.할부현금여부 || ''} ${info.최종구매가 ? info.최종구매가 + '원' : ''}`
-                    },
-                    '안산/이스턴': {
-                        name: '안산/이스턴',
-                        type: 'normal',
-                        outputType: 'single',
-                        memo: agencyMemos['KT']['안산/이스턴'],
-                        template: (info) => `[안산/이스턴] ${info.고객명 || ''} - ${info.모델명 || ''} - ${info.색상 || ''} - ${info.요금제 || ''} - ${info.가입유형 || ''} - ${info.할부현금여부 || ''} ${info.최종구매가 ? info.최종구매가 + '원' : ''}`,
-                        extensionForm: (info) => `[안산/이스턴-신청서연장]
-고객명: ${info.고객명 || ''}
-연락처: ${info.개통번호 || info.전화번호 || ''}
-모델명: ${info.모델명 || ''}
-색상: ${info.색상 || ''}
-요금제: ${info.요금제 || ''}
-가입유형: ${info.가입유형 || ''}
-할부금액: ${info.할부현금여부 || ''} ${info.최종구매가 ? info.최종구매가 + '원' : ''}`
-                    },
-                    '신청서연장양식': {
-                        name: '신청서연장양식',
-                        type: 'normal',
-                        outputType: 'single',
-                        memo: '',
-                        template: (info) => `${info.고객명 || ''} / ${info.주민번호 || info.생년월일 || ''} / ${info.개통번호 || info.전화번호 || ''}`
-                    }
-                }
-            },
             'LG': {
                 name: 'LG',
                 agencies: {
@@ -1470,10 +1471,16 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                             openRequest: template.openRequest(customerInfo)
                         };
                     case 'multi':
-                        // 휴넷의 경우 특별한 처리
+                        // 휴넷과 오앤티의 경우 특별한 처리
                         if (agency === '제이/휴넷') {
                             return {
                                 confirm: template.confirm(customerInfo),
+                                delivery: template.delivery(customerInfo),
+                                open: template.open(customerInfo)
+                            };
+                        } else if (agency === '오앤티') {
+                            return {
+                                request: template.request(customerInfo),
                                 delivery: template.delivery(customerInfo),
                                 open: template.open(customerInfo)
                             };
@@ -1522,7 +1529,9 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                     'keyValueTableContainer',
                     'actExtraOutputs',
                     'bncomExtraOutputs',
-                    'hunetExtraOutputs'
+                    'hunetExtraOutputs',
+                    'millionExtraOutputs',
+                    'ontExtraOutputs'
                 ];
                 
                 containers.forEach(id => {
@@ -1570,6 +1579,10 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                     container = document.getElementById('dblackExtraOutputs');
                 } else if (agency === '제이/휴넷') {
                     container = document.getElementById('hunetExtraOutputs');
+                } else if (agency === '밀리언') {
+                    container = document.getElementById('millionExtraOutputs');
+                } else if (agency === '오앤티') {
+                    container = document.getElementById('ontExtraOutputs');
                 } else {
                     container = document.getElementById('luxExtraOutputs');
                 }
@@ -1602,6 +1615,24 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                     if (confirmText) confirmText.value = result.confirm || '';
                     if (deliveryText) deliveryText.value = result.delivery || '';
                     if (openText) openText.value = result.open || '';
+                } else if (agency === '밀리언') {
+                    // 밀리언 대리점용 출력 처리
+                    const requestText = document.getElementById('millionRequestText');
+                    const stockText = document.getElementById('millionStockText');
+                    const memoText = document.getElementById('millionMemoText');
+                    
+                    if (requestText) requestText.value = result.request || '';
+                    if (stockText) stockText.value = result.stock || '';
+                    if (memoText) memoText.value = result.memo || '';
+                } else if (agency === '오앤티') {
+                    // 오앤티 대리점용 출력 처리
+                    const requestText = document.getElementById('ontRequestText');
+                    const stockText = document.getElementById('ontStockText');
+                    const memoText = document.getElementById('ontMemoText');
+                    
+                    if (requestText) requestText.value = result.request || '';
+                    if (stockText) stockText.value = result.delivery || '';
+                    if (memoText) memoText.value = result.open || '';
                 } else {
                     // 럭스 대리점용 출력 처리
                     container.innerHTML = `
@@ -2241,6 +2272,8 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
             const actExtraOutputs = document.getElementById('actExtraOutputs');
             const bncomExtraOutputs = document.getElementById('bncomExtraOutputs');
             const hunetExtraOutputs = document.getElementById('hunetExtraOutputs');
+            const millionExtraOutputs = document.getElementById('millionExtraOutputs');
+            const ontExtraOutputs = document.getElementById('ontExtraOutputs');
             const keyValueTableContainer = document.getElementById('keyValueTableContainer');
             
             // 모든 출력 컨테이너 숨기기
@@ -2250,6 +2283,8 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
             if (actExtraOutputs) actExtraOutputs.style.display = 'none';
             if (bncomExtraOutputs) bncomExtraOutputs.style.display = 'none';
             if (hunetExtraOutputs) hunetExtraOutputs.style.display = 'none';
+            if (millionExtraOutputs) millionExtraOutputs.style.display = 'none';
+            if (ontExtraOutputs) ontExtraOutputs.style.display = 'none';
             if (keyValueTableContainer) keyValueTableContainer.style.display = 'none';
             
             // 기본 출력 컨테이너 표시
@@ -4085,10 +4120,43 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                     },
                     '밀리언': {
                         name: '밀리언',
-                        type: 'normal',
-                        outputType: 'single',
+                        type: 'special',
+                        outputType: 'multi',
                         memo: agencyMemos['SK']['밀리언'],
-                        template: (info) => `[밀리언]\n고객명: ${info.고객명}\n모델: ${info.모델명}\n색상: ${info.색상}\n요금제: ${info.요금제}\n가입유형: ${info.가입유형}\n${info.할부현금여부}: ${info.최종구매가}원`
+                        templates: {
+                            request: (info) => {
+                                // 가입유형 + 할부현금여부 + '개통' 조합
+                                const subscriptionType = info.가입유형 || '';
+                                const paymentType = info.할부현금여부 || '';
+                                const requestType = `${subscriptionType} ${paymentType}개통`;
+                                
+                                // 고객명 (고객명 또는 가입자명)
+                                const customerName = info.고객명 || info.가입자명 || '';
+                                
+                                // 생년월일/주민번호
+                                const birthOrId = info.생년월일 || info.주민번호 || '';
+                                
+                                // 개통번호/전화번호  
+                                const phoneNumber = info.개통번호 || info.전화번호 || '';
+                                
+                                return `★신조요청★
+${requestType}
+${customerName}/${birthOrId}/${phoneNumber}`;
+                            },
+                            stock: (info) => `[밀리언 배정요청 템플릿]
+고객명: ${info.고객명 || ''}
+모델명: ${info.모델명 || ''}
+색상: ${info.색상 || ''}
+주소: ${info.택배주소 || info.배송주소지 || ''}`,
+                            memo: (info) => `[밀리언 개통요청 템플릿]
+고객명: ${info.고객명 || ''}
+모델명: ${info.모델명 || ''}
+색상: ${info.색상 || ''}
+요금제: ${info.요금제 || ''}
+가입유형: ${info.가입유형 || ''}
+할부현금여부: ${info.할부현금여부 || ''}
+최종구매가: ${info.최종구매가 || ''}원`
+                        }
                     },
                     '장천': {
                         name: '장천',
@@ -4227,10 +4295,29 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                     },
                     '오앤티': {
                         name: '오앤티',
-                        type: 'normal',
-                        outputType: 'single',
+                        type: 'special',
+                        outputType: 'multi',
                         memo: agencyMemos['KT']['오앤티'],
-                        template: (info) => `[오앤티] ${info.고객명 || ''} / ${info.모델명 || ''} ${info.색상 || ''} / ${info.요금제 || ''} / ${info.가입유형 || ''} / ${info.할부현금여부 || ''} ${info.최종구매가 ? info.최종구매가 + '원' : ''}`
+                        templates: {
+                            request: (info) => `★신조요청 ★
+${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
+성함 : ${info.고객명 || info.가입자명 || ''}
+주민번호 : ${info.주민번호 || info.생년월일 || ''}
+개통번호 : ${info.개통번호 || info.전화번호 || ''}`,
+                            delivery: (info) => `[오앤티 배정요청]
+고객명: ${info.고객명 || ''}
+모델명: ${info.모델명 || ''} ${info.색상 || ''}
+주소: ${info.택배주소 || info.배송주소지 || ''}
+배정 요청드립니다.`,
+                            open: (info) => `[오앤티 개통요청]
+고객명: ${info.고객명 || ''}
+개통번호: ${info.개통번호 || info.전화번호 || ''}
+모델명: ${info.모델명 || ''} ${info.색상 || ''}
+요금제: ${info.요금제 || ''}
+가입유형: ${info.가입유형 || ''}
+할부현금: ${info.할부현금여부 || ''} ${info.최종구매가 ? info.최종구매가 + '원' : ''}
+개통 요청드립니다.`
+                        }
                     },
                     '안산/이스턴': {
                         name: '안산/이스턴',
