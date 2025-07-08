@@ -4173,7 +4173,14 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                 }
                                 
                                 // 현금/할부 처리
-                                const paymentType = info.할부현금여부 || '';
+                                let paymentType = '';
+                                if (info.할부현금여부 === '현금') {
+                                    paymentType = `현금완납 ${info.최종구매가 || ''}`;
+                                } else if (info.할부현금여부 === '할부') {
+                                    paymentType = `할부 ${info.할부개월수 || ''} ${info.최종구매가 || ''}`;
+                                } else {
+                                    paymentType = info.할부현금여부 || '';
+                                }
                                 
                                 return `★정책명
 ▶판매점 : 신풍
