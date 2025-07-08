@@ -739,6 +739,13 @@
                             min-height: 100px;
                             resize: vertical;
                         }
+                        
+                        /* 밀리언 배정요청 textarea 스타일 (절반 크기) */
+                        #millionStockText {
+                            height: 100px !important;
+                            min-height: 100px;
+                            resize: vertical;
+                        }
                     </style>
                     <div id="singleOutputContainer">
                         <div class="form-group">
@@ -4143,19 +4150,59 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 ${requestType}
 ${customerName}/${birthOrId}/${phoneNumber}`;
                             },
-                            stock: (info) => `[밀리언 배정요청 템플릿]
-고객명: ${info.고객명 || ''}
-모델명: ${info.모델명 || ''}
-색상: ${info.색상 || ''}
-주소: ${info.택배주소 || info.배송주소지 || ''}`,
-                            memo: (info) => `[밀리언 개통요청 템플릿]
-고객명: ${info.고객명 || ''}
-모델명: ${info.모델명 || ''}
-색상: ${info.색상 || ''}
-요금제: ${info.요금제 || ''}
-가입유형: ${info.가입유형 || ''}
-할부현금여부: ${info.할부현금여부 || ''}
-최종구매가: ${info.최종구매가 || ''}원`
+                            stock: (info) => {
+                                // 유심 값 확인해서 기존유심 여부 결정
+                                const usimValue = info.유심 || '';
+                                const hasExistingUsim = /기존유심|기존/i.test(usimValue);
+                                const customerNameSuffix = hasExistingUsim ? ' (기존유심재사용)' : '';
+                                
+                                return `★라온아이 배정요청
+${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
+                            },
+                            memo: (info) => {
+                                // 유심 상태 결정 (기존, 기존유심 문자열이 없으면 후청구, 있으면 기존유심재사용)
+                                const usimValue = info.유심 || '';
+                                const hasExistingUsim = /기존|기존유심/i.test(usimValue);
+                                const usimStatus = hasExistingUsim ? '기존유심재사용' : '후청구';
+                                
+                                // 할부원금 처리
+                                let paymentInfo = '';
+                                if (info.할부현금여부 === '현금') {
+                                    paymentInfo = `★현금완납(${info.최종구매가 || ''})`;
+                                } else if (info.할부현금여부 === '할부') {
+                                    const priceInfo = info.최종구매가 ? `${info.최종구매가}` : '';
+                                    const monthInfo = info.할부개월수 ? ` / ${info.할부개월수}` : '';
+                                    paymentInfo = `${priceInfo}${monthInfo}`;
+                                    
+                                    // 프리할부가 있는 경우 추가
+                                    if (info.프리할부 && info.프리할부 !== '0') {
+                                        paymentInfo += ` (프리할부: ${info.프리할부})`;
+                                    }
+                                } else {
+                                    paymentInfo = info.할부현금여부 || '';
+                                }
+                                
+                                // 부가서비스 정리
+                                const additionalServices = [];
+                                if (info.부가서비스 && info.부가서비스 !== '무') {
+                                    additionalServices.push(info.부가서비스);
+                                }
+                                if (info.보험) {
+                                    additionalServices.push(info.보험);
+                                }
+                                const servicesText = additionalServices.length > 0 ? additionalServices.join(' / ') : '';
+                                
+                                return `개통요청(${info.가입유형 || ''})
+*현통신사 : ${info.현재통신사 || ''}
+이름 : ${info.가입자명 || info.고객명 || ''}
+주민번호 : ${info.주민번호 || info.생년월일 || ''}
+개통번호 : ${info.개통번호 || info.전화번호 || ''}
+구매기종 : ${info.모델명 || ''} ${info.용량 || ''} / ${info.색상 || ''}
+유심 : ${usimStatus}
+요금제 : ${info.요금제 || ''}
+할부원금 (프리할부) / 개월수 : ${paymentInfo}
+부가서비스 : ${servicesText}`;
+                            }
                         }
                     },
                     '장천': {
