@@ -2403,6 +2403,16 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                 console.log('추출된 고객 정보:', customerInfo);
                 console.table(customerInfo);
                 
+                // KT 대리점 약정 체크
+                if (selectedTelecom === 'KT') {
+                    const 공시선약여부 = customerInfo['공시선약여부'] || customerInfo['할인유형'] || '';
+                    const 약정개월수 = customerInfo['약정개월수'] || '';
+                    
+                    if (공시선약여부 === '선택약정' && 약정개월수 === '12개월') {
+                        alert('KT 대리점은 선택약정 24개월만 진행 가능합니다. 어드민 메모를 확인하세요.');
+                    }
+                }
+                
                 // 필수 항목 체크 및 alert 표시
                 const requiredFields = ['가입유형', '할인유형', '유심', '요금제', '약정개월수', '최종구매가', '용량', '모델제조사', '현재통신사'];
                 const emptyFields = [];
@@ -4271,6 +4281,11 @@ ${customerName}/${birthOrId}/${phoneNumber}`;
 ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
                             },
                             memo: (info) => {
+                                // 밀리언 선택약정 12개월 체크
+                                if (info['공시선약여부'] === '선택약정' && info['약정개월수'] === '12개월') {
+                                    alert('밀리언은 선택약정 24개월만 진행 가능합니다. 어드민 메모를 확인하세요. \n도우미 양식은 24개월로 자동 변환됩니다.');
+                                }
+                                
                                 // 유심 상태 결정 (기존, 기존유심 문자열이 없으면 후청구, 있으면 기존유심재사용)
                                 const usimValue = info.유심 || '';
                                 const hasExistingUsim = /기존|기존유심/i.test(usimValue);
@@ -4304,7 +4319,7 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
                                 const servicesText = additionalServices.length > 0 ? additionalServices.join(' / ') : '';
                                 
                                 return `개통요청(${info.가입유형 || ''})
-*현통신사 : ${info.현재통신사 || ''}
+현통신사 : ${info.현재통신사 || ''}
 이름 : ${info.가입자명 || info.고객명 || ''}
 주민번호 : ${info.주민번호 || info.생년월일 || ''}
 개통번호 : ${info.개통번호 || info.전화번호 || ''}
@@ -4520,7 +4535,7 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
                         outputType: 'table',
                         memo: agencyMemos['KT']['재희'],
                         template: (info) => {
-                            const additionalOutput = `${info.모델명 || ''} / ${info.가입유형 || ''}\n` +
+                            const additionalOutput = `${info.모델명 || ''} ${info.용량 || ''} / ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통\n` +
                                 `${info.고객명 || ''} / ${info.주민번호 || info.생년월일 || ''} / ${info.개통번호 || info.전화번호 || info.연락처 || ''}\n` +
                                 `접수 확인 부탁드립니다.`;
                             return {
