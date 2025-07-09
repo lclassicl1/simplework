@@ -591,10 +591,15 @@
                       <input type="file" id="excelFile" accept=".xlsx, .xls" style="font-size: 14px;"/>
                       <span id="extractCount" style="font-size: 14px; color: #2196F3; margin-left: 10px; font-weight: bold;"></span>
                   </div>
-                  <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
-                      <label for="excelFile2" style="font-size: 14px; color: #555;">어드민 엑셀 첨부로 배송요청 양식 만들기(대리점 먼저 선택 필수)</label>
-                      <input type="file" id="excelFile2" accept=".xlsx, .xls" style="font-size: 14px;"/>
-                      <span id="extractCount2" style="font-size: 14px; color: #e91e63; margin-left: 10px; font-weight: bold;"></span>
+                  <div style="display: flex; flex-direction: column; gap: 5px;">
+                      <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
+                          <label for="excelFile2" style="font-size: 14px; color: #555;">어드민 엑셀 첨부로 배송요청 양식 만들기(대리점 먼저 선택 필수)</label>
+                          <input type="file" id="excelFile2" accept=".xlsx, .xls" style="font-size: 14px;"/>
+                          <span id="extractCount2" style="font-size: 14px; color: #e91e63; margin-left: 10px; font-weight: bold;"></span>
+                      </div>
+                      <div style="margin-left: 5px;">
+                          <button id="downloadDeliveryBtn" onclick="downloadDeliveryExcel()" style="display: none; background-color: #4CAF50; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">배송요청양식 다운로드</button>
+                      </div>
                   </div>
               </div>
             
@@ -757,9 +762,6 @@
                         <div class="form-group">
                             <label id="outputTextLabel" for="outputText">변환된 텍스트:</label>
                             <textarea id="outputText" class="output-textarea"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <button id="downloadDeliveryBtn" onclick="downloadDeliveryExcel()" style="display: none; background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; margin-top: 10px;">배송요청양식 다운로드</button>
                         </div>
                     </div>
                     
@@ -3050,6 +3052,19 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
             document.getElementById('excelFile').value = '';
             document.getElementById('extractCount').textContent = '';
             
+            // 두 번째 엑셀 파일 입력 및 관련 요소 초기화
+            document.getElementById('excelFile2').value = '';
+            document.getElementById('extractCount2').textContent = '';
+            
+            // 배송요청양식 다운로드 버튼 숨기기
+            const downloadBtn = document.getElementById('downloadDeliveryBtn');
+            if (downloadBtn) {
+                downloadBtn.style.display = 'none';
+                downloadBtn.removeAttribute('data-telecom');
+                downloadBtn.removeAttribute('data-agency');
+                downloadBtn.removeAttribute('data-count');
+            }
+            
             // 통신사 및 대리점 선택 초기화
             const telecomSelect = document.getElementById('telecom');
             const agencySelect = document.getElementById('agency');
@@ -4897,12 +4912,14 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
 
         // 새로운 엑셀 파일 처리 로직 (배송요청 양식)
         document.getElementById('excelFile2').addEventListener('change', function(e) {
-            // 대리점 선택 여부 확인
+            // 통신사와 대리점 선택 여부 확인
+            const telecomSelect = document.getElementById('telecom');
             const agencySelect = document.getElementById('agency');
+            const selectedTelecom = telecomSelect ? telecomSelect.value : '';
             const selectedAgency = agencySelect ? agencySelect.value : '';
             
-            if (!selectedAgency) {
-                alert('대리점을 먼저 선택해주세요!');
+            if (!selectedTelecom || !selectedAgency) {
+                alert('통신사와 대리점을 모두 선택해주세요!');
                 // 파일 선택 초기화
                 e.target.value = '';
                 return;
@@ -5046,9 +5063,19 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
                             // 대리점별 배송요청 양식 적용
                             let formattedResult = '';
                             
-                            // 현재는 모든 대리점이 기본 양식 사용 (나텔은 추후 양식 변경 예정)
-                            // 기본 양식: 고객명/전화번호/모델명/색상/주소/유심상태/이심여부
-                            formattedResult = `${info['고객명'] || ''} / ${info['전화번호'] || ''} / ${info['모델명'] || ''} / ${info['색상'] || ''} / ${address} / ${usimStatus} / 이심:${esimStatus}`;
+                            if (selectedTelecom === 'SK' && selectedAgency === '나텔') {
+                                // SK 나텔 전용 양식: 고객명/전화번호/모델명/색상/주소/유심상태/이심여부/가입유형
+                                // 10번열에서 가입유형 추출
+                                let joinType = '';
+                                const col10Value = row[9]; // 10번열 (0-based index이므로 9)
+                                if (col10Value) {
+                                    joinType = col10Value === '보상기변' ? '기기변경' : col10Value;
+                                }
+                                formattedResult = `${info['고객명'] || ''} / ${info['전화번호'] || ''} / ${info['모델명'] || ''} / ${info['색상'] || ''} / ${address} / ${usimStatus} / 이심:${esimStatus} / ${joinType}`;
+                            } else {
+                                // 기본 양식: 고객명/전화번호/모델명/색상/주소/유심상태/이심여부
+                                formattedResult = `${info['고객명'] || ''} / ${info['전화번호'] || ''} / ${info['모델명'] || ''} / ${info['색상'] || ''} / ${address} / ${usimStatus} / 이심:${esimStatus}`;
+                            }
                             
                             // 최종 가공된 결과값 로깅
                             console.log(`[${index + 1}번째 행] 최종 결과: ${formattedResult}`);
@@ -5061,21 +5088,19 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
                     // 결과를 textarea에 출력
                     document.getElementById('outputText').value = processedData.join('\n');
                     
-                    // 추출 건수 표시 (대리점별로 표시)
+                    // 추출 건수 및 성공 메시지를 alert로 표시
                     const extractCount = processedData.length;
-                    document.getElementById('extractCount2').textContent = `${extractCount}건 ${selectedAgency} 배송요청 양식으로 처리 완료`;
+                    alert(`어드민 엑셀파일의 배송준비중 상태인 \n총 ${extractCount}건을 ${selectedTelecom}의 ${selectedAgency} 배송요청 엑셀로 변환 완료. \n다운로드 버튼을 누르세요.`);
                     
                     // 배송요청양식 다운로드 버튼 표시
                     const downloadBtn = document.getElementById('downloadDeliveryBtn');
                     if (downloadBtn && processedData.length > 0) {
-                        downloadBtn.style.display = 'block';
-                        // 버튼에 대리점명과 데이터를 저장 (다운로드 시 사용)
+                        downloadBtn.style.display = 'inline-block';
+                        // 버튼에 통신사, 대리점명과 데이터를 저장 (다운로드 시 사용)
+                        downloadBtn.setAttribute('data-telecom', selectedTelecom);
                         downloadBtn.setAttribute('data-agency', selectedAgency);
                         downloadBtn.setAttribute('data-count', extractCount);
                     }
-                    
-                    // 성공 메시지 표시
-                    alert(`${selectedAgency} 배송요청 양식으로 엑셀 파일이 성공적으로 처리되었습니다.`);
                     
                 } catch (error) {
                     console.error('새로운 엑셀 파일 처리 중 오류 발생:', error);
@@ -5101,8 +5126,11 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
                 return;
             }
             
-            // 버튼에서 대리점명 가져오기
-            const selectedAgency = downloadBtn.getAttribute('data-agency') || '대리점';
+            // 현재 선택된 통신사와 대리점명 가져오기 (버튼의 data 속성 우선)
+            const selectedTelecom = downloadBtn.getAttribute('data-telecom') || 
+                                  (document.getElementById('telecom') ? document.getElementById('telecom').value : '');
+            const selectedAgency = downloadBtn.getAttribute('data-agency') || 
+                                 (document.getElementById('agency') ? document.getElementById('agency').value : '대리점');
             
             // 현재 날짜 생성
             const now = new Date();
@@ -5112,8 +5140,11 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
             
             // 파일명 생성 (대리점별 다른 형식)
             let fileName = '';
-            if (selectedAgency === '삼보(온라인)') {
-                // 삼보(온라인)은 "삼보 매칭요청 독산 mm-dd" 형식
+            if (selectedAgency === '나텔') {
+                // 나텔은 "(나텔) 배송요청양식 mmdd" 형식 (괄호 뒤 공백 추가)
+                fileName = `(나텔) 배송요청양식 ${month}${day}.xlsx`;
+            } else if (selectedTelecom === 'SK' && selectedAgency === '삼보(온라인)') {
+                // SK 삼보(온라인)은 "삼보 매칭요청 독산 mm-dd" 형식
                 fileName = `삼보 매칭요청 독산 ${month}-${day}.xlsx`;
             } else {
                 // 다른 대리점은 기존 형식 유지
@@ -5128,11 +5159,62 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
                 // 엑셀 데이터 구성
                 let excelData = [];
                 
-                // 대리점별 헤더 구성
-                if (selectedAgency === '삼보(온라인)' || selectedAgency === '삼보/엠디도매') {
-                    // 삼보 전용 헤더
+                // 대리점별 헤더 구성 (통신사와 대리점 모두 검증)
+                if (selectedTelecom === 'SK' && selectedAgency === '나텔') {
+                    // SK 나텔 전용 헤더
+                    excelData.push(['이름', '주소', '연락처', '모델명', '색상', '유심', '가입유형', '비고', '일련번호(나텔)', '유심번호(나텔)', '송장번호(나텔)', '비고']);
+                    // 나텔 양식 데이터 처리
+                    rows.forEach(row => {
+                        const columns = row.split(' / ').map(col => col.trim().replace('이심:', ''));
+                        // 나텔 양식에 맞게 데이터 재배열: 고객명/전화번호/모델명/색상/주소/유심상태/이심여부/가입유형
+                        // → 이름/주소/연락처/모델명/색상/유심/가입유형/비고/일련번호(나텔)/유심번호(나텔)/송장번호(나텔)/비고
+                        
+                        const customerName = columns[0] || '';
+                        const phoneNumber = columns[1] || '';
+                        const modelName = columns[2] || '';
+                        const color = columns[3] || '';
+                        const address = columns[4] || '';
+                        const simStatus = columns[5] || '';
+                        const esimStatus = columns[6] || '';
+                        const joinType = columns[7] || ''; // 가입유형 (8번째 항목)
+                        
+                        // 유심 상태 변환 (O/X로만 표시)
+                        let simText = '';
+                        if (esimStatus === 'Y') {
+                            simText = 'X'; // 이심이 Y면 유심 비구매
+                        } else if (simStatus.includes('구매')) {
+                            simText = 'O';
+                        } else if (simStatus.includes('비구매')) {
+                            simText = 'X';
+                        } else {
+                            simText = 'O'; // 기본값
+                        }
+                        
+                        // 비고란 처리 (이심이 Y이고 유심이 X인 경우 "이심" 표시)
+                        let memo = '';
+                        if (esimStatus === 'Y' && simText === 'X') {
+                            memo = '이심';
+                        }
+                        
+                        const reorderedColumns = [
+                            customerName, // 이름
+                            address, // 주소
+                            phoneNumber, // 연락처
+                            modelName, // 모델명
+                            color, // 색상
+                            simText, // 유심 (O/X)
+                            joinType, // 가입유형
+                            memo, // 비고 (이심 표시)
+                            '', // 일련번호(나텔) - 나텔에서 작성
+                            '', // 유심번호(나텔) - 나텔에서 작성
+                            '', // 송장번호(나텔) - 나텔에서 작성
+                            '' // 비고 - 나텔에서 작성
+                        ];
+                        excelData.push(reorderedColumns);
+                    });
+                } else if (selectedTelecom === 'SK' && (selectedAgency === '삼보(온라인)' || selectedAgency === '삼보/엠디도매')) {
+                    // SK 삼보 전용 헤더
                     excelData.push(['수취인명', '수취인 전화번호', '수취인 이동통신', '수취인 주소', '색상', '주문상품명', '기타', '단말기일련번호']);
-                    
                     // 삼보 양식 데이터 처리
                     rows.forEach(row => {
                         const columns = row.split(' / ').map(col => col.trim().replace('이심:', ''));
@@ -5189,8 +5271,70 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
                 const workbook = XLSX.utils.book_new();
                 const worksheet = XLSX.utils.aoa_to_sheet(excelData);
                 
-                // 삼보 대리점인 경우 헤더 스타일링 적용
-                if (selectedAgency === '삼보(온라인)' || selectedAgency === '삼보/엠디도매') {
+                // 대리점별 헤더 스타일링 적용 (통신사와 대리점 모두 검증)
+                if (selectedTelecom === 'SK' && selectedAgency === '나텔') {
+                    // 나텔 전용 스타일링 (12개 컬럼)
+                    const natelGrayHeaderStyle = {
+                        fill: { fgColor: { rgb: "D3D3D3" } }, // 회색 배경 (A~G 컬럼)
+                        font: { sz: 11, bold: true }, // 11pt 폰트, 굵게
+                        alignment: { horizontal: "center", vertical: "center" },
+                        border: {
+                            top: { style: "thin" },
+                            bottom: { style: "thin" },
+                            left: { style: "thin" },
+                            right: { style: "thin" }
+                        }
+                    };
+                    
+                    const natelYellowHeaderStyle = {
+                        fill: { fgColor: { rgb: "FFFF00" } }, // 노란색 배경 (H~L 컬럼)
+                        font: { sz: 11, bold: true }, // 11pt 폰트, 굵게
+                        alignment: { horizontal: "center", vertical: "center" },
+                        border: {
+                            top: { style: "thin" },
+                            bottom: { style: "thin" },
+                            left: { style: "thin" },
+                            right: { style: "thin" }
+                        }
+                    };
+                    
+                    const natelDataStyle = {
+                        font: { sz: 11 }, // 11pt 폰트
+                        alignment: { horizontal: "center", vertical: "center" }, // 중앙 정렬
+                        border: {
+                            top: { style: "thin" },
+                            bottom: { style: "thin" },
+                            left: { style: "thin" },
+                            right: { style: "thin" }
+                        }
+                    };
+                    
+                    // 헤더 컬럼 (나텔 12개 컬럼)
+                    const natelColumns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+                    
+                    // 헤더 셀에 스타일 적용
+                    natelColumns.forEach((col, index) => {
+                        const cellAddress = col + '1';
+                        if (!worksheet[cellAddress]) worksheet[cellAddress] = { v: excelData[0][index] };
+                        
+                        // A~G 컬럼(이름~비고)은 회색, H~L 컬럼(일련번호(나텔)~비고)은 노란색
+                        if (index <= 7) { // A~G (0~6 인덱스)
+                            worksheet[cellAddress].s = natelGrayHeaderStyle;
+                        } else { // H~L (7~11 인덱스)
+                            worksheet[cellAddress].s = natelYellowHeaderStyle;
+                        }
+                    });
+                    
+                    // 데이터 셀에 스타일 적용 (2행부터)
+                    for (let row = 2; row <= excelData.length; row++) {
+                        natelColumns.forEach(col => {
+                            const cellAddress = col + row;
+                            if (worksheet[cellAddress]) {
+                                worksheet[cellAddress].s = natelDataStyle;
+                            }
+                        });
+                    }
+                } else if (selectedTelecom === 'SK' && (selectedAgency === '삼보(온라인)' || selectedAgency === '삼보/엠디도매')) {
                     // 헤더 스타일 정의
                     const yellowHeaderStyle = {
                         fill: { fgColor: { rgb: "FFFF00" } }, // 노란색 배경
@@ -5328,7 +5472,7 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
                 // 파일 다운로드
                 XLSX.writeFile(workbook, fileName);
                 
-                console.log(`엑셀 파일 다운로드 완료: ${fileName}`);
+                console.log(`${selectedTelecom} ${selectedAgency} 엑셀 파일 다운로드 완료: ${fileName}`);
                 console.log(`총 ${rows.length}건의 데이터가 포함되었습니다.`);
                 
             } catch (error) {
