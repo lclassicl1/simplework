@@ -593,7 +593,7 @@
                   </div>
                   <div style="display: flex; flex-direction: column; gap: 5px;">
                       <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
-                          <label for="excelFile2" style="font-size: 14px; color: #555;">어드민 엑셀 첨부로 배송요청 양식 만들기(대리점 먼저 선택 필수)</label>
+                          <label for="excelFile2" style="font-size: 14px; color: #555;">어드민 엑셀 첨부로 대리점별 배송요청 엑셀 생성(대리점 먼저 선택 필수)</label>
                           <input type="file" id="excelFile2" accept=".xlsx, .xls" style="font-size: 14px;"/>
                           <span id="extractCount2" style="font-size: 14px; color: #e91e63; margin-left: 10px; font-weight: bold;"></span>
                       </div>
@@ -4242,10 +4242,44 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                     specialNotes += specialNotes ? ` / ${paymentInfo}` : paymentInfo;
                                 }
                                 
+                                // 보험 정보 추가
+                                const insurance = info.보험 || '';
+                                if (insurance && insurance !== '무') {
+                                    specialNotes += specialNotes ? ` / ${insurance}` : insurance;
+                                }
+                                
+                                // 부가서비스 정보 추가
+                                const addon = info.부가서비스 || '';
+                                if (addon && addon !== '무') {
+                                    specialNotes += specialNotes ? ` / ${addon}` : addon;
+                                }
+                                
                                 // 현재 월을 2자리 형식으로 가져오기 (01, 02, ..., 12)
                                 const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
                                 
-                                return `[T-GATE 무선 접수 양식 ${currentMonth}월 ★ ]
+                                // MNO/MVNO 구분 로직 (SK, KT, LG는 MNO, 그 외는 MVNO)
+                                const currentCarrier = (info.현재통신사 || '').toLowerCase().trim();
+                                const isMNO = ['sk', 'kt', 'lg'].includes(currentCarrier);
+                                const carrierType = isMNO ? 'MNO' : 'MVNO';
+                                
+                                // 유심 선납/후납 처리
+                                const usimValue = info.유심 || '';
+                                let usimStatus = '';
+                                
+                                // 기존 또는 기존유심이 포함된 경우
+                                if (/기존|기존유심/i.test(usimValue)) {
+                                    usimStatus = usimValue; // 원본 값 그대로 사용
+                                } else {
+                                    // 기존/기존유심이 없는 경우 후납으로 처리
+                                    if (/이심/i.test(usimValue)) {
+                                        usimStatus = '후납(이심)';
+                                    } else {
+                                        usimStatus = '후납';
+                                    }
+                                }
+                                
+                                return `★★ 메모 : 7 (${carrierType})  ★★
+[T-GATE 무선 접수 양식 ${currentMonth}월 ★ ]
 1. 고객명: ${info.고객명 || ''}
 2. 전화번호: ${info.전화번호 || ''}
 3. 주민번호(13자리): ${info.주민번호 || info.생년월일 || ''}
@@ -4256,8 +4290,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 8. 모델명: ${info.모델명 || ''} ${info.용량 || ''}
 9. 일련번호: ${info.단말기일련번호 || ''}
 10. 유심번호(13자리): ${info.유심일련번호 || ''}
-11.유심 선납/후납: ${info.유심 || ''}
-
+11. 유심 선납/후납: ${usimStatus}
 12. 기타특이사항 : ${specialNotes}
 13. 판매점명: 에이치엠씨
 14. P코드: 에이치엠씨`;
