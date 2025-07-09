@@ -4242,16 +4242,24 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                     specialNotes += specialNotes ? ` / ${paymentInfo}` : paymentInfo;
                                 }
                                 
+                                // 보험과 부가서비스를 위한 별도 배열
+                                const additionalServices = [];
+                                
                                 // 보험 정보 추가
                                 const insurance = info.보험 || '';
                                 if (insurance && insurance !== '무') {
-                                    specialNotes += specialNotes ? ` / ${insurance}` : insurance;
+                                    additionalServices.push(insurance);
                                 }
                                 
                                 // 부가서비스 정보 추가
                                 const addon = info.부가서비스 || '';
                                 if (addon && addon !== '무') {
-                                    specialNotes += specialNotes ? ` / ${addon}` : addon;
+                                    additionalServices.push(addon);
+                                }
+                                
+                                // 보험/부가서비스가 있으면 줄바꿈 후 추가
+                                if (additionalServices.length > 0) {
+                                    specialNotes += '\n' + additionalServices.join(' / ');
                                 }
                                 
                                 // 현재 월을 2자리 형식으로 가져오기 (01, 02, ..., 12)
