@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>통신사 양식 변환기</title>
+    <title>한결이 업무 도우미</title>
     <!-- SheetJS 스타일링 지원 라이브러리 추가 -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <style>
@@ -1096,6 +1096,34 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                 }
             }
         };
+
+        // 유틸리티 함수들
+        
+        /**
+         * 주민번호/생년월일을 yymmdd 형식으로 변환
+         * @param {string} input - 주민번호 또는 생년월일 (yymmdd-1234567, yymmdd-, yymmdd 등)
+         * @returns {string} - yymmdd 형식의 문자열
+         */
+        function formatBirthDate(input) {
+            if (!input) return '';
+            
+            // 문자열로 변환하고 공백 제거
+            const cleanInput = String(input).trim();
+            
+            // 하이픈(-) 제거
+            const withoutHyphen = cleanInput.replace(/-/g, '');
+            
+            // 앞 6자리만 추출 (yymmdd)
+            const yymmdd = withoutHyphen.substring(0, 6);
+            
+            // 6자리 숫자인지 확인
+            if (yymmdd.length === 6 && /^\d{6}$/.test(yymmdd)) {
+                return yymmdd;
+            }
+            
+            // 형식이 맞지 않으면 원본 반환
+            return cleanInput;
+        }
 
         // 대리점별 양식 템플릿 (레거시 - 사용 안함)
         const templates = {
@@ -4539,7 +4567,20 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
                                 const installmentDiscount = (info.프리할부 && info.프리할부 !== '0') ? info.프리할부 : 'X';
                                 
                                 // 유심 처리 (즉납/후납/기존)
-                                const usimType = info.유심 || '';
+                                const usimValue = info.유심 || '';
+                                let usimType = '';
+                                
+                                // 기존 또는 기존유심이 포함된 경우
+                                if (/기존|기존유심/i.test(usimValue)) {
+                                    usimType = '기존';
+                                } else {
+                                    // 기존/기존유심이 없는 경우 후납으로 처리
+                                    if (/이심/i.test(usimValue)) {
+                                        usimType = '후납(이심)';
+                                    } else {
+                                        usimType = '후납';
+                                    }
+                                }
                                 
                                 // 공시/선약 처리
                                 const contractType = info.공시선약여부 || info.할인유형 || '';
@@ -4547,7 +4588,7 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
                                 // 공시지원인 경우 추가 정보 표시
                                 let contractDisplayText = contractType;
                                 if (contractType === '공시지원') {
-                                    contractDisplayText = `${contractType} ${info.약정개월수 || ''} (공시 ${info.공시 || ''} / 추지 ${info.추지 || ''})`;
+                                    contractDisplayText = `${contractType} ${info.약정개월수 || ''} (공시 ${info.공시 || ''} + 추지 ${info.추지 || ''})`;
                                 } else if (contractType === '선택약정') {
                                     contractDisplayText = `${contractType} ${info.약정개월수 || ''}`;
                                 } else {
@@ -4568,7 +4609,7 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
 ▶판매점 : 신풍
 ▶고객명 : ${info.고객명 || ''}
 ▶개통번호 : ${info.전화번호 || ''}
-▶주민번호 : ${info.주민번호 || info.생년월일 || ''}
+▶주민번호 : ${formatBirthDate(info.주민번호 || info.생년월일 || '')}
 ▶전통신사 : ${info.현재통신사 || ''}
 ▶모델/색상 : ${info.모델명 || ''} ${info.용량 || ''} / ${info.색상 || ''}
 ▶단말일련번호 : ${info.단말기일련번호 || ''}
