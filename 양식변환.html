@@ -810,6 +810,13 @@
                             min-height: 100px;
                             resize: vertical;
                         }
+                        
+                        /* 한올 접수확인 textarea 스타일 (절반 크기) */
+                        #hanolConfirmText {
+                            height: 70px !important;
+                            min-height: 70px;
+                            resize: vertical;
+                        }
                     </style>
                     <div id="singleOutputContainer">
                         <div class="form-group">
@@ -905,6 +912,22 @@
                         </div>
                     </div>
                     
+                    <!-- 한올 전용 추가 textarea (접수확인/배송요청/개통요청) -->
+                    <div id="hanolExtraOutputs" style="display:none;">
+                        <div class="form-group">
+                            <label for="hanolConfirmText">한올 접수확인양식:</label>
+                            <textarea id="hanolConfirmText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="hanolDeliveryText">한올 배송요청양식:</label>
+                            <textarea id="hanolDeliveryText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="hanolOpenText">한올 개통요청양식:</label>
+                            <textarea id="hanolOpenText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                    </div>
+                    
                     <div id="keyValueTableContainer" style="display: none;">
                         <div class="copy-notice">각 항목을 클릭하면 해당 값이 클립보드에 복사됩니다.</div>
                         <table class="key-value-table" id="keyValueTable">
@@ -969,7 +992,7 @@
     <script>
         // 통신사별 대리점 목록
         const agencies = {
-            'SK': ['큐브', '럭스', '나텔', '밀리언', '드블랙', '카파', '삼보(온라인)', '장천', '삼보/엠디도매', '코웨어', 'ACT(택배)', '비앤컴', '이앤티'],
+            'SK': ['큐브', '럭스', '나텔', '밀리언', '드블랙', '카파', '삼보(온라인)', '장천', '삼보/엠디도매', '코웨어', 'ACT(택배)', '비앤컴', '이앤티', '한올'],
             'KT': ['오앤티', '재희', '안산/이스턴','신청서연장양식'],
             'LG': ['소리', '제이/휴넷','신청서연장양식']
         };
@@ -1232,6 +1255,12 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                                 open: template.openRequest(customerInfo),     // 개통요청
                                 universe: template.universe(customerInfo)     // 우주패스양식
                             };
+                        } else if (agency === '한올') {
+                            return {
+                                confirm: template.confirm(customerInfo),   // 접수확인양식
+                                delivery: template.delivery(customerInfo), // 배송요청양식
+                                open: template.open(customerInfo)          // 개통요청양식
+                            };
                         } else {
                             return {
                                 request: template.request(customerInfo),
@@ -1280,7 +1309,8 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                     'hunetExtraOutputs',
                     'millionExtraOutputs',
                     'ontExtraOutputs',
-                    'jangcheonExtraOutputs'
+                    'jangcheonExtraOutputs',
+                    'hanolExtraOutputs'
                 ];
                 
                 containers.forEach(id => {
@@ -1344,6 +1374,8 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                     container = document.getElementById('ontExtraOutputs');
                 } else if (agency === '장천') {
                     container = document.getElementById('jangcheonExtraOutputs');
+                } else if (agency === '한올') {
+                    container = document.getElementById('hanolExtraOutputs');
                 } else if (agency === '럭스') {
                     container = document.getElementById('luxExtraOutputs');
                 } else if (agency === '큐브') {
@@ -1403,6 +1435,15 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                     const deliveryText = document.getElementById('jangcheonDeliveryText');
                     const openText = document.getElementById('jangcheonOpenText');
                     
+                    if (deliveryText) deliveryText.value = result.delivery || '';
+                    if (openText) openText.value = result.open || '';
+                } else if (agency === '한올') {
+                    // 한올 대리점용 출력 처리 (3개 textarea)
+                    const confirmText = document.getElementById('hanolConfirmText');
+                    const deliveryText = document.getElementById('hanolDeliveryText');
+                    const openText = document.getElementById('hanolOpenText');
+                    
+                    if (confirmText) confirmText.value = result.confirm || '';
                     if (deliveryText) deliveryText.value = result.delivery || '';
                     if (openText) openText.value = result.open || '';
                 } else if (agency === '럭스') {
@@ -2334,82 +2375,8 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                     // 결과 출력
                     OutputManager.showOutput(result, outputType, selectedTelecom, selectedAgency);
                 } else {
-                    // 기존 구조 사용 (이전 버전과의 호환성 유지)
-                    const isSpecialAgency = (selectedTelecom === 'KT' && selectedAgency === '재희') || 
-                                          (selectedTelecom === 'LG' && selectedAgency === '소리');
-                    const isDblackAgency = (selectedTelecom === 'SK' && selectedAgency === '드블랙');
-                    const isActAgency = (selectedTelecom === 'SK' && selectedAgency === 'ACT(택배)');
-                    const isBncomAgency = (selectedTelecom === 'SK' && selectedAgency === '비앤컴');
-                    const isHunetAgency = (selectedTelecom === 'LG' && selectedAgency === '제이/휴넷');
-                    
-                    // 기존 템플릿 시스템 사용
-                    const template = templates[selectedTelecom]?.[selectedAgency];
-                    if (!template) {
-                        throw new Error('선택하신 대리점에 대한 템플릿을 찾을 수 없습니다.');
-                    }
-                    
-                    result = template(customerInfo);
-                    
-                    // 기존 출력 로직 사용
-                    if (isDblackAgency || isActAgency || isBncomAgency || isHunetAgency) {
-                        // 특수 대리점의 경우 기본 출력 컨테이너 숨기기
-                        if (singleOutputContainer) singleOutputContainer.style.display = 'none';
-                        
-                        if (isActAgency) {
-                            const actOutputs = document.getElementById('actExtraOutputs');
-                            if (actOutputs) {
-                                actOutputs.style.display = 'block';
-                                const stockText = document.getElementById('actStockText');
-                                const openText = document.getElementById('actOpenText');
-                                if (stockText) stockText.value = result.stockRequest || '';
-                                if (openText) openText.value = result.openRequest || '';
-                            }
-                        } else if (isBncomAgency) {
-                            const bncomOutputs = document.getElementById('bncomExtraOutputs');
-                            if (bncomOutputs) {
-                                bncomOutputs.style.display = 'block';
-                                const stockText = document.getElementById('bncomStockText');
-                                const openText = document.getElementById('bncomOpenText');
-                                if (stockText) stockText.value = result.stockRequest || '';
-                                if (openText) openText.value = result.openRequest || '';
-                            }
-                        } else if (isHunetAgency) {
-                            const hunetOutputs = document.getElementById('hunetExtraOutputs');
-                            if (hunetOutputs) {
-                                hunetOutputs.style.display = 'block';
-                                const confirmText = document.getElementById('hunetConfirmText');
-                                const deliveryText = document.getElementById('hunetDeliveryText');
-                                const openText = document.getElementById('hunetOpenText');
-                                if (confirmText) confirmText.value = result.confirm || '';
-                                if (deliveryText) deliveryText.value = result.delivery || '';
-                                if (openText) openText.value = result.open || '';
-                            }
-                        } else {
-                            const outputDiv = document.getElementById('dblackExtraOutputs');
-                            if (outputDiv) {
-                                outputDiv.style.display = 'block';
-                                document.getElementById('dblackRequestText').value = result.request || '';
-                                document.getElementById('dblackStockText').value = result.stock || '';
-                                document.getElementById('dblackMemoText').value = result.memo || '';
-                            }
-                        }
-                    } else if (isSpecialAgency) {
-                        // 특수 대리점 처리 (재희, 소리) - 기본 컨테이너 숨기기
-                        if (singleOutputContainer) singleOutputContainer.style.display = 'none';
-                        
-                        const container = document.getElementById('keyValueTableContainer');
-                        if (container) {
-                            container.style.display = 'block';
-                            createKeyValueTable(customerInfo);
-                        }
-                    } else {
-                        // 일반 대리점 처리
-                        const container = document.getElementById('singleOutputContainer');
-                        if (container) {
-                            container.style.display = 'block';
-                            document.getElementById('outputText').value = result;
-                        }
-                    }
+                    // TELECOM_CONFIG에 없는 대리점은 오류 처리
+                    throw new Error(`선택하신 대리점 (${selectedAgency})에 대한 템플릿을 찾을 수 없습니다. TELECOM_CONFIG에 추가가 필요합니다.`);
                 }
                 
                 // 변환 이력 저장
@@ -4781,12 +4748,6 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                                 const addon1 = info['부가서비스'] || '';
                                 const addon2 = info['부가서비스2'] || '';
                                 const addonText = `${addon1} ${addon2}`.toLowerCase();
-                                
-                                // 우주패스가 없으면 빈 문자열 반환 (출력 안됨)
-                                // if (!addonText.includes('우주패스')) {
-                                //     return '';
-                                // }
-                                
                                 const name = info['가입자명'] || info['고객명'] || '';
                                 const contact = info['개통번호'] || info['전화번호'] || '';
                                 
@@ -4823,6 +4784,114 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
 5. 추가옵션 (배민,유튜브 등) : ${additionalOption}
 6. 결제정보 : 기존자동이체`;
                             }
+                        }
+                    },
+                    '한올': {
+                        name: '한올',
+                        type: 'special',
+                        outputType: 'multi',
+                        memo: agencyMemos['SK']['한올'],
+                        templates: {
+                                                         confirm: (info) => {
+                                 // 한올 접수확인양식
+                                 const customerName = info.고객명 || info.가입자명 || '';
+                                 const birthOrRegNum = info.주민번호 || info.생년월일 || '';
+                                 const phoneNumber = info.개통번호 || info.전화번호 || '';
+                                 
+                                 return `${customerName} / ${birthOrRegNum} / ${phoneNumber}
+접수확인부탁드립니다.`;
+                             },
+                                                         delivery: (info) => {
+                                 // 한올 배송요청양식 (이앤티 유심 로직 적용)
+                                 const customerName = info.고객명 || info.가입자명 || '';
+                                 const phoneNumber = info.개통번호 || info.전화번호 || '';
+                                 const address = info.배송주소지 || info.택배주소 || '';
+                                 const model = info.모델명 || '';
+                                 const capacity = info.용량 || '';
+                                 const color = info.색상 || '';
+                                 
+                                 // 이앤티와 동일한 유심 발송 여부 로직
+                                 const usimValue = info.유심 || '';
+                                 let usimDelivery = '';
+                                 
+                                 // 기존 또는 기존유심이 포함된 경우
+                                 if (/기존|기존유심/i.test(usimValue)) {
+                                     usimDelivery = 'X';
+                                 } else {
+                                     // 기존/기존유심이 없는 경우
+                                     if (/이심/i.test(usimValue)) {
+                                         usimDelivery = 'X'; // 이심인 경우 발송 불필요
+                                     } else {
+                                         usimDelivery = 'O'; // 일반 유심인 경우 발송 필요
+                                     }
+                                 }
+                                 
+                                 return `■ 배송요청
+＊배송방법 : 택배
+＊고객명 : ${customerName}
+＊연락처 : ${phoneNumber}
+＊주소 : ${address}
+＊모델(색상 및 용량) : ${model} ${capacity} / ${color}
+＊일련번호 : 
+＊유심발송 여부 : ${usimDelivery}`;
+                             },
+                                                         open: (info) => {
+                                 // 한올 개통요청양식
+                                 const customerName = info.고객명 || info.가입자명 || '';
+                                 const birthDate = formatBirthDate(info.주민번호 || info.생년월일 || '');
+                                 const currentTelecom = info.현재통신사 || '';
+                                 const model = info.모델명 || '';
+                                 const capacity = info.용량 || '';
+                                 const color = info.색상 || '';
+                                 const serialNumber = info.단말기일련번호 || '';
+                                 const plan = info.요금제 || '';
+                                 const contractMonths = info.약정개월수 || '';
+                                 const contractType = info.공시선약여부 || info.할인유형 || '';
+                                 const joinType = info.가입유형 || '';
+                                 const paymentType = info.할부현금여부 || '';
+                                 const finalPrice = info.최종구매가 || '';
+                                 const installmentMonths = info.할부개월수 || '';
+                                 const freeLoan = info.프리할부 || '';
+                                 const address = info.배송주소지 || info.택배주소 || '';
+                                 const emergencyContact = info.개통번호 || info.전화번호 || '';
+                                 const usimSerial = info.유심일련번호 || '';
+                                 
+                                 // 부가서비스 처리
+                                 const services = [info.부가서비스, info.부가서비스2, info.보험]
+                                     .filter(service => service && service.trim() && service !== '무')
+                                     .join(' / ');
+                                 
+                                 // 현금 or 할부 처리
+                                 const cashOrInstallment = `${paymentType} (${finalPrice})`;
+                                 
+                                 // 할부원금 및 프리금액 처리
+                                 let installmentInfo = '';
+                                 if (paymentType === '할부') {
+                                     installmentInfo = `${paymentType}${installmentMonths} (${finalPrice})`;
+                                     if (freeLoan && freeLoan !== '0') {
+                                         installmentInfo += ` / 프리할부 ${freeLoan}원`;
+                                     }
+                                 } else if (paymentType === '현금') {
+                                     installmentInfo = 'X';
+                                 } else {
+                                     installmentInfo = paymentType ? `${paymentType} (${finalPrice})` : '';
+                                 }
+                                 
+                                 return `◆ 개통 조건 : ${contractMonths} ${contractType} / ${joinType}
+◆ 성함: ${customerName}
+◆ 주민번호 13자리 : ${birthDate}
+◆ 이전 통신사 : ${currentTelecom}
+◆ 모델 : ${model}-${capacity}
+◆ 색상 : ${color} / ${serialNumber}
+◆ 요금제 : ${plan}
+◆ 현금 or 할부 : ${cashOrInstallment}
+◆ 할부원금및 프리금액 : ${installmentInfo}
+◆ 주소 : ${address}
+◆ 비상연락처 : ${emergencyContact}
+◆ 부가서비스 : ${services || 'X'}
+◆ 유심: ${usimSerial}
+◆ 기타 : X`;
+                             }
                         }
                     }
                 }
@@ -4897,6 +4966,43 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
 할부원금 : ${info.할부현금여부 || '' } ${info.최종구매가 || ''}
 보험 : ${info.보험 || 'X'}
 부가 : ${info.부가서비스 || 'X'}`
+                        }
+                    },
+                    '한올': {
+                        name: '한올',
+                        type: 'special',
+                        outputType: 'multi',
+                        memo: agencyMemos['SK']['한올'],
+                        templates: {
+                            confirm: (info) => {
+                                // 한올 접수확인양식 템플릿 (추후 요청 예정)
+                                return `[한올 접수확인양식]
+고객명: ${info.고객명 || ''}
+개통번호: ${info.개통번호 || info.전화번호 || ''}
+모델명: ${info.모델명 || ''}
+색상: ${info.색상 || ''}
+가입유형: ${info.가입유형 || ''}`;
+                            },
+                            delivery: (info) => {
+                                // 한올 배송요청양식 템플릿 (추후 요청 예정)
+                                return `[한올 배송요청양식]
+고객명: ${info.고객명 || ''}
+연락처: ${info.개통번호 || info.전화번호 || ''}
+주소: ${info.택배주소 || info.배송주소지 || ''}
+모델명: ${info.모델명 || ''}
+색상: ${info.색상 || ''}`;
+                            },
+                            open: (info) => {
+                                // 한올 개통요청양식 템플릿 (추후 요청 예정)
+                                return `[한올 개통요청양식]
+고객명: ${info.고객명 || ''}
+개통번호: ${info.개통번호 || info.전화번호 || ''}
+주민번호: ${info.주민번호 || info.생년월일 || ''}
+모델명: ${info.모델명 || ''}
+색상: ${info.색상 || ''}
+요금제: ${info.요금제 || ''}
+가입유형: ${info.가입유형 || ''}`;
+                            }
                         }
                     },
                     '안산/이스턴': {
