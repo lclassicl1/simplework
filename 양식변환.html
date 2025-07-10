@@ -4069,14 +4069,30 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                     paymentInfo = `${info.할부현금여부 || ''} ${info.최종구매가 || ''}원`;
                                 }
                                 
+                                // 유심 처리 로직 (이앤티와 동일)
+                                const usimValue = info.유심 || '';
+                                let usimType = '';
+                                
+                                // 기존 또는 기존유심이 포함된 경우
+                                if (/기존|기존유심/i.test(usimValue)) {
+                                    usimType = 'X';
+                                } else {
+                                    // 기존/기존유심이 없는 경우 후납으로 처리
+                                    if (/이심/i.test(usimValue)) {
+                                        usimType = '후납(이심)';
+                                    } else {
+                                        usimType = '후납';
+                                    }
+                                }
+                                
                                 return `■SK3 개통요청		
 ◎ 고객명 / 번호 : ${info.고객명 || ''} / ${info.전화번호 || ''}	
-◎ 주민번호 : ${info.주민번호 || info.생년월일 || ''}	
+◎ 주민번호 : ${formatBirthDate(info.주민번호 || info.생년월일 || '')}	
 ◎ 통신사/인증 : ${telecom}	
 ◎ 모델/색상 : ${info.모델명 || ''} ${info.용량 || ''} / ${info.색상 || ''}	
 ◎ 일련번호 : ${info.단말기일련번호 || ''}	
 ◎ 유심 일련번호 : ${info.유심일련번호 || ''}	
-◎ 유심비용:	${info.유심 || ''}	
+◎ 유심비용:	${usimType}	
 ◎ 요금제 / 혜택 : ${info.요금제 || ''}	
 ◎ 공시지원금 : ${info.공시 || '0'}	
 ◎ 추가지원금 : ${info.추지 || '0'}	
