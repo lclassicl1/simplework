@@ -3686,7 +3686,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                 return `도매c
 1. 고객명 : ${info.고객명 || info.가입자명 || ''}
 2. 전화번호 : ${info.전화번호 || info.개통번호 || ''}
-3. 주민번호전체 : ${info.주민번호 || info.생년월일 || ''}
+3. 주민번호전체 : ${formatBirthDate(info.주민번호 || info.생년월일 || '')}
 4. 법대명 : ${info.법정대리인이름 || ''}
 5. 법대주민번호전체 : ${info.법정대리인주민번호 || ''}
 6. 법대연락처 : ${info.법정대리인연락처 || ''}
@@ -4082,7 +4082,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 개통유형>${info.가입유형 || ''}
 고객명>${info.고객명 || ''}
 개통번호>${info.전화번호 || info.연락처 || ''}
-주민번호>${info.주민번호 || info.생년월일 || ''}
+주민번호>${formatBirthDate(info.주민번호 || info.생년월일 || '')}
 단말모델명>	${info.모델명 || ''} ${info.용량 || ''}
 단말색상>${info.색상 || ''}
 일련번호>${info.단말기일련번호 || ''}
@@ -4197,7 +4197,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 [T-GATE 무선 접수 양식 ${currentMonth}월 ★ ]
 1. 고객명: ${info.고객명 || ''}
 2. 전화번호: ${info.전화번호 || ''}
-3. 주민번호(13자리): ${info.주민번호 || info.생년월일 || ''}
+3. 주민번호(13자리): ${formatBirthDate(info.주민번호 || info.생년월일 || '')}
 4. 법정대리인: ${info.법정대리인이름 || 'X'}
 5. 법대주민번호(13자리): ${info.법정대리인주민번호 || 'X'}
 6. 법대연락처: ${info.법정대리인연락처 || 'X'}
@@ -4287,7 +4287,7 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
                                 return `개통요청(${info.가입유형 || ''})
 현통신사 : ${info.현재통신사 || ''}
 이름 : ${info.가입자명 || info.고객명 || ''}
-주민번호 : ${info.주민번호 || info.생년월일 || ''}
+주민번호 : ${formatBirthDate(info.주민번호 || info.생년월일 || '')}
 개통번호 : ${info.개통번호 || info.전화번호 || ''}
 구매기종 : ${info.모델명 || ''} ${info.용량 || ''} / ${info.색상 || ''}
 유심 : ${usimStatus}
@@ -4491,7 +4491,7 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                                 
                                 return `ㅇ 개통요청 (제휴)/케이뱅크
 고객명 : ${openName}
-생년월일 : ${openJumin}
+생년월일 : ${formatBirthDate(openJumin)}
 개통번호 : ${openPhone}
 가입유형 : ${openSubscriptionType}
 모델명 : ${model} / ${color}
