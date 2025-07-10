@@ -669,19 +669,43 @@
             <!-- 출력 컨테이너 (오른쪽 영역) -->
             <div class="output-column">
                 <div id="outputContainer" style="display: block;">
-                    <!-- 럭스 전용 추가 textarea (신조/재고) -->
+                    <!-- 럭스 전용 추가 textarea (신조/재고/개통/우주패스) -->
                     <div id="luxExtraOutputs" style="display:none;">
                         <div class="form-group">
-                            <label for="luxRequestText">신조요청양식:</label>
+                            <label for="luxRequestText">럭스 신조요청양식:</label>
                             <textarea id="luxRequestText" class="output-textarea compact-textarea"></textarea>
                         </div>
                         <div class="form-group">
-                            <label for="luxMemoText">재고요청양식:</label>
+                            <label for="luxStockText">럭스 재고요청양식:</label>
+                            <textarea id="luxStockText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="luxMemoText">럭스 개통요청양식:</label>
                             <textarea id="luxMemoText" class="output-textarea compact-textarea"></textarea>
                         </div>
                         <div class="form-group">
-                            <label for="luxStockText">개통요청양식:</label>
-                            <textarea id="luxStockText" class="output-textarea compact-textarea"></textarea>
+                            <label for="luxUniverseText">럭스 우주패스양식:</label>
+                            <textarea id="luxUniverseText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- 큐브 전용 추가 textarea (재고/개통/우주패스) -->
+                    <div id="cubeExtraOutputs" style="display:none;">
+                        <div class="form-group">
+                            <label for="cubeRequestText">큐브 신조요청양식:</label>
+                            <textarea id="cubeRequestText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="cubeStockText">큐브 재고요청양식:</label>
+                            <textarea id="cubeStockText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="cubeOpenText">큐브 개통요청양식:</label>
+                            <textarea id="cubeOpenText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="cubeUniverseText">큐브 우주패스양식:</label>
+                            <textarea id="cubeUniverseText" class="output-textarea compact-textarea"></textarea>
                         </div>
                     </div>
                     
@@ -707,13 +731,40 @@
                             resize: vertical;
                         }
                         #luxStockText {
-                            height: 220px !important;
-                            min-height: 220px;
+                            height: 110px !important;
+                            min-height: 110px;
                             resize: vertical;
                         }
                         #luxMemoText {
                             height: 150px !important;
                             min-height: 150px;
+                            resize: vertical;
+                        }
+                        #luxUniverseText {
+                            height: 120px !important;
+                            min-height: 120px;
+                            resize: vertical;
+                        }
+                        
+                        /* 큐브 textarea 스타일 */
+                        #cubeRequestText {
+                            height: 130px !important;
+                            min-height: 130px;
+                            resize: vertical;
+                        }
+                        #cubeStockText {
+                            height: 130px !important;
+                            min-height: 130px;
+                            resize: vertical;
+                        }
+                        #cubeOpenText {
+                            height: 150px !important;
+                            min-height: 150px;
+                            resize: vertical;
+                        }
+                        #cubeUniverseText {
+                            height: 120px !important;
+                            min-height: 120px;
                             resize: vertical;
                         }
                         /* 드블랙 신조요청 textarea 스타일 */
@@ -1175,152 +1226,6 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                     
                     return { stockRequest, openRequest };
                 },
-                '럭스': (info) => {
-                    // 기본 정보 처리
-                    const name = info['가입자명'] || info['고객명'] || '';
-                    const contact = info['개통번호'] || info['전화번호'] || '';
-                    const modelColor = `${info['모델명'] || ''} / ${info['색상'] || ''} / ${info['단말기일련번호'] || ''}`;
-                    const plan = info['요금제'] || '';
-                    const subscriptionType = info['가입유형'] || '';
-                    
-                    // 가입유형에 따른 접두사 결정
-                    let prefix = '';
-                    if (['기기변경', '보상기변', '기변'].includes(subscriptionType)) {
-                        prefix = '기변';
-                    } else if (['번호이동', '번이'].includes(subscriptionType)) {
-                        prefix = '번이';
-                    } else if (['신규가입', '신규'].includes(subscriptionType)) {
-                        prefix = '신규';
-                    }
-                    
-                    // 주민번호 유효성 검사 (번호이동 또는 신규가입인 경우에만)
-                    const jumin = info['주민번호'] || info['생년월일'] || '';
-                    let juminError = '';
-                    if (['번호이동', '번이', '신규가입', '신규'].includes(subscriptionType)) {
-                        const juminRegex = /^\d{6}-?\d{7}$/;
-                        if (!juminRegex.test(jumin)) {
-                            juminError = '\n※ 번호이동/신규가입시 주민번호 전체가 필요합니다.';
-                        }
-                    }
-                    
-                    // 신조요청양식
-                    const request = `[${prefix} 신조요청후 유키반려]
-업체명: 에이치엘
-고객명: ${name}
-전화번호: ${contact}
-주민번호: ${jumin}${juminError}`;
-                    
-                    // 재고요청 양식 (기존 템플릿 유지)
-                    let stock = '';
-                    if (info['공시선약여부'] === '공시지원' && info['할부현금여부'] === '현금') {
-                        stock = `판매점명 :	 에이치엘
-고객명 :	${name}	
-개통번호 :	${contact}	
-모델명 / 색상 / 일련번호 :	${modelColor}	
-유심 일련번호 :	${info['유심일련번호'] || ''}	
-요금제명(혜택) :	${plan}	
-개통유형 :	${subscriptionType}	
-공시 ${info['약정개월수'] || '24개월'}		
-현금완납		
-		
-출고가 ${info['출고가'] || ''}
-공시지원 ${info['공시'] || ''}
-추가지원 ${info['추지'] || ''}${info['전환지원금'] && info['전환지원금'] !== '0' ? `
-전환지원금 ${info['전환지원금']}` : ''}
-최종구매가 ${info['최종구매가'] || ''}
-		
-보험 / 부가서비스 : ${info['부가서비스'] || ''}`;
-                    } else if (info['공시선약여부'] === '공시지원' && info['할부현금여부'] === '할부') {
-                        stock = `판매점명 :	 에이치엘
-고객명 :	${name}	
-개통번호 :	${contact}	
-모델명 / 색상 / 일련번호 :	${modelColor}	
-유심 일련번호 :	${info['유심일련번호'] || ''}	
-요금제명(혜택) :	${plan}	
-개통유형 :	${subscriptionType}	
-공시 ${info['약정개월수'] || '24개월'}		
-할부 ${info['할부개월수'] || '24개월'}		
-		
-출고가 ${info['출고가'] || ''}
-공시지원 ${info['공시'] || ''}
-추가지원 ${info['추지'] || ''}${info['전환지원금'] && info['전환지원금'] !== '0' ? `
-전환지원금 ${info['전환지원금']}` : ''}
-프리할부 ${info['프리할부'] || ''}
-최종구매가 ${info['최종구매가'] || ''}
-		
-보험 / 부가서비스 : ${info['부가서비스'] || ''}`;
-                    } else if ((info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') && info['할부현금여부'] === '현금') {
-                        stock = `판매점명 :	 에이치엘
-고객명 :	${name}	
-개통번호 :	${contact}	
-모델명 / 색상 / 일련번호 :	${modelColor}	
-유심 일련번호 :	${info['유심일련번호'] || ''}	
-요금제명(혜택) :	${plan}	
-개통유형 :	${subscriptionType}	
-선약 ${info['약정개월수'] || '24개월'}		
-현금완납		
-		
-출고가 ${info['출고가'] || ''}${info['전환지원금'] && info['전환지원금'] !== '0' ? `
-전환지원금 ${info['전환지원금']}` : ''}
-최종구매가 ${info['최종구매가'] || ''}
-		
-보험 / 부가서비스 : ${info['부가서비스'] || ''}`;
-                    } else if ((info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') && info['할부현금여부'] === '할부') {
-                        stock = `판매점명 :	 에이치엘
-고객명 :	${name}	
-개통번호 :	${contact}	
-모델명 / 색상 / 일련번호 :	${modelColor}	
-유심 일련번호 :	${info['유심일련번호'] || ''}	
-요금제명(혜택) :	${plan}	
-개통유형 :	${subscriptionType}	
-선약 ${info['약정개월수'] || '24개월'}		
-할부 ${info['할부개월수'] || '24개월'}		
-		
-출고가 ${info['출고가'] || ''}${info['전환지원금'] && info['전환지원금'] !== '0' ? `
-전환지원금 ${info['전환지원금']}` : ''}
-프리할부 ${info['프리할부'] || ''}
-최종구매가 ${info['최종구매가'] || ''}
-		
-보험 / 부가서비스 : ${info['부가서비스'] || ''}`;
-                    } else {
-                        stock = `[럭스] ${name}님 / ${info['모델명'] || ''} / ${info['색상'] || ''} / ${plan} / ${subscriptionType} / ${info['할부현금여부'] || ''} ${info['최종구매가'] || ''}`;
-                    }
-                    
-                    // 재고요청양식 (메모 텍스트에리어에 표시됨)
-                    const simIncluded = ['번호이동', '번이', '신규가입', '신규'].includes(subscriptionType) ? 'Y' : 'N';
-                    const memo = `□재고 요청서□
-매장상호 : 에이치엘
-고객명: ${name}
-연락처: ${contact}
-받을 주소: ${info['택배주소'] || info['배송주소지'] || ''}
-퀵/택배: 택배
-기종/색상: ${info['모델명'] || ''} / ${info['색상'] || ''}
-유심동봉여부: ${simIncluded}`;
-                    
-                    // 변환 이력 저장을 위해 고객 정보 저장
-                    const customerInfo = {
-                        ...info,
-                        원본텍스트: document.getElementById('inputText').value,
-                        가입자명: name,
-                        전화번호: contact,
-                        모델명: info['모델명'] || '',
-                        색상: info['색상'] || '',
-                        요금제: plan,
-                        가입유형: subscriptionType,
-                        단말기일련번호: info['단말기일련번호'] || '',
-                        유심일련번호: info['유심일련번호'] || ''
-                    };
-                    
-                    // 변환 이력 저장
-                    saveToHistory(customerInfo, 'SK', '럭스');
-                    
-                    // 3개의 텍스트에리어에 들어갈 내용 반환
-                    return {
-                        request: request,
-                        stock: stock,
-                        memo: memo
-                    };
-                },
                 '밀리언': (info) => `[밀리언]\n고객명: ${info.고객명}\n모델: ${info.모델명}\n색상: ${info.색상}\n요금제: ${info.요금제}\n가입유형: ${info.가입유형}\n${info.할부현금여부}: ${info.최종구매가}원`,
 
                 '삼보/엠디도매': (info) => `[삼보/엠디도매]\n${info.고객명}\n${info.모델명}\n${info.색상}\n${info.요금제}\n${info.가입유형}\n${info.할부현금여부} ${info.최종구매가}원`,
@@ -1553,6 +1458,20 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                                 delivery: template.delivery(customerInfo),
                                 open: template.open(customerInfo)
                             };
+                        } else if (agency === '럭스') {
+                            return {
+                                request: template.request(customerInfo),
+                                stock: template.delivery(customerInfo),  // 배송/재고 요청서를 재고요청양식으로
+                                open: template.open(customerInfo),       // 개통요청양식
+                                universe: template.universe(customerInfo) // 우주패스양식
+                            };
+                        } else if (agency === '큐브') {
+                            return {
+                                request: template.stockRequest(customerInfo), // 재고요청
+                                stock: template.stockRequest(customerInfo),   // 중복이지만 기존 구조 유지
+                                open: template.openRequest(customerInfo),     // 개통요청
+                                universe: template.universe(customerInfo)     // 우주패스양식
+                            };
                         } else {
                             return {
                                 request: template.request(customerInfo),
@@ -1609,6 +1528,10 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                     if (container) container.style.display = 'none';
                 });
                 
+                // 큐브 컨테이너도 숨기기
+                const cubeContainer = document.getElementById('cubeExtraOutputs');
+                if (cubeContainer) cubeContainer.style.display = 'none';
+                
                 // 추가 텍스트 div 제거
                 const additionalTextDiv = document.getElementById('additionalTextDiv');
                 if (additionalTextDiv) {
@@ -1661,6 +1584,10 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                     container = document.getElementById('ontExtraOutputs');
                 } else if (agency === '장천') {
                     container = document.getElementById('jangcheonExtraOutputs');
+                } else if (agency === '럭스') {
+                    container = document.getElementById('luxExtraOutputs');
+                } else if (agency === '큐브') {
+                    container = document.getElementById('cubeExtraOutputs');
                 } else {
                     container = document.getElementById('luxExtraOutputs');
                 }
@@ -1718,20 +1645,42 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                     
                     if (deliveryText) deliveryText.value = result.delivery || '';
                     if (openText) openText.value = result.open || '';
+                } else if (agency === '럭스') {
+                    // 럭스 대리점용 출력 처리 (4개 textarea)
+                    const requestText = document.getElementById('luxRequestText');
+                    const stockText = document.getElementById('luxStockText');
+                    const openText = document.getElementById('luxMemoText');
+                    const universeText = document.getElementById('luxUniverseText');
+                    
+                    if (requestText) requestText.value = result.request || '';
+                    if (stockText) stockText.value = result.stock || '';
+                    if (openText) openText.value = result.open || '';
+                    if (universeText) universeText.value = result.universe || '';
+                } else if (agency === '큐브') {
+                    // 큐브 대리점용 출력 처리 (4개 textarea)
+                    const requestText = document.getElementById('cubeRequestText');
+                    const stockText = document.getElementById('cubeStockText');
+                    const openText = document.getElementById('cubeOpenText');
+                    const universeText = document.getElementById('cubeUniverseText');
+                    
+                    if (requestText) requestText.value = result.request || '';
+                    if (stockText) stockText.value = result.stock || '';
+                    if (openText) openText.value = result.open || '';
+                    if (universeText) universeText.value = result.universe || '';
                 } else {
-                    // 럭스 대리점용 출력 처리
+                    // 기타 대리점용 출력 처리 (기본 럭스 형태)
                     container.innerHTML = `
                         <div class="form-group">
-                            <label for="luxRequestText">럭스 신조요청양식:</label>
+                            <label for="luxRequestText">신조요청양식:</label>
                             <textarea id="luxRequestText" class="output-textarea compact-textarea">${result.request || ''}</textarea>
                         </div>
                         <div class="form-group">
-                            <label for="luxStockText">럭스 재고요청양식:</label>
+                            <label for="luxStockText">재고요청양식:</label>
                             <textarea id="luxStockText" class="output-textarea compact-textarea">${result.stock || ''}</textarea>
                         </div>
                         <div class="form-group">
-                            <label for="luxMemoText">럭스 개통요청양식:</label>
-                            <textarea id="luxMemoText" class="output-textarea compact-textarea">${result.memo || ''}</textarea>
+                            <label for="luxMemoText">개통요청양식:</label>
+                            <textarea id="luxMemoText" class="output-textarea compact-textarea">${result.open || ''}</textarea>
                         </div>
                     `;
                 }
@@ -1892,7 +1841,152 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
             return modelName; // 매핑되지 않은 경우 원본 반환
         }
 
-        // 부가서비스와 보험 분리 함수
+        // 향상된 부가서비스와 보험 분리 함수
+        function parseAddonAndInsuranceEnhanced(addonText) {
+            if (!addonText) {
+                return { 보험: '', 부가서비스1: '', 부가서비스2: '' };
+            }
+            
+            // 보험 관련 키워드 정의 (더 포괄적)
+            const insuranceKeywords = [
+                'T올케어', 'T ALL케어', 'T All케어', '케어플러스', '케어',
+                '단말보험', '보험', '스마트케어', '안심케어', '케어서비스',
+                '보장서비스', '분실보험', '파손보험', '파손', '분실'
+            ];
+            
+            // 부가서비스 관련 키워드 정의
+            const addonKeywords = [
+                '우주패스', '마이스마트콜', '스마트콜', '벨소리', '컬러링',
+                '네이버플러스', '멜론', '지니뮤직', '플로', '티맵', '네비게이션',
+                '클라우드', '백업', '바이브', '카카오VIP', '모바일TV', 'DMB',
+                '데이터쉐어링', '패밀리플러스', '아이들나라', '키즈랜드'
+            ];
+            
+            // 불필요한 기간/횟수 정보 패턴 (웨이브는 제외)
+            const unwantedPatterns = [
+                /\s*M\+\d+\s*개월/gi,
+                /\s*M\+\d+/gi,
+                /\s*총\s*\d+\s*개월/gi,
+                /\d+\s*개월\s*무료/gi,
+                /\s*무료\s*\d+/gi,
+                /\(\s*총\s*\d+\s*개월\s*\)/gi
+            ];
+            
+            let insuranceItems = [];
+            let addonItems1 = [];
+            let addonItems2 = [];
+            
+            // 주요 구분자로 분리 (/, 번호순서 등)
+            // 예시: 1. 우주패스 G마켓,쇼핑 (웨이브) M+3개월 (총4개월) / 2. 마이스마트콜3 M+2 (총3개월) /3. T올케어 파손 M+1 개월 (총2개월)
+            let items = [];
+            
+            // 먼저 "/숫자." 패턴으로 분리 시도
+            if (addonText.includes('/') && /\/\s*\d+\.\s*/.test(addonText)) {
+                items = addonText.split(/\/\s*\d+\.\s*/)
+                    .map(item => item.trim())
+                    .filter(item => item.length > 0);
+                
+                // 첫 번째 항목에서 "숫자." 제거
+                if (items[0] && /^\d+\.\s*/.test(items[0])) {
+                    items[0] = items[0].replace(/^\d+\.\s*/, '').trim();
+                }
+            } else {
+                // 일반적인 "/" 구분자로 분리
+                items = addonText.split('/')
+                    .map(item => item.trim())
+                    .filter(item => item.length > 0);
+            }
+            
+            console.log('분리된 항목들:', items);
+            
+            for (let item of items) {
+                // 1단계: 불필요한 기간/회수 패턴들을 제거 (M+숫자, 총숫자개월 등)
+                let cleanItem = item;
+                for (const pattern of unwantedPatterns) {
+                    cleanItem = cleanItem.replace(pattern, '').trim();
+                }
+                
+                // 2단계: 빈 괄호만 제거 (내용이 있는 괄호는 보존)
+                cleanItem = cleanItem.replace(/\(\s*\)/g, '').trim();
+                
+                // 3단계: 앞뒤 공백 및 특수문자 정리
+                cleanItem = cleanItem.replace(/^[-\s]+|[-\s]+$/g, '').trim();
+                
+                // 정리 후 빈 문자열이면 스킵
+                if (!cleanItem || cleanItem.length < 2) {
+                    continue;
+                }
+                
+                console.log('정리된 항목:', cleanItem);
+                
+                let isInsurance = false;
+                let isAddon = false;
+                
+                // 보험 키워드 확인
+                for (const keyword of insuranceKeywords) {
+                    if (cleanItem.toLowerCase().includes(keyword.toLowerCase())) {
+                        insuranceItems.push(cleanItem);
+                        isInsurance = true;
+                        console.log('보험으로 분류:', cleanItem);
+                        break;
+                    }
+                }
+                
+                // 보험이 아닌 경우 부가서비스 키워드 확인
+                if (!isInsurance) {
+                    for (const keyword of addonKeywords) {
+                        if (cleanItem.toLowerCase().includes(keyword.toLowerCase())) {
+                            // 마이스마트콜은 자동으로 마이스마트콜3로 보정
+                            if (keyword === '마이스마트콜' && cleanItem.toLowerCase() === '마이스마트콜') {
+                                cleanItem = '마이스마트콜3';
+                            }
+                            
+                            // 첫 번째 부가서비스가 비어있으면 첫 번째에, 아니면 두 번째에
+                            if (addonItems1.length === 0) {
+                                addonItems1.push(cleanItem);
+                                console.log('부가서비스1로 분류:', cleanItem);
+                            } else {
+                                addonItems2.push(cleanItem);
+                                console.log('부가서비스2로 분류:', cleanItem);
+                            }
+                            isAddon = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // 키워드에 매칭되지 않은 경우 길이로 판단
+                if (!isInsurance && !isAddon && cleanItem.length >= 3) {
+                    // 우주패스나 G마켓 등이 포함된 경우 부가서비스로 분류
+                    if (cleanItem.includes('우주') || cleanItem.includes('G마켓') || cleanItem.includes('쇼핑')) {
+                        if (addonItems1.length === 0) {
+                            addonItems1.push(cleanItem);
+                            console.log('부가서비스1로 분류 (키워드 기반):', cleanItem);
+                        } else {
+                            addonItems2.push(cleanItem);
+                            console.log('부가서비스2로 분류 (키워드 기반):', cleanItem);
+                        }
+                    } else {
+                        // 기타 긴 텍스트는 부가서비스로 분류
+                        if (addonItems1.length === 0) {
+                            addonItems1.push(cleanItem);
+                            console.log('부가서비스1로 분류 (기타):', cleanItem);
+                        } else {
+                            addonItems2.push(cleanItem);
+                            console.log('부가서비스2로 분류 (기타):', cleanItem);
+                        }
+                    }
+                }
+            }
+            
+            return {
+                보험: insuranceItems.join(' / '),
+                부가서비스1: addonItems1.join(' / '),
+                부가서비스2: addonItems2.join(' / ')
+            };
+        }
+
+        // 기존 부가서비스와 보험 분리 함수 (호환성 유지)
         function parseAddonAndInsurance(addonText) {
             if (!addonText) {
                 return { 보험: '', 부가서비스: '' };
@@ -2339,18 +2433,24 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                 customerInfo['모델제조사'] = '';
             }
             
-            // 부가서비스와 보험 분리 처리
+            // 부가서비스와 보험 분리 처리 (개선된 버전)
             if (customerInfo['부가서비스']) {
                 const originalAddon = customerInfo['부가서비스'];
-                const { 보험, 부가서비스 } = parseAddonAndInsurance(customerInfo['부가서비스']);
-                customerInfo['보험'] = 보험;
-                customerInfo['부가서비스'] = 부가서비스;
+                const parsed = parseAddonAndInsuranceEnhanced(customerInfo['부가서비스']);
+                
+                // 분리된 결과를 customerInfo에 저장
+                customerInfo['보험'] = parsed.보험;
+                customerInfo['부가서비스'] = parsed.부가서비스1;
+                customerInfo['부가서비스2'] = parsed.부가서비스2;
                 
                 console.log('부가서비스 분리 결과:', {
                     '원본': originalAddon,
-                    '분리된 보험': 보험,
-                    '분리된 부가서비스': 부가서비스
+                    '분리된 보험': parsed.보험,
+                    '분리된 부가서비스1': parsed.부가서비스1,
+                    '분리된 부가서비스2': parsed.부가서비스2
                 });
+            } else {
+                customerInfo['부가서비스2'] = '';
             }
             
             // 모델제조사에 따른 보험명 자동 설정 (모델제조사 설정 후 실행)
@@ -2477,7 +2577,6 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                     // 기존 구조 사용 (이전 버전과의 호환성 유지)
                     const isSpecialAgency = (selectedTelecom === 'KT' && selectedAgency === '재희') || 
                                           (selectedTelecom === 'LG' && selectedAgency === '소리');
-                    const isLuxAgency = (selectedTelecom === 'SK' && selectedAgency === '럭스');
                     const isDblackAgency = (selectedTelecom === 'SK' && selectedAgency === '드블랙');
                     const isActAgency = (selectedTelecom === 'SK' && selectedAgency === 'ACT(택배)');
                     const isBncomAgency = (selectedTelecom === 'SK' && selectedAgency === '비앤컴');
@@ -2492,7 +2591,7 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                     result = template(customerInfo);
                     
                     // 기존 출력 로직 사용
-                    if (isLuxAgency || isDblackAgency || isActAgency || isBncomAgency || isHunetAgency) {
+                    if (isDblackAgency || isActAgency || isBncomAgency || isHunetAgency) {
                         // 특수 대리점의 경우 기본 출력 컨테이너 숨기기
                         if (singleOutputContainer) singleOutputContainer.style.display = 'none';
                         
@@ -2526,17 +2625,12 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                                 if (openText) openText.value = result.open || '';
                             }
                         } else {
-                            const outputDivId = isLuxAgency ? 'luxExtraOutputs' : 'dblackExtraOutputs';
-                            const outputDiv = document.getElementById(outputDivId);
+                            const outputDiv = document.getElementById('dblackExtraOutputs');
                             if (outputDiv) {
                                 outputDiv.style.display = 'block';
-                                const requestField = isLuxAgency ? 'luxRequestText' : 'dblackRequestText';
-                                const stockField = isLuxAgency ? 'luxStockText' : 'dblackStockText';
-                                const memoField = isLuxAgency ? 'luxMemoText' : 'dblackMemoText';
-                                
-                                document.getElementById(requestField).value = result.request || '';
-                                document.getElementById(stockField).value = result.stock || '';
-                                document.getElementById(memoField).value = result.memo || '';
+                                document.getElementById('dblackRequestText').value = result.request || '';
+                                document.getElementById('dblackStockText').value = result.stock || '';
+                                document.getElementById('dblackMemoText').value = result.memo || '';
                             }
                         }
                     } else if (isSpecialAgency) {
@@ -2604,6 +2698,7 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                 '프리할부': customerInfo['프리할부'] || '',
                 '최종구매가': customerInfo['최종구매가'] || '',
                 '부가서비스': customerInfo['부가서비스'] || '',
+                '부가서비스2': customerInfo['부가서비스2'] || '',
                 '보험': customerInfo['보험'] || '',
                 '배송주소지': customerInfo['배송주소지'] || customerInfo['택배주소'] || '',
                 '미성년자여부': customerInfo['미성년자여부'] || '',
@@ -2629,7 +2724,7 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
             ];
             
             const additionalFields = [
-                '부가서비스', '보험', '배송주소지'
+                '부가서비스', '부가서비스2', '보험', '배송주소지'
             ];
             
             const minorFields = [
@@ -4042,7 +4137,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                     '큐브': {
                         name: '큐브',
                         type: 'special',
-                        outputType: 'split',
+                        outputType: 'multi',
                         memo: agencyMemos['SK']['큐브'],
                         templates: {
                             stockRequest: (info) => {
@@ -4099,6 +4194,36 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 ◎ 할부원금 : ${paymentInfo}
 ◎ 약정유형 : ${info.할인유형 || ''} ${info.약정개월수 || ''}
 ◎ 부가서비스 : ${info.부가서비스 && info.보험 ? `${info.부가서비스} / ${info.보험}` : (info.부가서비스 || info.보험 || '')}`;
+                            },
+                            stockRequest: (info) => {
+                                // 유심 값에 '이심' 또는 '기존유심' 키워드가 있으면 X, 그렇지 않으면 O
+                                const usimValue = info.유심 || '';
+                                const hasESim = /이심|기존유심/i.test(usimValue);
+                                const usimRequest = hasESim ? 'X' : 'O';
+                                
+                                return `★재고요청(SK3)
+택배or퀵 :	
+이름: ${info.고객명 || ''}
+연락처 : ${info.전화번호 || ''}
+주소 : ${info.택배주소 || info.배송주소지 || ''}
+유심 : ${usimRequest}
+모델명 : ${info.모델명 || ''} ${info.용량 || ''}
+색상 : ${info.색상 || ''}`;
+                            },
+                            universe: (info) => {
+                                const name = info['가입자명'] || info['고객명'] || '';
+                                const contact = info['개통번호'] || info['전화번호'] || '';
+                                const jumin = info['주민번호'] || info['생년월일'] || '';
+                                
+                                return `[큐브 우주패스양식]
+고객명: ${name}
+개통번호: ${contact}
+주민번호: ${jumin}
+모델명: ${info['모델명'] || ''}
+색상: ${info['색상'] || ''}
+가입유형: ${info['가입유형'] || ''}
+요금제: ${info['요금제'] || ''}
+현재통신사: ${info['현재통신사'] || ''}`;
                             }
                         }
                     },
@@ -4637,6 +4762,175 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
 ▶요금제 : ${info.요금제 || ''}
 ▶지정번호 : ${designatedNumber}
 ▶부가 : ${info.부가서비스 && info.부가서비스 !== '무' ? info.부가서비스 : ''}${info.보험 ? '\n▶보험 : ' + info.보험 : ''}`;
+                            }
+                        }
+                    },
+                    '럭스': {
+                        name: '럭스',
+                        type: 'special',
+                        outputType: 'multi',
+                        memo: agencyMemos['SK']['럭스'],
+                        templates: {
+                            request: (info) => {
+                                // 기본 정보 처리
+                                const name = info['가입자명'] || info['고객명'] || '';
+                                const contact = info['개통번호'] || info['전화번호'] || '';
+                                const subscriptionType = info['가입유형'] || '';
+                                
+                                // 가입유형에 따른 접두사 결정
+                                let prefix = '';
+                                if (['기기변경', '보상기변', '기변'].includes(subscriptionType)) {
+                                    prefix = '기변';
+                                } else if (['번호이동', '번이'].includes(subscriptionType)) {
+                                    prefix = '번이';
+                                } else if (['신규가입', '신규'].includes(subscriptionType)) {
+                                    prefix = '신규';
+                                }
+                                
+                                // 주민번호 유효성 검사 (번호이동 또는 신규가입인 경우에만)
+                                const jumin = info['주민번호'] || info['생년월일'] || '';
+                                let juminError = '';
+                                if (['번호이동', '번이', '신규가입', '신규'].includes(subscriptionType)) {
+                                    const juminRegex = /^\d{6}-?\d{7}$/;
+                                    if (!juminRegex.test(jumin)) {
+                                        juminError = '\n※ 번호이동/신규가입시 주민번호 전체가 필요합니다.';
+                                    }
+                                }
+                                
+                                return `[${prefix} 신조요청후 유키반려]
+업체명: 에이치엘
+고객명: ${name}
+전화번호: ${contact}
+주민번호: ${jumin}${juminError}`;
+                            },
+
+                            open: (info) => {
+                                // 기존 럭스 개통요청 양식 (조건부)
+                                const name = info['가입자명'] || info['고객명'] || '';
+                                const contact = info['개통번호'] || info['전화번호'] || '';
+                                const modelColor = `${info['모델명'] || ''} ${info['용량'] || ''} / ${info['색상'] || ''} / ${info['단말기일련번호'] || ''}`;
+                                const plan = info['요금제'] || '';
+                                const subscriptionType = info['가입유형'] || '';
+                                const subscriptionTypeWithCarrier = info['현재통신사'] ? `${subscriptionType}(${info['현재통신사']})` : subscriptionType;
+                                
+                                // 기존 조건부 로직 그대로 복원
+                                if (info['공시선약여부'] === '공시지원' && info['할부현금여부'] === '현금') {
+                                    return `판매점명 : 에이치엘
+고객명 : ${name}	
+개통번호 : ${contact}	
+모델명 / 색상 / 일련번호 : ${modelColor}	
+유심 일련번호 :	${info['유심일련번호'] || ''}	
+요금제명(혜택) : ${plan}	
+개통유형 : ${subscriptionTypeWithCarrier}	
+공시 ${info['약정개월수'] || '24개월'}		
+현금완납		
+		
+출고가 ${info['출고가'] || ''}
+공시지원 ${info['공시'] || ''}
+추가지원 ${info['추지'] || ''}${info['전환지원금'] && info['전환지원금'] !== '0' ? `
+전환지원금 ${info['전환지원금']}` : ''}
+최종구매가 ${info['최종구매가'] || ''}
+		
+보험 / 부가서비스 : ${[info['보험'], info['부가서비스'], info['부가서비스2']].filter(item => item && item.trim()).join(' / ')}`;
+                                } else if (info['공시선약여부'] === '공시지원' && info['할부현금여부'] === '할부') {
+                                    return `판매점명 : 에이치엘
+고객명 : ${name}	
+개통번호 : ${contact}	
+모델명 / 색상 / 일련번호 : ${modelColor}	
+유심 일련번호 :	${info['유심일련번호'] || ''}	
+요금제명(혜택) : ${plan}	
+개통유형 :	${subscriptionTypeWithCarrier}	
+공시 ${info['약정개월수'] || '24개월'}		
+할부 ${info['할부개월수'] || '24개월'}		
+		
+출고가 ${info['출고가'] || ''}
+공시지원 ${info['공시'] || ''}
+추가지원 ${info['추지'] || ''}${info['전환지원금'] && info['전환지원금'] !== '0' ? `
+전환지원금 ${info['전환지원금']}` : ''}
+프리할부 ${info['프리할부'] || ''}
+최종구매가 ${info['최종구매가'] || ''}
+		
+보험 / 부가서비스 : ${[info['보험'], info['부가서비스'], info['부가서비스2']].filter(item => item && item.trim()).join(' / ')}`;
+                                } else if ((info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') && info['할부현금여부'] === '현금') {
+                                    return `판매점명 : 에이치엘
+고객명 : ${name}	
+개통번호 : ${contact}	
+모델명 / 색상 / 일련번호 : ${modelColor}	
+유심 일련번호 :	${info['유심일련번호'] || ''}	
+요금제명(혜택) : ${plan}	
+개통유형 :	${subscriptionTypeWithCarrier}	
+선약 ${info['약정개월수'] || '24개월'}		
+현금완납		
+		
+출고가 ${info['출고가'] || ''}${info['전환지원금'] && info['전환지원금'] !== '0' ? `
+전환지원금 ${info['전환지원금']}` : ''}
+최종구매가 ${info['최종구매가'] || ''}
+		
+보험 / 부가서비스 : ${[info['보험'], info['부가서비스'], info['부가서비스2']].filter(item => item && item.trim()).join(' / ')}`;
+                                } else if ((info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') && info['할부현금여부'] === '할부') {
+                                    return `판매점명 : 에이치엘
+고객명 : ${name}	
+개통번호 : ${contact}	
+모델명 / 색상 / 일련번호 : ${modelColor}	
+유심 일련번호 :	${info['유심일련번호'] || ''}	
+요금제명(혜택) : ${plan}	
+개통유형 : ${subscriptionTypeWithCarrier}	
+선약 ${info['약정개월수'] || '24개월'}		
+할부 ${info['할부개월수'] || '24개월'}		
+		
+출고가 ${info['출고가'] || ''}${info['전환지원금'] && info['전환지원금'] !== '0' ? `
+전환지원금 ${info['전환지원금']}` : ''}
+프리할부 ${info['프리할부'] || ''}
+최종구매가 ${info['최종구매가'] || ''}
+		
+보험 / 부가서비스 : ${[info['보험'], info['부가서비스'], info['부가서비스2']].filter(item => item && item.trim()).join(' / ')}`;
+                                } else {
+                                    return `[럭스] ${name}님 / ${info['모델명'] || ''} / ${info['색상'] || ''} / ${plan} / ${subscriptionTypeWithCarrier} / ${info['할부현금여부'] || ''} ${info['최종구매가'] || ''}`;
+                                }
+                            },
+                            delivery: (info) => {
+                                const name = info['가입자명'] || info['고객명'] || '';
+                                const contact = info['개통번호'] || info['전화번호'] || '';
+                                
+                                // 이앤티와 동일한 유심 처리 로직
+                                const usimValue = info['유심'] || '';
+                                let simIncluded = '';
+                                
+                                // 기존 또는 기존유심이 포함된 경우
+                                if (/기존|기존유심/i.test(usimValue)) {
+                                    simIncluded = 'N';
+                                } else {
+                                    // 기존/기존유심이 없는 경우
+                                    if (/이심/i.test(usimValue)) {
+                                        simIncluded = 'N';
+                                    } else {
+                                        simIncluded = 'Y';
+                                    }
+                                }
+                                
+                                return `□재고 요청서□
+매장상호 : 에이치엘
+고객명: ${name}
+연락처: ${contact}
+받을 주소: ${info['택배주소'] || info['배송주소지'] || ''}
+퀵/택배: 택배
+기종/색상: ${info['모델명'] || ''} ${info['용량'] || ''} / ${info['색상'] || ''}
+유심동봉여부: ${simIncluded}`;
+                            },
+                            universe: (info) => {
+                                const name = info['가입자명'] || info['고객명'] || '';
+                                const contact = info['개통번호'] || info['전화번호'] || '';
+                                const jumin = info['주민번호'] || info['생년월일'] || '';
+                                
+                                return `[럭스 우주패스양식]
+고객명: ${name}
+개통번호: ${contact}
+주민번호: ${jumin}
+모델명: ${info['모델명'] || ''}
+색상: ${info['색상'] || ''}
+가입유형: ${info['가입유형'] || ''}
+요금제: ${info['요금제'] || ''}
+현재통신사: ${info['현재통신사'] || ''}`;
                             }
                         }
                     }
