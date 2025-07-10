@@ -1178,248 +1178,6 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             return cleanInput;
         }
 
-        // 대리점별 양식 템플릿 (레거시 - 사용 안함)
-        const templates = {
-            'SK': {
-                '큐브': (info) => {
-                    // 이름 처리
-                    const name = info['가입자명'] || info['고객명'] || '';
-                    // 연락처 처리
-                    const contact = info['개통번호'] || info['전화번호'] || '';
-                    // 주소 처리
-                    const address = info['택배주소'] || info['배송주소지'] || '';
-                    // 통신사/인증 처리
-                    const telecom = info['현재통신사'] || '';
-                    // 할부원금 처리
-                    let paymentInfo = '';
-                    if (info['할부현금여부'] === '현금') {
-                        paymentInfo = '★현금완납';
-                    } else {
-                        paymentInfo = info['할부현금여부'] + ' ' + info['최종구매가'] + '원';
-                    }
-                    
-                    // 재고요청 양식
-                    const stockRequest = `★재고요청(SK3)
-택배or퀵 :	
-이름: ${name}
-연락처 : ${contact}
-주소 : ${address}
-유심 : ${info['유심'] || ''}
-모델명 : ${info['모델명'] || ''}
-색상 : ${info['색상'] || ''}`;
-                    
-                    // 개통요청 양식
-                    const openRequest = `■SK3 개통요청		
-◎ 고객명 / 번호 : ${name} / ${contact}	
-◎ 주민번호 : ${info['주민번호'] || info['생년월일'] || ''}	
-◎ 통신사/인증 : ${telecom}	
-◎ 모델/색상 : ${info['모델명'] || ''} / ${info['색상'] || ''}	
-◎ 일련번호 : ${info['단말기일련번호'] || ''}	
-◎ 유심 일련번호 : ${info['유심일련번호'] || ''}	
-◎ 유심비용:	${info['유심'] || ''}	
-◎ 요금제 / 혜택 : ${info['요금제'] || ''}	
-◎ 공시지원금 : ${info['공시'] || '0'}	
-◎ 추지(15%) : ${info['추지'] || '0'}	${info['전환지원금'] && info['전환지원금'] !== '0' ? `
-◎ 전환지원금 : ${info['전환지원금']}	` : ''}
-◎ 고객선납 : ${info['프리할부'] || '0'}	
-◎ 할부원금 : ${paymentInfo}		
-◎ 약정유형 : ${info['공시선약여부'] || ''} ${info['약정개월수'] || ''}	
-◎ 부가서비스 : ${info['부가서비스'] || ''}`;
-                    
-                    return { stockRequest, openRequest };
-                },
-                '밀리언': (info) => `[밀리언]\n고객명: ${info.고객명}\n모델: ${info.모델명}\n색상: ${info.색상}\n요금제: ${info.요금제}\n가입유형: ${info.가입유형}\n${info.할부현금여부}: ${info.최종구매가}원`,
-
-                '삼보/엠디도매': (info) => `[삼보/엠디도매]\n${info.고객명}\n${info.모델명}\n${info.색상}\n${info.요금제}\n${info.가입유형}\n${info.할부현금여부} ${info.최종구매가}원`,
-                '코웨어': (info) => {
-                    // 기본 정보 처리
-                    const name = info['고객명'] || '';
-                    const regNum = info['주민번호'] || info['생년월일'] || '';
-                    const contact = info['전화번호'] || info['개통번호'] || info['연락처'] || ''; // 전화번호나 개통번호 우선 사용
-                    const modelInfo = `${info['모델명'] || ''} ${info['색상'] || ''}`;
-                    const serialNum = info['단말기일련번호'] || '';
-                    const plan = info['요금제'] || '';
-                    
-                    // 할부 정보 처리
-                    let installment = '';
-                    if (info['할부현금여부'] === '할부') {
-                        installment = `${info['할부개월수'] || '24개월'}`;
-                    } else if (info['할부현금여부'] === '현금') {
-                        installment = '0'; // 현금인 경우 0으로 표시
-                    }
-                    
-                    // 프리할부 정보
-                    const prepay = info['프리할부'] || '0';
-                    
-                    // 할부원금 정보
-                    let principal = '0';
-                    if (info['할부현금여부'] === '할부') {
-                        principal = info['최종구매가'] || '0'; // 할부인 경우에만 최종구매가 표시
-                    }
-                    
-                    // 현금완납 정보
-                    const cashPayment = info['할부현금여부'] === '현금' ? 'O' : '';
-                    
-                    // 선약 & 공시 정보
-                    let contractType = '';
-                    if (info['공시선약여부'] === '공시지원') {
-                        contractType = `공시 ${info['약정개월수'] || '24개월'}`;
-                    } else if (info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') {
-                        contractType = `선약 ${info['약정개월수'] || '24개월'}`;
-                    }
-                    
-                    // 유심 정보
-                    const usim = info['유심일련번호'] || info['유심'] || '';
-                    
-                    // 부가서비스 정보
-                    const addon = info['부가서비스'] || '';
-                    
-                    // 보험가입여부 정보
-                    const insurance = info['보험'] || '';
-                    
-                    // 코웨어 양식
-                    return `* 개통요청	
-고객명 - ${name}	
-주민번호 - ${regNum}	
-개통번호 - ${contact}	
-단말정보 - ${modelInfo}	
-일련번호 - ${serialNum}	
-요금제 - ${plan}	
-할부 - ${installment}	
-프리 - ${prepay}	
-할부원금 - ${principal}	
-현금완납 - ${cashPayment}	
-선약&공시 - ${contractType}	
-유심 - ${usim}	
-부가 - ${addon}	
-보험가입여부 - ${insurance}`;
-                },
-                '비앤컴': (info) => {
-                    // 비앤컴 템플릿
-                    const name = info['가입자명'] || info['고객명'] || '';
-                    const jumin = info['주민번호'] || info['생년월일'] || '';
-                    const phone = info['전화번호'] || info['개통번호'] || '';
-                    const subscriptionType = info['가입유형'] || '';
-                    
-                    // 접수확인&신조요청 양식
-                    const stockRequest = `- ${subscriptionType}
-ㅁSK조회양식
-고객명 : ${name}
-주민번호 : ${jumin}
-전화번호 : ${phone}
-${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
-                    
-                    // 개통요청 양식을 위한 데이터 처리
-                    const openName = info['고객명'] || info['가입자명'] || '';
-                    const openJumin = info['주민번호'] || info['생년월일'] || '';
-                    const openPhone = info['개통번호'] || info['전화번호'] || '';
-                    const openSubscriptionType = info['가입유형'] || '';
-                    const model = info['모델명'] || '';
-                    const color = info['색상'] || '';
-                    const serialNumber = info['단말기일련번호'] || '';
-                    const usimNumber = info['유심일련번호'] || info['유심'] || '';
-                    const plan = info['요금제'] || '';
-                    const discountType = info['할인유형'] || '';
-                    const contractMonths = info['약정개월수'] || '';
-                    // 부가서비스/보험 조합 (보험이 없으면 / 제거)
-                    const addonService = info['부가서비스'] || '';
-                    const insurance = info['보험'] || '';
-                    let addon = '';
-                    if (addonService && insurance) {
-                        addon = `${addonService} / ${insurance}`;
-                    } else if (addonService) {
-                        addon = addonService;
-                    } else if (insurance) {
-                        addon = insurance;
-                    }
-                    
-                    // 할부원금/개월수 처리
-                    let installmentInfo = '';
-                    if (info['할부현금여부'] === '현금') {
-                        installmentInfo = `★현금완납 / ${info['최종구매가'] || ''}`;
-                    } else if (info['할부현금여부'] === '할부') {
-                        installmentInfo = `${info['최종구매가'] || ''} / ${info['할부개월수'] || ''}`;
-                    } else {
-                        installmentInfo = `${info['최종구매가'] || ''}`;
-                    }
-                    
-                    // 선납금 계산 (숫자 형태로 처리 후 콤마 포맷)
-                    let prepayment = '0';
-                    if (info['공시선약여부'] === '공시지원') {
-                        // 콤마 제거 후 숫자로 변환
-                        const gongsi = parseInt((info['공시'] || '0').replace(/,/g, '')) || 0;
-                        const chuji = parseInt((info['추지'] || '0').replace(/,/g, '')) || 0;
-                        const jeonhwan = parseInt((info['전환지원금'] || '0').replace(/,/g, '')) || 0;
-                        const preFree = parseInt((info['프리할부'] || '0').replace(/,/g, '')) || 0;
-                        
-                        const total = gongsi + chuji + jeonhwan + preFree;
-                        // 숫자를 콤마 형태로 포맷
-                        prepayment = total.toLocaleString();
-                    } else if (info['공시선약여부'] === '선택약정') {
-                        prepayment = '0';
-                    }
-                    
-                    // 개통요청 양식
-                    const openRequest = `ㅇ 개통요청 (제휴)/케이뱅크
-고객명 : ${openName}
-생년월일 : ${openJumin}
-개통번호 : ${openPhone}
-가입유형 : ${openSubscriptionType}
-모델명 : ${model} / ${color}
-일련번호 : ${serialNumber}
-유심번호 : ${usimNumber}
-요금제 : ${plan}
-약정유형(공시/선약)/개월수 : ${discountType} / ${contractMonths}
-할부원금/개월수 : ${installmentInfo}
-선납금 : ${prepayment}
-부가서비스/보험 : ${addon}`;
-                    
-                    return {
-                        stockRequest: stockRequest, // 접수확인&신조요청
-                        openRequest: openRequest    // 개통요청
-                    };
-                }
-            },
-            'LG': {
-                name: 'LG',
-                agencies: {
-                    '소리': {
-                        name: '소리',
-                        type: 'special',
-                        outputType: 'table',
-                        memo: agencyMemos['LG']['소리'],
-                        template: (info) => {
-                            const additionalOutput = `${info.모델명 || ''} / ${info.가입유형 || ''}\n` +
-                                `${info.고객명 || ''} / ${info.주민번호 || info.생년월일 || ''} / ${info.개통번호 || info.전화번호 || info.연락처 || ''}\n` +
-                                `접수 확인 및 신조 부탁드립니다.`;
-                            return {
-                                tableData: info,
-                                additionalText: additionalOutput
-                            };
-                        }
-                    },
-                    '제이/휴넷': {
-                        name: '제이/휴넷',
-                        type: 'special',
-                        outputType: 'multi',
-                        memo: agencyMemos['LG']['제이/휴넷'],
-                        templates: {
-                            confirm: (info) => `[휴넷 접수확인]\n고객: ${info.고객명 || ''}\n모델: ${info.모델명 || ''}\n색상: ${info.색상 || ''}\n요금제: ${info.요금제 || ''}\n가입유형: ${info.가입유형 || ''}`,
-                            delivery: (info) => `[휴넷 배송요청]\n고객: ${info.고객명 || ''}\n모델: ${info.모델명 || ''}\n색상: ${info.색상 || ''}\n주소: ${info.택배주소 || info.배송주소지 || ''}`,
-                            open: (info) => `[휴넷 개통요청]\n고객: ${info.고객명 || ''}\n개통번호: ${info.개통번호 || info.전화번호 || ''}\n모델: ${info.모델명 || ''}\n가입유형: ${info.가입유형 || ''}`
-                        }
-                    },
-                    '신청서연장양식': {
-                        name: '신청서연장양식',
-                        type: 'normal',
-                        outputType: 'single',
-                        memo: '',
-                        template: (info) => `${info.고객명 || ''} / ${info.주민번호 || info.생년월일 || ''} / ${info.개통번호 || info.전화번호 || ''}`
-                    }
-                }
-            }
-        };
-
         // 템플릿 관리 클래스
         class TemplateManager {
             static getTemplate(telecom, agency) {
@@ -4690,6 +4448,94 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
                             
                             result += `유심 - ${info.유심일련번호 || info.유심 || ''}\n`;
                             return result;
+                        }
+                    },
+                    '비앤컴': {
+                        name: '비앤컴',
+                        type: 'special',
+                        outputType: 'split',
+                        memo: agencyMemos['SK']['비앤컴'],
+                        templates: {
+                            stockRequest: (info) => {
+                                // 비앤컴 접수확인&신조요청 양식
+                                const name = info['가입자명'] || info['고객명'] || '';
+                                const jumin = info['주민번호'] || info['생년월일'] || '';
+                                const phone = info['전화번호'] || info['개통번호'] || '';
+                                const subscriptionType = info['가입유형'] || '';
+                                
+                                return `- ${subscriptionType}
+ㅁSK조회양식
+고객명 : ${name}
+주민번호 : ${jumin}
+전화번호 : ${phone}
+${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
+                            },
+                            openRequest: (info) => {
+                                // 비앤컴 개통요청 양식
+                                const openName = info['고객명'] || info['가입자명'] || '';
+                                const openJumin = info['주민번호'] || info['생년월일'] || '';
+                                const openPhone = info['개통번호'] || info['전화번호'] || '';
+                                const openSubscriptionType = info['가입유형'] || '';
+                                const model = info['모델명'] || '';
+                                const color = info['색상'] || '';
+                                const serialNumber = info['단말기일련번호'] || '';
+                                const usimNumber = info['유심일련번호'] || info['유심'] || '';
+                                const plan = info['요금제'] || '';
+                                const discountType = info['할인유형'] || '';
+                                const contractMonths = info['약정개월수'] || '';
+                                
+                                // 부가서비스/보험 조합 (보험이 없으면 / 제거)
+                                const addonService = info['부가서비스'] || '';
+                                const insurance = info['보험'] || '';
+                                let addon = '';
+                                if (addonService && insurance) {
+                                    addon = `${addonService} / ${insurance}`;
+                                } else if (addonService) {
+                                    addon = addonService;
+                                } else if (insurance) {
+                                    addon = insurance;
+                                }
+                                
+                                // 할부원금/개월수 처리
+                                let installmentInfo = '';
+                                if (info['할부현금여부'] === '현금') {
+                                    installmentInfo = `★현금완납 / ${info['최종구매가'] || ''}`;
+                                } else if (info['할부현금여부'] === '할부') {
+                                    installmentInfo = `${info['최종구매가'] || ''} / ${info['할부개월수'] || ''}`;
+                                } else {
+                                    installmentInfo = `${info['최종구매가'] || ''}`;
+                                }
+                                
+                                // 선납금 계산 (숫자 형태로 처리 후 콤마 포맷)
+                                let prepayment = '0';
+                                if (info['공시선약여부'] === '공시지원') {
+                                    // 콤마 제거 후 숫자로 변환
+                                    const gongsi = parseInt((info['공시'] || '0').replace(/,/g, '')) || 0;
+                                    const chuji = parseInt((info['추지'] || '0').replace(/,/g, '')) || 0;
+                                    const jeonhwan = parseInt((info['전환지원금'] || '0').replace(/,/g, '')) || 0;
+                                    const preFree = parseInt((info['프리할부'] || '0').replace(/,/g, '')) || 0;
+                                    
+                                    const total = gongsi + chuji + jeonhwan + preFree;
+                                    // 숫자를 콤마 형태로 포맷
+                                    prepayment = total.toLocaleString();
+                                } else if (info['공시선약여부'] === '선택약정') {
+                                    prepayment = '0';
+                                }
+                                
+                                return `ㅇ 개통요청 (제휴)/케이뱅크
+고객명 : ${openName}
+생년월일 : ${openJumin}
+개통번호 : ${openPhone}
+가입유형 : ${openSubscriptionType}
+모델명 : ${model} / ${color}
+일련번호 : ${serialNumber}
+유심번호 : ${usimNumber}
+요금제 : ${plan}
+약정유형(공시/선약)/개월수 : ${discountType} / ${contractMonths}
+할부원금/개월수 : ${installmentInfo}
+선납금 : ${prepayment}
+부가서비스/보험 : ${addon}`;
+                            }
                         }
                     },
                     '이앤티': {
