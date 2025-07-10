@@ -4023,56 +4023,47 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 ＃${idLabel}	${idInfo}`;
                             },
                             stock: (info) => {
-                                const modelColor = `${info.모델명 || ''} ${info.용량 || ''} / ${info.색상 || ''} / ${info.단말기일련번호 || ''}`;
-                                const plan = info.요금제 || '';
-                                const subscriptionType = info.가입유형 || '';
+                                // 현재통신사에 따른 MNO/MVNO 분류 (SK, KT, LG는 MNO, 그 외는 MVNO)
+                                const currentTelecom = (info.현재통신사 || '').toLowerCase().trim();
+                                const isMNO = ['sk', 'kt', 'lg'].includes(currentTelecom);
+                                const telecomType = isMNO ? 'MNO' : 'MVNO';
                                 
-                                if (info.공시선약여부 === '공시지원' && info.할부현금여부 === '현금') {
-                                    return `판매점명 : 에이치엘
-고객명 : ${info.고객명 || ''}	
-개통번호 : ${info.전화번호 || ''}	
-모델명 / 색상 / 일련번호 : ${modelColor}	
-유심 일련번호 :	${info.유심일련번호 || ''}	
-요금제명(혜택) :	${plan}	
-개통유형 : ${subscriptionType}	
-공시 ${info.약정개월수 || '24개월'}		
-현금완납		
-		
-출고가 ${info.출고가 || ''}
-공시지원 ${info.공시 || ''}
-추가지원 ${info.추지 || ''}${info.전환지원금 && info.전환지원금 !== '0' ? `
-전환지원금 ${info.전환지원금}` : ''}
-최종구매가 ${info.최종구매가 || ''}
-		
-보험 / 부가서비스 : ${info.부가서비스 || ''}`;
-                                } else if (info.공시선약여부 === '공시지원' && info.할부현금여부 === '할부') {
-                                    return `판매점명 : 에이치엘
-고객명 :	${info.고객명 || ''}	
-개통번호 :	${info.전화번호 || ''}	
-모델명 / 색상 / 일련번호 :	${modelColor}	
-유심 일련번호 :	${info.유심일련번호 || ''}	
-요금제명(혜택) : ${plan}	
-개통유형 : ${subscriptionType}	
-공시 ${info.약정개월수 || '24개월'}		
-할부 ${info.할부개월수 || '24개월'}		
-		
-출고가 ${info.출고가 || ''}
-공시지원 ${info.공시 || ''}
-추가지원 ${info.추지 || ''}${info.전환지원금 && info.전환지원금 !== '0' ? `
-전환지원금 ${info.전환지원금}` : ''}
-프리할부 ${info.프리할부 || ''}
-최종구매가 ${info.최종구매가 || ''}
-		
-보험 / 부가서비스 : ${info.부가서비스 || ''}`;
+                                // 유심 발송 여부 (SK 이앤티와 동일한 로직)
+                                const usimValue = info.유심 || '';
+                                let usimDelivery = '';
+                                
+                                // 기존 또는 기존유심이 포함된 경우
+                                if (/기존|기존유심/i.test(usimValue)) {
+                                    usimDelivery = 'X';
+                                } else {
+                                    // 기존/기존유심이 없는 경우 발송 필요
+                                    if (/이심/i.test(usimValue)) {
+                                        usimDelivery = 'X'; // 이심인 경우 발송 불필요
+                                    } else {
+                                        usimDelivery = 'O'; // 일반 유심인 경우 발송 필요
+                                    }
                                 }
+                                
+                                return `■ 택배 배송 요청 양식
+* 개통유형 : ${telecomType} / ${info.가입유형 || ''}
+* 매장명 : 라온아이
+＊담당자명 : 김한결
+＊개통자명 : ${info.가입자명 || info.고객명 || ''}
+＊고객명 : ${info.가입자명 || info.고객명 || ''}
+＊연락처 : ${info.개통번호 || info.전화번호 || ''}
+＊주소 : ${info.배송주소지 || info.택배주소 || ''}
+＊모델(색상 및 용량) : ${info.모델명 || ''} ${info.용량 || ''} / ${info.색상 || ''}
+＊유심 발송 여부 : ${usimDelivery}`;
                             },
                             memo: (info) => {
                                 const subscriptionType = info.가입유형 || '';
                                 const currentTelecom = info.현재통신사 || '';
                                 const name = info.고객명 || info.가입자명 || '';
-                                const birthDate = info.생년월일 || info.주민번호 || '';
+                                // 생년월일 yymmdd 형식으로 변환
+                                const birthDate = formatBirthDate(info.생년월일 || info.주민번호 || '');
                                 const phone = info.개통번호 || info.전화번호 || '';
-                                const model = info.모델명 || '' + info.용량 || '';
+                                // 모델명 뒤에 용량 추가
+                                const model = `${info.모델명 || ''} ${info.용량 || ''}`.trim();
                                 const color = info.색상 || '';
                                 const serialNumber = info.단말기일련번호 || '';
                                 // 유심 정보 처리 (유심일련번호 우선, 없으면 유심 값 사용)
@@ -4084,12 +4075,14 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                 const contractMonths = info.약정개월수 || '';
                                 const contractInfo = discountType && contractMonths ? `${discountType}${contractMonths}` : (discountType || contractMonths);
                                 
-                                // 할부 개월 & 현금완납 처리
+                                // 할부 개월 & 현금완납 처리 (뒤에 최종구매가 추가)
                                 let installmentInfo = '';
                                 if (info.할부현금여부 === '현금') {
-                                    installmentInfo = '현금완납';
+                                    installmentInfo = `현금완납 ${info.최종구매가 || ''}`;
                                 } else if (info.할부현금여부 === '할부') {
-                                    installmentInfo = `${info.할부개월수 || '24'}개월`;
+                                    installmentInfo = `${info.할부현금여부 || ''} ${info.할부개월수 || '24'} ${info.최종구매가 || ''}`;
+                                } else {
+                                    installmentInfo = info.최종구매가 || '';
                                 }
                                 
                                 // 할부원금 처리 (기재 안할시 현금완납)
@@ -4100,17 +4093,27 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                     installmentPrincipal = '현금완납';
                                 }
                                 
-                                // 전환지원금 (MNP만 적용)
+                                // 전환지원금 (MNP만 적용, 0이면 X 표시)
                                 let transferSupport = '';
                                 if (['번호이동', '번이'].includes(subscriptionType)) {
-                                    transferSupport = info.전환지원금 || '';
+                                    const transferAmount = info.전환지원금 || '';
+                                    transferSupport = (transferAmount === '0' || transferAmount === '') ? 'X' : transferAmount;
+                                } else {
+                                    transferSupport = 'X';
                                 }
                                 
-                                // 보험/부가/복지 정보 통합
+                                // 공시지원금, 추가지원금, 프리금액 - 0이면 X 표시
+                                const publicSupport = (info.공시 === '0' || info.공시 === '') ? 'X' : (info.공시 || 'X');
+                                const additionalSupport = (info.추지 === '0' || info.추지 === '') ? 'X' : (info.추지 || 'X');
+                                const freeAmount = (info.프리할부 === '0' || info.프리할부 === '') ? 'X' : (info.프리할부 || 'X');
+                                
+                                // 보험/부가/복지 정보 통합 (부가서비스2 포함)
                                 const insurance = info.보험 || '';
                                 const addon = info.부가서비스 || '';
+                                const addon2 = info.부가서비스2 || '';
                                 const welfare = info.복지 || '';
-                                let benefitInfo = [insurance, addon, welfare].filter(item => item).join(' / ');
+                                let benefitInfo = [insurance, addon, addon2, welfare].filter(item => item && item.trim()).join(' / ');
+                                if (!benefitInfo) benefitInfo = 'X';
                                 
                                 return `▶가입유형 / 전통신사 : ${subscriptionType} / ${currentTelecom}
 ▶고객명 : ${name}
@@ -4123,9 +4126,9 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 ▶약정 (공시 or 선약12 or 선약24) : ${contractInfo}
 ▶할부 개월 & 현금완납 : ${installmentInfo}
 ▶출고가 : ${info.출고가 || ''}
-▶공시 지원금 : ${info.공시 || ''}
-▶추가 지원금 : ${info.추지 || ''}
-▶프리 금액 : ${info.프리할부 || ''}
+▶공시 지원금 : ${publicSupport}
+▶추가 지원금 : ${additionalSupport}
+▶프리 금액 : ${freeAmount}
 ▶전환 지원금 (MNP만 적용) : ${transferSupport}
 ▶할부원금 (기재 안할시 현금완납) : ${installmentPrincipal}
 ▶*보험 / *부가 / *복지 : ${benefitInfo}
