@@ -4918,19 +4918,51 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
 유심동봉여부: ${simIncluded}`;
                             },
                             universe: (info) => {
+                                // 우주패스 항목이 있는지 먼저 확인
+                                const addon1 = info['부가서비스'] || '';
+                                const addon2 = info['부가서비스2'] || '';
+                                const addonText = `${addon1} ${addon2}`.toLowerCase();
+                                
+                                // 우주패스가 없으면 빈 문자열 반환 (출력 안됨)
+                                // if (!addonText.includes('우주패스')) {
+                                //     return '';
+                                // }
+                                
                                 const name = info['가입자명'] || info['고객명'] || '';
                                 const contact = info['개통번호'] || info['전화번호'] || '';
-                                const jumin = info['주민번호'] || info['생년월일'] || '';
                                 
-                                return `[럭스 우주패스양식]
-고객명: ${name}
-개통번호: ${contact}
-주민번호: ${jumin}
-모델명: ${info['모델명'] || ''}
-색상: ${info['색상'] || ''}
-가입유형: ${info['가입유형'] || ''}
-요금제: ${info['요금제'] || ''}
-현재통신사: ${info['현재통신사'] || ''}`;
+                                // 생년월일/주민번호를 yymmdd 형식으로 변환
+                                const birthOrRegNum = info['주민번호'] || info['생년월일'] || '';
+                                let formattedBirth = '';
+                                if (birthOrRegNum) {
+                                    // - 제거하고 앞 6자리만 추출 (yymmdd)
+                                    formattedBirth = birthOrRegNum.replace(/-/g, '').substring(0, 6);
+                                }
+                                
+                                // 우주패스 상품명 추출 (편의점&카페, 11번가, G마켓)
+                                let productName = '';
+                                if (addonText.includes('편의점') && addonText.includes('카페')) {
+                                    productName = '편의점 & 카페';
+                                } else if (addonText.includes('11번가')) {
+                                    productName = '쇼핑 11번가';
+                                } else if (addonText.includes('g마켓')) {
+                                    productName = '쇼핑 G마켓';
+                                }
+                                
+                                // 추가옵션 추출 (괄호 안의 내용)
+                                let additionalOption = '';
+                                const parenthesesMatch = `${addon1} ${addon2}`.match(/\(([^)]+)\)/);
+                                if (parenthesesMatch && parenthesesMatch[1]) {
+                                    additionalOption = parenthesesMatch[1].trim();
+                                }
+                                
+                                return `[T우주패스 신청 양식]
+1. 고객명 : ${name}
+2. 생년월일 : ${formattedBirth}
+3. 개통번호 : ${contact}
+4. 상품명 (편의점 & 카페 / 쇼핑 11번가 / 쇼핑 G마켓 택1) : ${productName}
+5. 추가옵션 (배민,유튜브 등) : ${additionalOption}
+6. 결제정보 : 기존자동이체`;
                             }
                         }
                     }
