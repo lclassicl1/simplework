@@ -3717,6 +3717,20 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             initializeModelDatabase();
         }
         
+        // 페이지 로드 완료 후 자동 잠금 기능 초기화
+        window.addEventListener('load', function() {
+            // 메인 콘텐츠가 표시된 상태일 때만 자동 잠금 시작
+            const mainContent = document.querySelector('.main-content');
+            const passwordModal = document.getElementById('passwordModal');
+            
+            if (mainContent && mainContent.style.display !== 'none' && 
+                passwordModal && passwordModal.style.display === 'none') {
+                // 자동 잠금 매니저 시작
+                autoLockManager = new AutoLockManager();
+                console.log(`자동 잠금 기능이 시작되었습니다. (${AUTO_LOCK_TIMEOUT_MINUTES}분 후 자동 잠금)`);
+            }
+        });
+        
         document.addEventListener('DOMContentLoaded', function() {
             // 초기 텍스트에리어에 더블클릭 이벤트 설정
             setupDoubleClickCopy();
@@ -5275,6 +5289,187 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
                 OutputManager.hideAllContainers();
             }
         }
+
+        // ⏰ 자동 잠금 설정 - 이 값만 수정하면 모든 곳에 적용됩니다!
+        const AUTO_LOCK_TIMEOUT_MINUTES = 10; // 자동 잠금 시간 (분)
+
+        // 자동 잠금 기능 클래스
+        class AutoLockManager {
+            constructor(timeoutMinutes = AUTO_LOCK_TIMEOUT_MINUTES) { // 상수 사용
+                this.timeoutDuration = timeoutMinutes * 60 * 1000; // 밀리초로 변환
+                this.timeoutId = null;
+                this.isLocked = false;
+                this.lastActivityTime = Date.now();
+                
+                // 활동 감지 이벤트들
+                this.activityEvents = [
+                    'mousedown', 'mousemove', 'keypress', 'scroll', 
+                    'touchstart', 'click', 'keydown', 'input', 'change'
+                ];
+                
+                this.init();
+            }
+            
+            init() {
+                console.log(`자동 잠금 기능 초기화: ${this.timeoutDuration / 60000}분 후 자동 잠금`);
+                this.setupActivityListeners();
+                this.startTimer();
+            }
+            
+            setupActivityListeners() {
+                // 모든 활동 이벤트에 대해 리스너 등록
+                this.activityEvents.forEach(event => {
+                    document.addEventListener(event, () => {
+                        this.resetTimer();
+                    }, true);
+                });
+                
+                // 창 포커스 이벤트도 추가
+                window.addEventListener('focus', () => {
+                    this.resetTimer();
+                });
+            }
+            
+            startTimer() {
+                this.clearTimer();
+                this.timeoutId = setTimeout(() => {
+                    this.lockApplication();
+                }, this.timeoutDuration);
+                
+                this.lastActivityTime = Date.now();
+            }
+            
+            resetTimer() {
+                if (!this.isLocked) {
+                    this.startTimer();
+                }
+            }
+            
+            clearTimer() {
+                if (this.timeoutId) {
+                    clearTimeout(this.timeoutId);
+                    this.timeoutId = null;
+                }
+            }
+            
+            lockApplication() {
+                console.log('자동 잠금 활성화: 일정 시간 동안 활동이 없어 잠금 처리됩니다.');
+                this.isLocked = true;
+                this.clearTimer();
+                
+                // 메인 콘텐츠 숨기기
+                const mainContent = document.querySelector('.main-content');
+                if (mainContent) {
+                    mainContent.style.display = 'none';
+                }
+                
+                // 비밀번호 모달 표시
+                const passwordModal = document.getElementById('passwordModal');
+                if (passwordModal) {
+                    passwordModal.style.display = 'flex';
+                    
+                    // 비밀번호 입력 필드 초기화 및 포커스
+                    const passwordInput = document.getElementById('passwordInput');
+                    if (passwordInput) {
+                        passwordInput.value = '';
+                        passwordInput.focus();
+                    }
+                    
+                    // 에러 메시지 숨기기
+                    const passwordError = document.getElementById('passwordError');
+                    if (passwordError) {
+                        passwordError.style.display = 'none';
+                    }
+                }
+                
+                // 잠금 알림 메시지 표시 (선택사항)
+                this.showLockNotification();
+            }
+            
+            unlockApplication() {
+                console.log('자동 잠금 해제: 정상적으로 잠금이 해제되었습니다.');
+                this.isLocked = false;
+                this.startTimer(); // 타이머 재시작
+            }
+            
+            showLockNotification() {
+                // 임시 알림 div 생성
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #f44336;
+                    color: white;
+                    padding: 15px 20px;
+                    border-radius: 5px;
+                    z-index: 10000;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+                    font-size: 14px;
+                    font-weight: bold;
+                `;
+                notification.textContent = '보안을 위해 자동으로 잠금되었습니다.';
+                
+                document.body.appendChild(notification);
+                
+                // 3초 후 알림 제거
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 3000);
+            }
+            
+            // 타임아웃 시간 변경 메서드
+            setTimeoutDuration(minutes) {
+                this.timeoutDuration = minutes * 60 * 1000;
+                console.log(`자동 잠금 시간이 ${minutes}분으로 변경되었습니다.`);
+                if (!this.isLocked) {
+                    this.startTimer(); // 새로운 시간으로 타이머 재시작
+                }
+            }
+            
+            // 남은 시간 확인 메서드 (디버깅용)
+            getRemainingTime() {
+                if (this.isLocked) return 0;
+                const elapsed = Date.now() - this.lastActivityTime;
+                const remaining = Math.max(0, this.timeoutDuration - elapsed);
+                return Math.ceil(remaining / 1000); // 초 단위로 반환
+            }
+        }
+        
+        // 전역 자동 잠금 인스턴스 생성 (페이지 로드 후)
+        let autoLockManager = null;
+        
+        // 자동 잠금 시간 설정 함수 (콘솔에서 사용)
+        function setAutoLockTime(minutes) {
+            if (autoLockManager) {
+                autoLockManager.setTimeoutDuration(minutes);
+                return `자동 잠금 시간이 ${minutes}분으로 설정되었습니다.`;
+            } else {
+                return '자동 잠금 매니저가 초기화되지 않았습니다.';
+            }
+        }
+        
+        // 자동 잠금 상태 확인 함수 (콘솔에서 사용)
+        function getAutoLockStatus() {
+            if (autoLockManager) {
+                const remaining = autoLockManager.getRemainingTime();
+                const minutes = Math.floor(remaining / 60);
+                const seconds = remaining % 60;
+                return {
+                    isLocked: autoLockManager.isLocked,
+                    remainingTime: `${minutes}분 ${seconds}초`,
+                    remainingSeconds: remaining
+                };
+            } else {
+                return '자동 잠금 매니저가 초기화되지 않았습니다.';
+            }
+        }
+        
+        // 전역 함수로 노출
+        window.setAutoLockTime = setAutoLockTime;
+        window.getAutoLockStatus = getAutoLockStatus;
 
         // 비밀번호 인증 기능 - utils.js로 이동됨
         /*

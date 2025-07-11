@@ -190,6 +190,17 @@ function checkPassword() {
         document.getElementById('passwordModal').style.display = 'none';
         document.querySelector('.main-content').style.display = 'block';
         
+        // 자동 잠금 매니저가 있으면 잠금 해제
+        if (typeof autoLockManager !== 'undefined' && autoLockManager) {
+            autoLockManager.unlockApplication();
+        } else {
+            // 자동 잠금 매니저가 없으면 새로 생성 (최초 로그인 시)
+            if (typeof AutoLockManager !== 'undefined') {
+                autoLockManager = new AutoLockManager(); // 기본 설정 사용
+                console.log(`자동 잠금 기능이 시작되었습니다. (${typeof AUTO_LOCK_TIMEOUT_MINUTES !== 'undefined' ? AUTO_LOCK_TIMEOUT_MINUTES : '기본'}분 후 자동 잠금)`);
+            }
+        }
+        
         // 페이지 초기화 함수 호출 (기존에 있다면)
         if (typeof initializePage === 'function') {
             initializePage();
