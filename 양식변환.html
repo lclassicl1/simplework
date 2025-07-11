@@ -6,6 +6,8 @@
     <title>업무 도우미</title>
     <!-- SheetJS 스타일링 지원 라이브러리 추가 -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <!-- 유틸리티 함수들 -->
+    <script src="utils.js"></script>
     <!-- 엑셀 관리 모듈 -->
     <script src="excel-manager.js"></script>
     <style>
@@ -1574,6 +1576,11 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             }
         }
 
+        // ========================================
+        // 유틸리티 함수들 (utils.js로 이동됨 - 주석처리, 삭제예정)
+        // ========================================
+        
+        /*
         // 펫네임을 실제 모델명으로 변환하는 매핑 테이블
         const MODEL_NAME_MAPPING = {
             // 갤럭시 S 시리즈  
@@ -1661,6 +1668,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             // console.log(`모델명 변환 실패: ${modelName} (매핑되지 않음)`);
             return modelName; // 매핑되지 않은 경우 원본 반환
         }
+        */
 
         // 향상된 부가서비스와 보험 분리 함수
         function parseAddonAndInsuranceEnhanced(addonText) {
@@ -3368,6 +3376,11 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             }
         }
         
+        // ========================================
+        // 데이터 관리 관련 함수들 (utils.js로 이동됨 - 주석처리, 삭제예정)
+        // ========================================
+        
+        /*
         // 모델 데이터베이스 설정
         const MODEL_STORAGE_KEY = 'deviceModelDatabase_v1'; // 변경이력관리와 구분되는 고유 키
         let deviceModelDatabase = {};
@@ -3601,6 +3614,12 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
         window.model.c = modelManagement.clear;
         
         console.log('모델 관리 명령어가 등록되었습니다. model.help()로 도움말을 확인하세요.');
+        */
+
+        // utils.js에서 제공하는 함수들을 사용하여 모델 데이터베이스 초기화
+        if (typeof initializeModelDatabase === 'function') {
+            initializeModelDatabase();
+        }
         
         document.addEventListener('DOMContentLoaded', function() {
             // 초기 텍스트에리어에 더블클릭 이벤트 설정
@@ -5161,7 +5180,8 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
             }
         }
 
-        // 비밀번호 인증 기능
+        // 비밀번호 인증 기능 - utils.js로 이동됨
+        /*
         const CORRECT_PASSWORD = '5577'; // 원하는 4자리 비밀번호로 변경하세요
 
         function checkPassword() {
@@ -5229,6 +5249,7 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
                 }, 100); // 약간의 지연을 두어 UI 업데이트 후 실행
             }
         });
+        */
     </script>
     </div> <!-- main-content 닫는 태그 -->
 </body>
