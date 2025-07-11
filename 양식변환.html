@@ -2099,6 +2099,32 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             customerInfo['할인유형'] = subInfo.discountType;
             customerInfo['현재통신사'] = subInfo.currentTelecom;
             
+            // 2-1. 가입유형이 비어있는 경우 현재통신사와 선택된 통신사 비교하여 자동 설정
+            if (!customerInfo['가입유형'] || customerInfo['가입유형'].trim() === '') {
+                alert('어드민 메모의 가입유형이 확인되지않아 자동 변환을 시작합니다. \n 현재통신사와 선택된 통신사를 비교하여 가입유형을 자동 설정합니다. \n 변환된 양식을 한번더 체크하세요.');
+                // 현재 선택된 통신사 가져오기
+                const selectedTelecom = document.getElementById('telecom') ? document.getElementById('telecom').value : '';
+                const currentTelecom = customerInfo['현재통신사'] || '';
+                
+                console.log('가입유형 자동 판단:', {
+                    '선택된통신사': selectedTelecom,
+                    '현재통신사': currentTelecom
+                });
+                
+                // 현재통신사와 선택된 통신사 비교
+                if (currentTelecom && selectedTelecom) {
+                    if (currentTelecom.toLowerCase().trim() !== selectedTelecom.toLowerCase().trim()) {
+                        customerInfo['가입유형'] = '번호이동';
+                        console.log('가입유형 자동설정: 번호이동 (현재통신사 ≠ 선택통신사)');
+                    } else {
+                        customerInfo['가입유형'] = '기기변경';
+                        console.log('가입유형 자동설정: 기기변경 (현재통신사 = 선택통신사)');
+                    }
+                } else {
+                    console.log('가입유형 자동설정 불가: 통신사 정보 부족');
+                }
+            }
+            
             console.log('적용 후 customerInfo:', {
                 '가입유형': customerInfo['가입유형'],
                 '할인유형': customerInfo['할인유형'],
