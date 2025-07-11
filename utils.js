@@ -697,63 +697,249 @@ function parseAddonAndInsurance(addonText) {
     };
 }
 
-// 가입유형, 할인유형, 통신사 정보 분석 함수
+// 가입유형, 할인유형, 현재통신사 파싱 함수 (원본과 동일한 복잡한 로직)
 function parseSubscriptionAndDiscountInfo(customerInfo) {
-    const result = {
-        subscriptionType: '',    // 신규/기변/번이
-        discountType: '',        // 선택약정/공시지원금
-        currentTelecom: '',      // SKT/KT/LGU+
-        discountMonths: ''       // 24개월/30개월 등
+    let subscriptionType = customerInfo['가입유형'] || '';
+    let discountType = customerInfo['할인유형'] || '';
+    let currentTelecom = customerInfo['현재통신사'] || '';
+    let originalTelecomText = currentTelecom; // Store original for reference
+    let discountMonths = '';
+    let foundSubscription = false;
+    let foundDiscountInSubscription = false;
+    let isNormalCase = false; // Flag to check if this is a normal case (no need for special handling)
+
+    // Define patterns for subscription types
+    const subscriptionPatterns = {
+        '번호이동': /(번호\s*이동|번\s*이|번호\s*변경|번호\s*이전)/,
+        '기기변경': /(기기\s*변경|기변|기기\s*교체)/,
+        '신규가입': /(신규|신규\s*가입|신\s*가)/,
+        '보상기변': /(보상기변|보상\s*기변|보상\s*기기\s*변경)/
+    };
+
+    // Define patterns for discount types
+    const discountPatterns = {
+        '공시지원': /(공시\s*지원|공시)/,
+        '선택약정': /(선택\s*약정|선약)/,
+        '선약': /(선약|선\s*약)/
     };
     
-    // 가입유형 처리
-    if (customerInfo['가입유형']) {
-        const joinType = customerInfo['가입유형'];
-        if (joinType.includes('신규')) {
-            result.subscriptionType = '신규';
-        } else if (joinType.includes('기변') || joinType.includes('기기변경')) {
-            result.subscriptionType = '기변';
-        } else if (joinType.includes('번이') || joinType.includes('번호이동')) {
-            result.subscriptionType = '번이';
-        } else {
-            result.subscriptionType = joinType; // 원본 값 유지
-        }
-    }
-    
-    // 할인유형 처리
-    if (customerInfo['할인유형']) {
-        const discountType = customerInfo['할인유형'];
-        if (discountType.includes('선택약정') || discountType.includes('선약')) {
-            // 개월수 추출
-            const monthMatch = discountType.match(/(\d+)개월/);
-            if (monthMatch) {
-                result.discountMonths = monthMatch[1] + '개월';
-                result.discountType = '선택약정';
-            } else {
-                result.discountType = '선택약정';
+    // Major telecom providers only (SK, KT, LG)
+    const majorTelecomProviders = {
+        'SK': /^(SK|에스케이|SKT|SK텔레콤|에스케이텔레콤)$/i,
+        'KT': /^(KT|케이티|KT올레|케이티텔레콤)$/i,
+        'LG': /^(LG|엘지|LG U\+|엘지유플러스|LG유플러스)$/i
+    };
+
+    // 1. First, check if discountType is empty and subscriptionType contains discount info
+    if (!discountType && subscriptionType) {
+        // Check for discount type patterns in subscriptionType
+        for (const [type, pattern] of Object.entries(discountPatterns)) {
+            if (pattern.test(subscriptionType)) {
+                // Extract months if available (e.g., '24개월' or '24')
+                const monthMatch = subscriptionType.match(/(\d+)\s*개?월?/);
+                if (monthMatch) {
+                    discountMonths = monthMatch[1] + '개월';
+                    // Remove the months from subscriptionType
+                    subscriptionType = subscriptionType.replace(monthMatch[0], '').trim();
+                }
+                // Set the discount type
+                discountType = type;
+                // Remove the discount type from subscriptionType
+                subscriptionType = subscriptionType.replace(pattern, '').trim();
+                foundDiscountInSubscription = true;
+                break;
             }
-        } else if (discountType.includes('공시') || discountType.includes('지원금')) {
-            result.discountType = '공시지원금';
-        } else {
-            result.discountType = discountType; // 원본 값 유지
+        }
+        
+        // Special case: '공시' is treated as '공시지원'
+        if (discountType === '공시') {
+            discountType = '공시지원';
+        }
+    }
+    // If discountType is provided, process it normally
+    else if (discountType) {
+        // Check for discount type patterns and extract months
+        for (const [type, pattern] of Object.entries(discountPatterns)) {
+            if (pattern.test(discountType)) {
+                // Extract months if available (e.g., '24개월' or '24')
+                const monthMatch = discountType.match(/(\d+)\s*개?월?/);
+                if (monthMatch) {
+                    discountMonths = monthMatch[1] + '개월';
+                    // Remove the months from discountType
+                    discountType = discountType.replace(monthMatch[0], '').trim();
+                }
+                // Normalize the discount type
+                discountType = type;
+                break;
+            }
+        }
+        
+        // Special case: '공시' is treated as '공시지원'
+        if (discountType === '공시') {
+            discountType = '공시지원';
+        }
+        
+        // For 공시지원, set default 24 months if not specified
+        if (discountType === '공시지원' && !discountMonths) {
+            discountMonths = '24개월';
         }
     }
     
-    // 현재통신사 처리
-    if (customerInfo['현재통신사']) {
-        const telecom = customerInfo['현재통신사'];
-        if (telecom.includes('SK') || telecom.includes('에스케이')) {
-            result.currentTelecom = 'SKT';
-        } else if (telecom.includes('KT') || telecom.includes('케이티')) {
-            result.currentTelecom = 'KT';
-        } else if (telecom.includes('LG') || telecom.includes('엘지')) {
-            result.currentTelecom = 'LGU+';
-        } else {
-            result.currentTelecom = telecom; // 원본 값 유지
+    if (currentTelecom) {
+        const telecomText = currentTelecom.trim();
+        
+        // Check for subscription type patterns in currentTelecom
+        for (const [type, pattern] of Object.entries(subscriptionPatterns)) {
+            if (pattern.test(telecomText)) {
+                // If we find a subscription type in currentTelecom, use it
+                subscriptionType = type;
+                foundSubscription = true;
+                // Remove the subscription type from currentTelecom
+                currentTelecom = telecomText.replace(pattern, '').trim();
+                break;
+            }
+        }
+        
+        // Clean up currentTelecom (remove any remaining dashes, spaces, etc.)
+        currentTelecom = currentTelecom.replace(/^[\s\-]+|[\s\-]+$/g, '').trim();
+        
+        // If currentTelecom is empty after removing subscription type, set it to empty
+        if (!currentTelecom) {
+            currentTelecom = '';
+        }
+    }
+
+    // 2. Now check if subscriptionType contains discount info
+    if (subscriptionType) {
+        // First, check for discount type with months (e.g., "공시지원 24개월")
+        const discountWithMonths = subscriptionType.match(/(공시\s*지원|공시|선택\s*약정|선약)\s*(\d+)\s*개?월?/i);
+        if (discountWithMonths) {
+            const [fullMatch, discount, months] = discountWithMonths;
+            discountType = discount.includes('공시') ? '공시지원' : 
+                          discount.includes('선약') ? '선택약정' : discount;
+            discountMonths = months + '개월';
+            foundDiscountInSubscription = true;
+            subscriptionType = subscriptionType.replace(fullMatch, '').trim();
+        } 
+        // If no months pattern, just check for discount type
+        else {
+            for (const [type, pattern] of Object.entries(discountPatterns)) {
+                if (pattern.test(subscriptionType)) {
+                    discountType = type;
+                    foundDiscountInSubscription = true;
+                    // Remove discount info from subscriptionType
+                    subscriptionType = subscriptionType.replace(pattern, '').trim();
+                    break;
+                }
+            }
+        }
+    }
+
+    // 4. Extract telecom provider from subscriptionType if currentTelecom is empty
+    if ((!currentTelecom || currentTelecom.trim() === '') && subscriptionType) {
+        const subscriptionKeywords = ['번호이동', '번이', '신규가입', '신규', '보상기변', '기기변경', '기변'];
+        const subscriptionPattern = new RegExp(`(${subscriptionKeywords.join('|')})[\s\-]*(.*)`, 'i');
+        const match = subscriptionType.match(subscriptionPattern);
+        
+        if (match && match[1] && match[2]) {
+            // Found a subscription type and telecom provider in subscriptionType
+            const subType = match[1].trim();
+            const telecom = match[2].trim();
+            
+            // Map shortened forms to full forms
+            const subscriptionMap = {
+                '번이': '번호이동',
+                '신규': '신규가입',
+                '기변': '기기변경',
+                '보상기변': '기기변경'
+            };
+            
+            // Set subscription type (convert to full form if needed)
+            subscriptionType = subscriptionMap[subType] || subType;
+            
+            // Set currentTelecom to the remaining text
+            currentTelecom = telecom;
+            foundSubscription = true;
         }
     }
     
-    return result;
+    // 5. Final cleanup and validation
+    if (!isNormalCase) {
+        // Clean up subscription type
+        if (subscriptionType) {
+            subscriptionType = subscriptionType
+                .replace(/[\s\-]+/g, ' ')
+                .trim();
+            
+            // If subscriptionType is not a valid type, try to extract it from currentTelecom
+            if (!/(기기변경|번호이동|신규가입|기변|번이|신규|보상기변)/.test(subscriptionType) && currentTelecom) {
+                const telecomText = currentTelecom.trim();
+                if (telecomText.includes('기기변경') || telecomText.includes('기변') || telecomText.includes('보상기변')) {
+                    subscriptionType = '기기변경';
+                    currentTelecom = telecomText
+                        .replace(/(기기변경|기변|보상기변)/g, '')
+                        .trim()
+                        .replace(/^[\s\-]+|[\s\-]+$/g, '');
+                } else if (telecomText.includes('번호이동') || telecomText.includes('번이')) {
+                    subscriptionType = '번호이동';
+                    currentTelecom = telecomText
+                        .replace(/(번호이동|번이)/g, '')
+                        .trim()
+                        .replace(/^[\s\-]+|[\s\-]+$/g, '');
+                } else if (telecomText.includes('신규가입') || telecomText.includes('신규')) {
+                    subscriptionType = '신규가입';
+                    currentTelecom = telecomText
+                        .replace(/(신규가입|신규)/g, '')
+                        .trim()
+                        .replace(/^[\s\-]+|[\s\-]+$/g, '');
+                }
+            }
+        }
+        
+        // If we still don't have a subscription type, try to determine from the text
+        if (!subscriptionType || subscriptionType === '') {
+            const allText = [currentTelecom, subscriptionType, discountType].join(' ');
+            if (allText.includes('기변') || allText.includes('기기변경')) {
+                subscriptionType = '기기변경';
+            } else if (allText.includes('번이') || allText.includes('번호이동')) {
+                subscriptionType = '번호이동';
+            } else if (allText.includes('신규')) {
+                subscriptionType = '신규가입';
+            }
+        }
+    }
+
+    // 5. Set contract type and months for specific discount types
+    let contractType = '';
+    if (discountType === '공시지원') {
+        contractType = '공시지원';
+        if (!discountMonths) {
+            discountMonths = '24개월'; // Default for 공시지원
+        }
+    } else if (discountType === '선택약정' || discountType === '선약') {
+        contractType = '선택약정';
+    }
+
+    // 6. Clean up currentTelecom - remove any remaining subscription or discount type indicators
+    for (const pattern of Object.values(subscriptionPatterns).concat(Object.values(discountPatterns))) {
+        currentTelecom = currentTelecom.replace(pattern, '').trim();
+    }
+    
+    // Remove any numbers followed by '개월' or '개' from currentTelecom
+    currentTelecom = currentTelecom.replace(/\d+\s*개?월?/g, '').trim();
+
+    return {
+        subscriptionType: subscriptionType,
+        discountType: discountType,
+        currentTelecom: currentTelecom,
+        discountMonths: discountMonths,
+        contractType: contractType,
+        original: {
+            subscriptionType: customerInfo['가입유형'] || '',
+            discountType: customerInfo['할인유형'] || '',
+            currentTelecom: customerInfo['현재통신사'] || ''
+        }
+    };
 }
 
 // ========================================

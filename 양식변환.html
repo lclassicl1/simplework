@@ -1168,11 +1168,11 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
 
         // 유틸리티 함수들
         
-        /**
-         * 주민번호/생년월일을 yymmdd 형식으로 변환
-         * @param {string} input - 주민번호 또는 생년월일 (yymmdd-1234567, yymmdd-, yymmdd 등)
-         * @returns {string} - yymmdd 형식의 문자열
-         */
+        // formatBirthDate 함수 - utils.js로 이동됨
+        /*
+        // 주민번호/생년월일을 yymmdd 형식으로 변환
+        // input: 주민번호 또는 생년월일 (yymmdd-1234567, yymmdd-, yymmdd 등)
+        // returns: yymmdd 형식의 문자열
         function formatBirthDate(input) {
             if (!input) return '';
             
@@ -1193,13 +1193,14 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             // 형식이 맞지 않으면 원본 반환
             return cleanInput;
         }
+        */
 
-        /**
-         * SK 통신사 요금제 자동 변환 함수
-         * @param {string} planValue - 요금제 값
-         * @param {string} telecom - 통신사 (SK, KT, LG)
-         * @returns {string} - 변환된 요금제 값
-         */
+        // convertSKPlan 함수 - utils.js로 이동됨
+        /*
+        // SK 통신사 요금제 자동 변환 함수
+        // planValue: 요금제 값
+        // telecom: 통신사 (SK, KT, LG)
+        // returns: 변환된 요금제 값
         function convertSKPlan(planValue, telecom) {
             if (!planValue || telecom !== 'SK') return planValue;
             
@@ -1225,6 +1226,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             
             return planValue;
         }
+        */
 
         // 템플릿 관리 클래스
         class TemplateManager {
@@ -1621,6 +1623,8 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             // 추가적인 매핑은 여기에 계속 추가 가능
         };
 
+        // convertModelName 함수 - utils.js로 이동됨
+        /*
         // 모델명 변환 함수
         function convertModelName(modelName) {
             if (!modelName) return modelName;
@@ -1670,6 +1674,8 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
         }
         */
 
+        // parseAddonAndInsuranceEnhanced 함수 - utils.js로 이동됨
+        /*
         // 향상된 부가서비스와 보험 분리 함수
         function parseAddonAndInsuranceEnhanced(addonText) {
             if (!addonText) {
@@ -1709,15 +1715,15 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             // 예시: 1. 우주패스 G마켓,쇼핑 (웨이브) M+3개월 (총4개월) / 2. 마이스마트콜3 M+2 (총3개월) /3. T올케어 파손 M+1 개월 (총2개월)
             let items = [];
             
-            // 먼저 "/숫자." 패턴으로 분리 시도
-            if (addonText.includes('/') && /\/\s*\d+\.\s*/.test(addonText)) {
-                items = addonText.split(/\/\s*\d+\.\s*/)
+            // 구분자로 분리 처리
+            if (addonText.includes('/')) {
+                items = addonText.split('/')
                     .map(item => item.trim())
                     .filter(item => item.length > 0);
                 
-                // 첫 번째 항목에서 "숫자." 제거
-                if (items[0] && /^\d+\.\s*/.test(items[0])) {
-                    items[0] = items[0].replace(/^\d+\.\s*/, '').trim();
+                // 첫 번째 항목에서 숫자와 점 제거
+                if (items[0]) {
+                    items[0] = items[0].replace('1.', '').replace('2.', '').replace('3.', '').trim();
                 }
             } else {
                 // 일반적인 "/" 구분자로 분리
@@ -1735,11 +1741,11 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                     cleanItem = cleanItem.replace(pattern, '').trim();
                 }
                 
-                // 2단계: 빈 괄호만 제거 (내용이 있는 괄호는 보존)
-                cleanItem = cleanItem.replace(/\(\s*\)/g, '').trim();
+                // 2단계: 빈 괄호 제거
+                cleanItem = cleanItem.replace('()', '').trim();
                 
-                // 3단계: 앞뒤 공백 및 특수문자 정리
-                cleanItem = cleanItem.replace(/^[-\s]+|[-\s]+$/g, '').trim();
+                // 3단계: 앞뒤 공백 정리
+                cleanItem = cleanItem.trim();
                 
                 // 정리 후 빈 문자열이면 스킵
                 if (!cleanItem || cleanItem.length < 2) {
@@ -1814,7 +1820,10 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                 부가서비스2: addonItems2.join(' / ')
             };
         }
+        */
 
+        // parseAddonAndInsurance 함수 - utils.js로 이동됨
+        /*
         // 기존 부가서비스와 보험 분리 함수 (호환성 유지)
         function parseAddonAndInsurance(addonText) {
             if (!addonText) {
@@ -1862,18 +1871,18 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             
             // 불필요한 기간/횟수 정보 패턴 정의
             const unwantedPatterns = [
-                /M\+\d+(?:개월)?/gi,           // M+1개월, M+2 등
-                /\(총\s*\d+개월\)/gi,          // (총 2개월) 등
-                /\(총\s*\d+\)/gi,              // (총 3) 등
-                /\d+개월/gi,                   // 1개월, 2개월 등
-                /\d+회/gi,                     // 1회, 2회 등
-                /\d+M/gi,                      // 1M, 2M 등
-                /무료체험/gi,                  // 무료체험
-                /체험/gi                       // 체험
+                // M+1개월, M+2 등 패턴
+                // (총 2개월) 등 패턴
+                // (총 3) 등 패턴
+                // 1개월, 2개월 등 패턴
+                // 1회, 2회 등 패턴
+                // 1M, 2M 등 패턴
+                // 무료체험 패턴
+                // 체험 패턴
             ];
             
-            // 텍스트를 "/" 또는 "," 또는 ";" 또는 줄바꿈으로 분할
-            const items = addonText.split(/[\/,;\n]/).map(item => item.trim()).filter(item => item);
+            // 텍스트를 구분자로 분할하여 처리
+            const items = addonText.split('/').map(item => item.trim()).filter(item => item);
             
             const insuranceItems = [];
             const addonItems = [];
@@ -1885,14 +1894,14 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                     cleanItem = cleanItem.replace(pattern, '').trim();
                 }
                 
-                // 괄호 안의 내용 제거 (남은 것들)
-                cleanItem = cleanItem.replace(/\([^)]*\)/g, '').trim();
+                // 괄호 안의 내용 제거
+                cleanItem = cleanItem.replace('(', '').replace(')', '').trim();
                 
-                // 숫자와 점으로 시작하는 부분 제거 (1., 2., 3. 등)
-                cleanItem = cleanItem.replace(/^\d+\.\s*/, '').trim();
+                // 숫자와 점으로 시작하는 부분 제거
+                cleanItem = cleanItem.replace('1.', '').replace('2.', '').replace('3.', '').trim();
                 
-                // 앞뒤 공백 및 특수문자 정리
-                cleanItem = cleanItem.replace(/^[-\s]+|[-\s]+$/g, '').trim();
+                // 앞뒤 공백 정리
+                cleanItem = cleanItem.trim();
                 
                 // 정리 후 빈 문자열이면 스킵
                 if (!cleanItem || cleanItem.length < 2) {
@@ -1941,6 +1950,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                 부가서비스: addonItems.join(' / ')
             };
         }
+        */
 
         // 텍스트에서 고객 정보 추출
         function extractCustomerInfo(text) {
@@ -2053,16 +2063,47 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             }
             
             // 1. Parse subscription, discount, and telecom info using the new function
-            const subInfo = parseSubscriptionAndDiscountInfo({
-                '가입유형': customerInfo['가입유형'] || '',
-                '할인유형': customerInfo['할인유형'] || '',
-                '현재통신사': customerInfo['현재통신사'] || ''
-            });
+            let subInfo;
+            try {
+                // utils.js에서 전역으로 노출된 함수 사용
+                if (typeof window.parseSubscriptionAndDiscountInfo === 'function') {
+                                         subInfo = window.parseSubscriptionAndDiscountInfo({
+                         '가입유형': customerInfo['가입유형'] || '',
+                         '할인유형': customerInfo['할인유형'] || '',
+                         '현재통신사': customerInfo['현재통신사'] || ''
+                     });
+                     console.log('parseSubscriptionAndDiscountInfo 실행 성공');
+                     console.log('입력 데이터:', {
+                         '가입유형': customerInfo['가입유형'] || '',
+                         '할인유형': customerInfo['할인유형'] || '',
+                         '현재통신사': customerInfo['현재통신사'] || ''
+                     });
+                     console.log('파싱 결과:', subInfo);
+                } else {
+                    throw new Error('parseSubscriptionAndDiscountInfo 함수를 찾을 수 없습니다.');
+                }
+            } catch (error) {
+                console.error('parseSubscriptionAndDiscountInfo 오류:', error);
+                // 오류 발생 시 기본값 사용
+                subInfo = {
+                    subscriptionType: customerInfo['가입유형'] || '',
+                    discountType: customerInfo['할인유형'] || '',
+                    currentTelecom: customerInfo['현재통신사'] || '',
+                    discountMonths: '',
+                    contractType: ''
+                };
+            }
 
             // 2. Update customer info with parsed values
             customerInfo['가입유형'] = subInfo.subscriptionType;
             customerInfo['할인유형'] = subInfo.discountType;
             customerInfo['현재통신사'] = subInfo.currentTelecom;
+            
+            console.log('적용 후 customerInfo:', {
+                '가입유형': customerInfo['가입유형'],
+                '할인유형': customerInfo['할인유형'],
+                '현재통신사': customerInfo['현재통신사']
+            });
 
             // 3. Set 공시선약여부 and 약정개월수 based on discount type
             if (subInfo.discountType === '공시지원') {
@@ -2075,6 +2116,11 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                 customerInfo['공시선약여부'] = '';
                 customerInfo['약정개월수'] = '';
             }
+            
+            console.log('최종 약정 정보:', {
+                '공시선약여부': customerInfo['공시선약여부'],
+                '약정개월수': customerInfo['약정개월수']
+            });
             
             // 출고가, 공시, 추지, 전환지원금, 프리할부, 할부/현금 정보 추출
             // 1. 기본값 초기화
@@ -2554,6 +2600,8 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             tableBody.appendChild(row);
         }
         
+        // copyToClipboardWithFeedback 함수 - utils.js로 이동됨
+        /*
         // 클립보드에 복사 후 피드백을 제공하는 함수
         function copyToClipboardWithFeedback(text, element) {
             navigator.clipboard.writeText(text).then(() => {
@@ -2594,7 +2642,10 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                 alert('복사에 실패했습니다.');
             });
         }
+        */
 
+        // copyToClipboard 함수 - utils.js로 이동됨
+        /*
         // 결과 복사 함수
         function copyToClipboard() {
             // 키-값 테이블이 표시되어 있는지 확인
@@ -2684,7 +2735,10 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                 alert('텍스트가 복사되었습니다.');
             }
         }
+        */
 
+        // setupDoubleClickCopy 함수 - utils.js로 이동됨
+        /*
         // 텍스트에리어 더블클릭 복사 함수
         function setupDoubleClickCopy() {
             // 출력 컨테이너에 이벤트 위임 방식으로 더블클릭 이벤트 추가
@@ -2696,7 +2750,10 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             // 이벤트 위임을 사용하여 동적으로 추가된 textarea에도 적용
             outputContainer.addEventListener('dblclick', handleTextareaDoubleClick);
         }
+        */
         
+        // handleTextareaDoubleClick 함수 - utils.js로 이동됨
+        /*
         // 이벤트 위임을 위한 핸들러
         function handleTextareaDoubleClick(event) {
             // 이벤트가 발생한 요소가 textarea인지 확인
@@ -2704,7 +2761,10 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                 handleDoubleClick(event);
             }
         }
+        */
         
+        // showToast 함수 - utils.js로 이동됨
+        /*
         // 토스트 메시지 표시 함수
         function showToast(message) {
             const toast = document.getElementById('toast');
@@ -2716,7 +2776,10 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                 toast.classList.remove('show');
             }, 2000);
         }
+        */
         
+        // handleDoubleClick 함수 - utils.js로 이동됨
+        /*
         // 더블클릭 이벤트 핸들러
         function handleDoubleClick(event) {
             const textarea = event.target;
@@ -2744,6 +2807,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                 alert('복사 중 오류가 발생했습니다.');
             });
         }
+        */
         
         // 변환 이력 저장
         function saveToHistory(customerInfo, telecom, agency) {
@@ -3078,6 +3142,8 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             popup.style.display = 'none';
         }
         
+        // parseSubscriptionAndDiscountInfo 함수 - utils.js로 이동됨
+        /*
         // 가입유형, 할인유형, 현재통신사 파싱 함수
         function parseSubscriptionAndDiscountInfo(customerInfo) {
             let subscriptionType = customerInfo['가입유형'] || '';
@@ -3323,6 +3389,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                 }
             };
         }
+        */
 
         // ESC 키로 팝업 닫기
         document.addEventListener('keydown', function(event) {
@@ -3364,6 +3431,8 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             ]}
         ];
         
+        // openSelectedUrl 함수 - utils.js로 이동됨
+        /*
         // 선택한 URL 열기 함수
         function openSelectedUrl() {
             const selectBox = document.getElementById('usefulUrls');
@@ -3375,6 +3444,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                 selectBox.selectedIndex = 0;
             }
         }
+        */
         
         // ========================================
         // 데이터 관리 관련 함수들 (utils.js로 이동됨 - 주석처리, 삭제예정)
