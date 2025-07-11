@@ -694,10 +694,6 @@
                     <!-- 큐브 전용 추가 textarea (재고/개통/우주패스) -->
                     <div id="cubeExtraOutputs" style="display:none;">
                         <div class="form-group">
-                            <label for="cubeRequestText">큐브 신조요청양식:</label>
-                            <textarea id="cubeRequestText" class="output-textarea compact-textarea"></textarea>
-                        </div>
-                        <div class="form-group">
                             <label for="cubeStockText">큐브 재고요청양식:</label>
                             <textarea id="cubeStockText" class="output-textarea compact-textarea"></textarea>
                         </div>
@@ -749,11 +745,6 @@
                         }
                         
                         /* 큐브 textarea 스타일 */
-                        #cubeRequestText {
-                            height: 130px !important;
-                            min-height: 130px;
-                            resize: vertical;
-                        }
                         #cubeStockText {
                             height: 130px !important;
                             min-height: 130px;
@@ -1250,8 +1241,7 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                             };
                         } else if (agency === '큐브') {
                             return {
-                                request: template.stockRequest(customerInfo), // 재고요청
-                                stock: template.stockRequest(customerInfo),   // 중복이지만 기존 구조 유지
+                                stock: template.stockRequest(customerInfo),   // 재고요청
                                 open: template.openRequest(customerInfo),     // 개통요청
                                 universe: template.universe(customerInfo)     // 우주패스양식
                             };
@@ -1458,13 +1448,11 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
                     if (openText) openText.value = result.open || '';
                     if (universeText) universeText.value = result.universe || '';
                 } else if (agency === '큐브') {
-                    // 큐브 대리점용 출력 처리 (4개 textarea)
-                    const requestText = document.getElementById('cubeRequestText');
+                    // 큐브 대리점용 출력 처리 (3개 textarea)
                     const stockText = document.getElementById('cubeStockText');
                     const openText = document.getElementById('cubeOpenText');
                     const universeText = document.getElementById('cubeUniverseText');
                     
-                    if (requestText) requestText.value = result.request || '';
                     if (stockText) stockText.value = result.stock || '';
                     if (openText) openText.value = result.open || '';
                     if (universeText) universeText.value = result.universe || '';
@@ -3878,21 +3866,6 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                         outputType: 'multi',
                         memo: agencyMemos['SK']['큐브'],
                         templates: {
-                            stockRequest: (info) => {
-                                // 유심 값에 '이심' 또는 '기존유심' 키워드가 있으면 X, 그렇지 않으면 O
-                                const usimValue = info.유심 || '';
-                                const hasESim = /이심|기존유심/i.test(usimValue);
-                                const usimRequest = hasESim ? 'X' : 'O';
-                                
-                                return `★재고요청(SK3)
-택배or퀵 :	
-이름: ${info.고객명 || ''}
-연락처 : ${info.전화번호 || ''}
-주소 : ${info.택배주소 || info.배송주소지 || ''}
-유심 : ${usimRequest}
-모델명 : ${info.모델명 || ''} ${info.용량 || ''}
-색상 : ${info.색상 || ''}`;
-                            },
                             openRequest: (info) => {
                                 const telecom = info.현재통신사 || '';
                                 let paymentInfo = '';
@@ -3921,7 +3894,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                 return `■SK3 개통요청		
 ◎ 고객명 / 번호 : ${info.고객명 || ''} / ${info.전화번호 || ''}	
 ◎ 주민번호 : ${formatBirthDate(info.주민번호 || info.생년월일 || '')}	
-◎ 통신사/인증 : ${telecom}	
+◎ 통신사 : ${telecom}	
 ◎ 모델/색상 : ${info.모델명 || ''} ${info.용량 || ''} / ${info.색상 || ''}	
 ◎ 일련번호 : ${info.단말기일련번호 || ''}	
 ◎ 유심 일련번호 : ${info.유심일련번호 || ''}	
@@ -3939,7 +3912,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                                 const hasESim = /이심|기존유심/i.test(usimValue);
                                 const usimRequest = hasESim ? 'X' : 'O';
                                 
-                                return `★재고요청(SK3)
+                                return `★재고요청(큐브)
 택배or퀵 :	
 이름: ${info.고객명 || ''}
 연락처 : ${info.전화번호 || ''}
