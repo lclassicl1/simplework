@@ -1192,6 +1192,38 @@ https://tworldfriends.co.kr/D009890000/sktuniverse/NM00000179`,
             return cleanInput;
         }
 
+        /**
+         * SK 통신사 요금제 자동 변환 함수
+         * @param {string} planValue - 요금제 값
+         * @param {string} telecom - 통신사 (SK, KT, LG)
+         * @returns {string} - 변환된 요금제 값
+         */
+        function convertSKPlan(planValue, telecom) {
+            if (!planValue || telecom !== 'SK') return planValue;
+            
+            // 39가 포함된 요금제 자동 변환
+            if (planValue.includes('39')) {
+                const originalPlan = planValue;
+                const convertedPlan = '컴팩트';
+                
+                alert(`요금제 자동 변환이 감지되었습니다.\n변환 전 요금제명: ${originalPlan}\n변환 후 요금제명: ${convertedPlan}`);
+                
+                return convertedPlan;
+            }
+            
+            // 109가 포함된 요금제 자동 변환
+            if (planValue.includes('109')) {
+                const originalPlan = planValue;
+                const convertedPlan = '프리미엄(T우주)';
+                
+                alert(`요금제 자동 변환이 감지되었습니다.\n변환 전 요금제명: ${originalPlan}\n변환 후 요금제명: ${convertedPlan}`);
+                
+                return convertedPlan;
+            }
+            
+            return planValue;
+        }
+
         // 템플릿 관리 클래스
         class TemplateManager {
             static getTemplate(telecom, agency) {
@@ -4608,7 +4640,7 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                                 const name = info['가입자명'] || info['고객명'] || '';
                                 const contact = info['개통번호'] || info['전화번호'] || '';
                                 const modelColor = `${info['모델명'] || ''} ${info['용량'] || ''} / ${info['색상'] || ''} / ${info['단말기일련번호'] || ''}`;
-                                const plan = info['요금제'] || '';
+                                const plan = convertSKPlan(info['요금제'] || '', 'SK');
                                 const subscriptionType = info['가입유형'] || '';
                                 const subscriptionTypeWithCarrier = info['현재통신사'] ? `${subscriptionType}(${info['현재통신사']})` : subscriptionType;
                                 
