@@ -14,6 +14,8 @@
     <script src="agencies-config.js"></script>
     <!-- 앱 설정 데이터 (사이트, 상수 등) -->
     <script src="app-config.js"></script>
+    <!-- 템플릿 설정 데이터 (TELECOM_CONFIG) -->
+    <script src="templates-config.js"></script>
     <style>
         /* 모델 검색 결과 스타일 */
         .model-result:hover {
@@ -2433,7 +2435,8 @@
             document.getElementById('outputContainer').addEventListener('dblclick', handleDoubleClick);
         }
 
-        // 새로운 통신사/대리점 설정 구조
+        // 새로운 통신사/대리점 설정 구조 - templates-config.js로 분리됨
+        /*
         const TELECOM_CONFIG = {
             'SK': {
                 name: 'SK',
@@ -3862,6 +3865,7 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
                 }
             }
         };
+        */
 
         // 이벤트 관리 클래스
         class EventManager {
