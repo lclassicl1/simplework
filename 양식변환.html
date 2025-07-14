@@ -1693,8 +1693,55 @@
             
             // 모델명 변환 및 용량 정보 추출
             if (customerInfo['모델명']) {
-                // 모델명 변환 적용 (펫네임 → 실제 모델명)
-                const convertedModelName = convertModelName(customerInfo['모델명']);
+                // 먼저 원본 모델명에서 용량 정보 추출 (convertModelName 실행 전)
+                let capacityMatch = null;
+                let hasUnit = false;
+                let extractedCapacity = '';
+                let originalModelName = customerInfo['모델명'];
+                
+                // 1. 단위가 있는 용량 먼저 찾기 (256G, 512GB, 1TB 등)
+                capacityMatch = originalModelName.match(/(?:^|\s|_)(\d+)(?:\s*[GT]?[B]?)(?=\s|$|_)/i);
+                
+                let capacityFound = false;
+                
+                if (capacityMatch) {
+                    // 매칭된 결과에서 실제로 단위가 있는지 확인
+                    const matchedText = capacityMatch[0].replace(/^[\s_]+|[\s_]+$/g, '');
+                    const hasActualUnit = matchedText.match(/[GT]?[B]?$/i);
+                    // 실제로 G, GB, TB 등의 단위가 있는지 확인 (빈 문자열이 아닌 경우)
+                    const hasRealUnit = hasActualUnit && hasActualUnit[0] && hasActualUnit[0].length > 0;
+                    
+                    if (hasRealUnit) {
+                        // 실제로 단위가 있는 경우
+                        hasUnit = true;
+                        extractedCapacity = capacityMatch[1];
+                        customerInfo['용량'] = matchedText;
+                        // 원본 모델명에서 용량 부분 제거
+                        originalModelName = originalModelName.replace(/(?:^|\s|_)\d+(?:\s*[GT]?[B]?)(?:\s|$|_)/i, ' ').replace(/\s+/g, ' ').trim();
+                        capacityFound = true;
+                    }
+                }
+                
+                if (!capacityFound) {
+                    // 2. 단위가 없는 용량 찾기 (256, 512 등)
+                    capacityMatch = originalModelName.match(/(?:^|\s|_)(\d+)(?:\s|$|_)/i);
+                    
+                    if (capacityMatch) {
+                        hasUnit = false;
+                        extractedCapacity = capacityMatch[1];
+                        customerInfo['용량'] = extractedCapacity + 'G';
+                        // 원본 모델명에서 용량 부분 제거
+                        originalModelName = originalModelName.replace(/(?:^|\s|_)\d+(?:\s|$|_)/i, ' ').replace(/\s+/g, ' ').trim();
+                        capacityFound = true;
+                    } else {
+                        // 3. 용량을 찾지 못한 경우
+                        customerInfo['용량'] = '';
+                    }
+                }
+                
+                // 용량이 제거된 모델명으로 변환 적용 (펫네임 → 실제 모델명)
+                const convertedModelName = convertModelName(originalModelName);
+                customerInfo['모델명'] = convertedModelName;
                 
                 // 모델제조사 자동 분류 (아이폰/갤럭시)
                 if (convertedModelName.toLowerCase().includes('아이폰') || 
@@ -1702,19 +1749,6 @@
                     customerInfo['모델제조사'] = '아이폰';
                 } else {
                     customerInfo['모델제조사'] = '갤럭시';
-                }
-                
-                // 변환된 모델명에서 용량 정보 추출 (예: S936 256G → 용량: 256G)
-                const capacityMatch = convertedModelName.match(/(\d+(?:GB?|TB?))/i);
-                if (capacityMatch) {
-                    customerInfo['용량'] = capacityMatch[1];
-                    // 모델명에서 용량 부분 제거 (S936 256G → S936)
-                    customerInfo['모델명'] = convertedModelName.replace(/\s*\d+(?:GB?|TB?)/i, '').trim();
-                    console.log(`용량 추출 및 모델명 정리: ${convertedModelName} → 모델명: ${customerInfo['모델명']}, 용량: ${customerInfo['용량']}, 제조사: ${customerInfo['모델제조사']}`);
-                } else {
-                    customerInfo['모델명'] = convertedModelName;
-                    customerInfo['용량'] = '';
-                    console.log(`용량 없음: ${convertedModelName} → 모델명: ${customerInfo['모델명']}, 제조사: ${customerInfo['모델제조사']}`);
                 }
             } else {
                 customerInfo['용량'] = '';
