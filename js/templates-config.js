@@ -286,6 +286,15 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                             addonInfo = addonInfo ? `${addonInfo} / ${info.부가서비스2}` : info.부가서비스2;
                         }
                         
+                        // 미성년자 정보 추가
+                        let minorInfo = '';
+                        if (info.미성년자여부 === 'Y') {
+                            minorInfo = `
+◎ 법정대리인이름 : ${info.법정대리인이름 || ''}
+◎ 법정대리인연락처 : ${info.법정대리인연락처 || ''}
+◎ 법정대리인주민번호 : ${info.법정대리인주민번호 || ''}`;
+                        }
+                        
                         return `■SK3 개통요청		
 ◎ 고객명 / 번호 : ${info.고객명 || ''} / ${info.전화번호 || ''}	
 ◎ 주민번호 : ${formatBirthDate(info.주민번호 || info.생년월일 || '')}	
@@ -299,7 +308,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 ◎ 추가지원금 : ${info.추지 || '0'}	
 ◎ 할부원금 : ${paymentInfo}
 ◎ 약정유형 : ${info.할인유형 || ''} ${info.약정개월수 || ''}
-◎ 부가서비스 : ${addonInfo}`;
+◎ 부가서비스 : ${addonInfo}${minorInfo}`;
                     },
                     stockRequest: (info) => {
                         // 유심 값에 '이심' 또는 '기존유심' 키워드가 있으면 X, 그렇지 않으면 O

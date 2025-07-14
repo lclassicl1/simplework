@@ -1141,7 +1141,7 @@ function extractCustomerInfo(text) {
         '유심': /\*{1,2}유\s*심\s*(?:비\s*용)?\s*[-:：]\s*([^\n]+)/i,
         '부가서비스': /\*{1,2}부\s*가\s*서\s*비\s*스\s*[-:：]\s*([^\n]+)/i,
         '보험': /\*{1,2}보\s*험\s*[-:：]\s*([^\n]+)/i,
-        '법대정보': /\*{1,2}법\s*대\s*정\s*보\s*[-:：]\s*([^/]+)\s*\/\s*([\d-]+)\s*\/\s*([\d-]+)/i
+        '법대정보': /\*{1,2}법\s*대\s*정\s*보\s*[-:：]\s*([^/]+)\s*\/\s*([^/]+)\s*\/\s*([^/]+)/i
     };
     
     // 각 패턴에 맞게 정보 추출
@@ -1151,9 +1151,65 @@ function extractCustomerInfo(text) {
             if (key === '법대정보') {
                 // 법대정보가 있는 경우 (미성년자)
                 customerInfo['미성년자여부'] = 'Y';
-                customerInfo['법정대리인이름'] = match[1].trim();
-                customerInfo['법정대리인주민번호'] = match[2].trim().replace(/\s*-\s*/g, '-');
-                customerInfo['법정대리인연락처'] = match[3].trim().replace(/[\s\-]/g, '').replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3');
+                
+                // 이름은 항상 첫 번째 그룹
+                const name = match[1].trim();
+                customerInfo['법정대리인이름'] = name;
+                
+                // 두 번째와 세 번째 그룹에서 전화번호와 주민번호 구분
+                const secondItem = match[2].trim();
+                const thirdItem = match[3].trim();
+                
+                // 전화번호 패턴: 010-1234-5678 또는 01012345678
+                const phonePattern = /^(\d{3})[-\s]*(\d{3,4})[-\s]*(\d{4})$/;
+                // 주민번호 패턴: 821018-1804813 또는 8210181804813
+                const idPattern = /^(\d{6})[-\s]*(\d{7})$/;
+                
+                let phone = '';
+                let idNumber = '';
+                
+                // 두 번째 항목 확인
+                if (phonePattern.test(secondItem.replace(/[^\d]/g, ''))) {
+                    phone = secondItem;
+                    idNumber = thirdItem;
+                } else if (idPattern.test(secondItem.replace(/[^\d]/g, ''))) {
+                    idNumber = secondItem;
+                    phone = thirdItem;
+                } else {
+                    // 세 번째 항목 확인
+                    if (phonePattern.test(thirdItem.replace(/[^\d]/g, ''))) {
+                        phone = thirdItem;
+                        idNumber = secondItem;
+                    } else if (idPattern.test(thirdItem.replace(/[^\d]/g, ''))) {
+                        idNumber = thirdItem;
+                        phone = secondItem;
+                    }
+                }
+                
+                // 전화번호 포맷 정규화
+                if (phone) {
+                    const cleanPhone = phone.replace(/[^\d]/g, '');
+                    if (cleanPhone.length >= 10) {
+                        customerInfo['법정대리인연락처'] = cleanPhone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3');
+                    } else {
+                        customerInfo['법정대리인연락처'] = phone;
+                    }
+                } else {
+                    customerInfo['법정대리인연락처'] = '';
+                }
+                
+                // 주민번호 포맷 정규화
+                if (idNumber) {
+                    const cleanId = idNumber.replace(/[^\d]/g, '');
+                    if (cleanId.length === 13) {
+                        customerInfo['법정대리인주민번호'] = cleanId.replace(/(\d{6})(\d{7})/, '$1-$2');
+                    } else {
+                        customerInfo['법정대리인주민번호'] = idNumber.replace(/\s*-\s*/g, '-');
+                    }
+                } else {
+                    customerInfo['법정대리인주민번호'] = '';
+                }
+                
                 continue;
             }
             

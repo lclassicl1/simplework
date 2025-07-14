@@ -583,7 +583,7 @@
 
     <!-- 메인 콘텐츠 -->
     <div class="main-content">
-        <div class="container">
+    <div class="container">
         <h1>한결이 업무 도우미</h1>
         
         <div class="url-container" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; flex-wrap: nowrap; width: 100%;">
@@ -611,7 +611,7 @@
                           <button id="downloadDeliveryBtn" onclick="downloadDeliveryExcel()" style="display: none; background-color: #4CAF50; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">배송요청양식 다운로드</button>
                       </div>
                   </div>
-              </div>
+            </div>
             
             <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-left: auto;">
                 <label for="modelSearch" style="font-size: 14px; color: #555;">모델 검색:</label>
@@ -1048,7 +1048,7 @@
                                 delivery: template.delivery(customerInfo), // 배송요청양식
                                 open: template.open(customerInfo)          // 개통요청양식
                             };
-                        } else {
+                    } else {
                             return {
                                 request: template.request(customerInfo),
                                 stock: template.stock(customerInfo),
@@ -1167,7 +1167,7 @@
                     container = document.getElementById('luxExtraOutputs');
                 } else if (agency === '큐브') {
                     container = document.getElementById('cubeExtraOutputs');
-                } else {
+                    } else {
                     container = document.getElementById('luxExtraOutputs');
                 }
                 
@@ -1846,15 +1846,15 @@
             try {
                 // 고객 정보 추출
                 const customerInfo = extractCustomerInfo(inputText.value || '');
-                
-                // 단말기 일련번호와 유심 일련번호 추가
-                if (deviceSerialInput && deviceSerialInput.value.trim()) {
-                    customerInfo['단말기일련번호'] = deviceSerialInput.value.trim();
-                }
-                if (simSerialInput && simSerialInput.value.trim()) {
-                    customerInfo['유심일련번호'] = simSerialInput.value.trim();
-                }
-
+            
+            // 단말기 일련번호와 유심 일련번호 추가
+            if (deviceSerialInput && deviceSerialInput.value.trim()) {
+                customerInfo['단말기일련번호'] = deviceSerialInput.value.trim();
+            }
+            if (simSerialInput && simSerialInput.value.trim()) {
+                customerInfo['유심일련번호'] = simSerialInput.value.trim();
+            }
+            
                 console.log('추출된 고객 정보:', customerInfo);
                 console.table(customerInfo);
                 
@@ -1902,9 +1902,9 @@
                 
                 // 변환 이력 저장
                 saveToHistory(customerInfo, selectedTelecom, selectedAgency);
-                
-                // 더블클릭 이벤트 설정
-                setupDoubleClickCopy();
+                    
+                    // 더블클릭 이벤트 설정
+                    setupDoubleClickCopy();
                 
             } catch (error) {
                 console.error('변환 중 오류:', error);
