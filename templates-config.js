@@ -1454,7 +1454,26 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
 할증/비할증 :
 기타 :`;
                     },
-                    open: (info) => `판매자 : 라온
+                    open: (info) => {
+                        // 보험과 부가서비스를 위한 배열
+                        const additionalServices = [];
+                        
+                        // 부가서비스 정보 추가
+                        const addon = info.부가서비스 || '';
+                        if (addon && addon !== '무') {
+                            additionalServices.push(addon);
+                        }
+                        
+                        // 부가서비스2 정보 추가
+                        const addon2 = info.부가서비스2 || '';
+                        if (addon2 && addon2.trim() !== '') {
+                            additionalServices.push(addon2);
+                        }
+                        
+                        // 보험/부가서비스 정보 구성
+                        const serviceInfo = additionalServices.length > 0 ? additionalServices.join(' / ') : 'X';
+                        
+                        return `판매자 : 라온
 판매자연락처 : 010-4671-4834
 
 고객명 : ${info.고객명 || info.가입자명 || ''}
@@ -1474,7 +1493,8 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
 프리금액 : ${info.프리할부 && info.프리할부 !== '0' ? info.프리할부 : 'X'}
 할부원금 : ${info.할부현금여부 || '' } ${info.최종구매가 || ''}
 보험 : ${info.보험 || 'X'}
-부가 : ${info.부가서비스 || 'X'}`
+부가 : ${serviceInfo}`;
+                    }
                 }
             },
             '한올': {
@@ -1578,7 +1598,26 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
 ▶모델명/색상 : ${info.모델명 || ''}/${info.색상 || ''}
 ▶기기일련 : ${info.단말기일련번호 || ''}
 ▶유심(구매/비구매) : ${info.유심 || ''}`,
-                    open: (info) => `▶판매처 : 위즈케이
+                    open: (info) => {
+                        // 보험과 부가서비스를 위한 배열
+                        const additionalServices = [];
+                        
+                        // 부가서비스 정보 추가
+                        const addon = info.부가서비스 || '';
+                        if (addon && addon !== '무') {
+                            additionalServices.push(addon);
+                        }
+                        
+                        // 부가서비스2 정보 추가
+                        const addon2 = info.부가서비스2 || '';
+                        if (addon2 && addon2.trim() !== '') {
+                            additionalServices.push(addon2);
+                        }
+                        
+                        // 보험/부가서비스 정보 구성
+                        const serviceInfo = additionalServices.length > 0 ? additionalServices.join(' / ') : 'X';
+                        
+                        return `▶판매처 : 위즈케이
 ▶가입유형 : ${info.가입유형 || ''}
 ▶고객명 : ${info.고객명 || ''}
 ▶생년월일 : ${info.생년월일 || info.주민번호 || ''}
@@ -1595,8 +1634,9 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
 ▶출고가 : ${info.출고가 || ''}
 ▶프리(고객선납) : ${info.프리할부 && info.프리할부 !== '0' ? info.프리할부 : 'X'}
 ▶할부원금 : ${info.최종구매가 || ''}
-▶부가서비스 : ${info.부가서비스 && info.부가서비스 !== '무' ? info.부가서비스 : 'X'}
-▶보험유무 : ${info.보험 || 'X'}`
+▶부가서비스 : ${serviceInfo}
+▶보험유무 : ${info.보험 || 'X'}`;
+                    }
                 }
             },
             '신청서연장양식': {
