@@ -913,7 +913,8 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
 ▶할부선할인 : ${installmentDiscount}
 ▶요금제 : ${info.요금제 || ''}
 ▶지정번호 : ${designatedNumber}
-▶부가 : ${info.부가서비스 && info.부가서비스 !== '무' ? info.부가서비스 : ''}${info.보험 ? '\n▶보험 : ' + info.보험 : ''}`;
+▶부가 : ${info.부가서비스 && info.부가서비스 !== '무' ? info.부가서비스 : ''}${info.보험 ? '\n▶보험 : ' + info.보험 : ''}
+▶티게이트 접수 : `;
                     }
                 }
             },
