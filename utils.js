@@ -1161,79 +1161,408 @@ function extractCustomerInfo(text) {
             if (match[1]) {
                 let value = match[1].trim();
                 
-                // 전화번호/개통번호 포맷 정규화
+                // 전화번호/개통번호 포맷 정규화 (01012345678 -> 010-1234-5678)
                 if ((key === '전화번호' || key === '개통번호') && value) {
+                    // 괄호 안의 내용 제거 (예: (휴대전화) 제거)
                     value = value.replace(/\([^)]*\)/g, '').trim();
+                    // 모든 공백과 하이픈 제거
                     const numbers = value.replace(/[^\d]/g, '');
+                    // 01012345678 -> 010-1234-5678 형식으로 변환
                     if (numbers.length >= 10) {
                         value = numbers.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3');
-                        customerInfo[key] = value;
+                        customerInfo[key] = value;  // 변환된 값 저장
                         
+                        // 전화번호에서 개통번호 추출 (개통번호가 없을 경우에만)
                         if (key === '전화번호' && !customerInfo['개통번호']) {
-                            customerInfo['개통번호'] = value;
+                            customerInfo['개통번호'] = value;  // 전화번호를 개통번호로도 저장
                         }
                     }
                 }
                 
-                // 생년월일/주민번호 포맷 정규화
+                // 생년월일/주민번호 포맷 정규화 (000718 - 3251915 -> 000718-3251915)
                 if ((key === '생년월일' || key === '주민번호') && value) {
+                    // 하이픈 주변의 공백 제거
                     value = value.replace(/\s*-\s*/g, '-');
                 }
                 
-                // 배송주소/택배주소에서 전화번호 부분 제거
+                // 배송주소/택배주소에서 "/" 이후의 전화번호 부분 제거
                 if ((key === '택배주소' || key === '배송주소지') && value) {
+                    // "/" 이후의 전화번호 패턴 제거 (예: / 010-8316-1294)
                     value = value.replace(/\s*\/\s*010-\d{3,4}-\d{4}.*$/, '').trim();
                 }
                 
-                if (!customerInfo[key]) {
-                    customerInfo[key] = value;
+                customerInfo[key] = value;
+            } else {
+                customerInfo[key] = '';
+            }
+        } else {
+            customerInfo[key] = '';
+        }
+    }
+    
+    // 미성년자 여부 기본값 설정 (법대정보가 없으면 'N')
+    if (!customerInfo.hasOwnProperty('미성년자여부')) {
+        customerInfo['미성년자여부'] = 'N';
+        customerInfo['법정대리인이름'] = '';
+        customerInfo['법정대리인주민번호'] = '';
+        customerInfo['법정대리인연락처'] = '';
+    }
+    
+    // 개통번호와 전화번호 통합 처리 (전화번호가 없을 경우 개통번호 사용)
+    if (!customerInfo['전화번호'] && customerInfo['개통번호']) {
+        customerInfo['전화번호'] = customerInfo['개통번호'];
+    }
+    
+    // 고객명과 가입자명 통합 처리 (고객명이 없을 경우 가입자명 사용)
+    if (!customerInfo['고객명'] && customerInfo['가입자명']) {
+        customerInfo['고객명'] = customerInfo['가입자명'];
+    }
+    
+    // 주민번호와 생년월일 통합 처리 (주민번호가 없을 경우 생년월일 사용)
+    if (!customerInfo['주민번호'] && customerInfo['생년월일']) {
+        customerInfo['주민번호'] = customerInfo['생년월일'];
+    }
+    
+    // 택배주소와 배송주소지 통합 처리 (택배주소가 없을 경우 배송주소지 사용)
+    if (!customerInfo['택배주소'] && customerInfo['배송주소지']) {
+        customerInfo['택배주소'] = customerInfo['배송주소지'];
+    }
+    
+    // 1. Parse subscription, discount, and telecom info using the new function
+    let subInfo;
+    try {
+        // utils.js에서 전역으로 노출된 함수 사용
+        if (typeof window.parseSubscriptionAndDiscountInfo === 'function') {
+                                 subInfo = window.parseSubscriptionAndDiscountInfo({
+                 '가입유형': customerInfo['가입유형'] || '',
+                 '할인유형': customerInfo['할인유형'] || '',
+                 '현재통신사': customerInfo['현재통신사'] || ''
+             });
+             console.log('parseSubscriptionAndDiscountInfo 실행 성공');
+             console.log('입력 데이터:', {
+                 '가입유형': customerInfo['가입유형'] || '',
+                 '할인유형': customerInfo['할인유형'] || '',
+                 '현재통신사': customerInfo['현재통신사'] || ''
+             });
+             console.log('파싱 결과:', subInfo);
+        } else {
+            throw new Error('parseSubscriptionAndDiscountInfo 함수를 찾을 수 없습니다.');
+        }
+    } catch (error) {
+        console.error('parseSubscriptionAndDiscountInfo 오류:', error);
+        // 오류 발생 시 기본값 사용
+        subInfo = {
+            subscriptionType: customerInfo['가입유형'] || '',
+            discountType: customerInfo['할인유형'] || '',
+            currentTelecom: customerInfo['현재통신사'] || '',
+            discountMonths: '',
+            contractType: ''
+        };
+    }
+
+    // 2. Update customer info with parsed values
+    customerInfo['가입유형'] = subInfo.subscriptionType;
+    customerInfo['할인유형'] = subInfo.discountType;
+    customerInfo['현재통신사'] = subInfo.currentTelecom;
+    
+    // 2-1. 가입유형이 비어있는 경우 현재통신사와 선택된 통신사 비교하여 자동 설정
+    if (!customerInfo['가입유형'] || customerInfo['가입유형'].trim() === '') {
+        alert('어드민 메모의 가입유형이 확인되지않아 자동 변환을 시작합니다. \n 현재통신사와 선택된 통신사를 비교하여 가입유형을 자동 설정합니다. \n 변환된 양식을 한번더 체크하세요.');
+        // 현재 선택된 통신사 가져오기
+        const selectedTelecom = document.getElementById('telecom') ? document.getElementById('telecom').value : '';
+        const currentTelecom = customerInfo['현재통신사'] || '';
+        
+        console.log('가입유형 자동 판단:', {
+            '선택된통신사': selectedTelecom,
+            '현재통신사': currentTelecom
+        });
+        
+        // 현재통신사와 선택된 통신사 비교
+        if (currentTelecom && selectedTelecom) {
+            if (currentTelecom.toLowerCase().trim() !== selectedTelecom.toLowerCase().trim()) {
+                customerInfo['가입유형'] = '번호이동';
+                console.log('가입유형 자동설정: 번호이동 (현재통신사 ≠ 선택통신사)');
+            } else {
+                customerInfo['가입유형'] = '기기변경';
+                console.log('가입유형 자동설정: 기기변경 (현재통신사 = 선택통신사)');
+            }
+        } else {
+            console.log('가입유형 자동설정 불가: 통신사 정보 부족');
+        }
+    }
+    
+    console.log('적용 후 customerInfo:', {
+        '가입유형': customerInfo['가입유형'],
+        '할인유형': customerInfo['할인유형'],
+        '현재통신사': customerInfo['현재통신사']
+    });
+
+    // 3. Set 공시선약여부 and 약정개월수 based on discount type
+    if (subInfo.discountType === '공시지원') {
+        customerInfo['공시선약여부'] = '공시지원';
+        customerInfo['약정개월수'] = subInfo.discountMonths || '24개월';
+    } else if (subInfo.discountType === '선택약정' || subInfo.discountType === '선약') {
+        customerInfo['공시선약여부'] = subInfo.discountType;
+        customerInfo['약정개월수'] = subInfo.discountMonths || '';
+    } else {
+        customerInfo['공시선약여부'] = '';
+        customerInfo['약정개월수'] = '';
+    }
+    
+    console.log('최종 약정 정보:', {
+        '공시선약여부': customerInfo['공시선약여부'],
+        '약정개월수': customerInfo['약정개월수']
+    });
+    
+    // 출고가, 공시, 추지, 전환지원금, 프리할부, 할부/현금 정보 추출
+    // 1. 기본값 초기화
+    customerInfo['추지'] = '0';
+    customerInfo['전환지원금'] = '0';
+    customerInfo['프리할부'] = '0';
+    
+    // 2. 괄호 포함 패턴 (예: **출고가 (1,540,000)- 공시(700,000)- 전지(100,000) = 현금(740,000))
+    const parenthesizedPattern = /\*\*\s*출고가\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*-\s*공시\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*(?:-\s*(?:추지|추가지원)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*(?:-\s*(?:전지|전환지원금?|전환)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*(?:-\s*프리할부\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*=\s*(할부\d*|\ud604\uae08)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?/i;
+    
+    // 3. 일반 패턴 (괄호 없음, 기존 형식 유지)
+    const normalPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*(?:-\s*(?:추지|추가지원)\s+([\d,]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,]+))?\s*(?:-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d*|\ud604\uae08)\s*([\d,]+)/i;
+    
+    // 4. 패턴 매칭 시도 (괄호 포함 패턴 먼저 시도)
+    let match = text.match(parenthesizedPattern) || text.match(normalPattern);
+    
+    if (match) {
+        // 매칭된 그룹 인덱스 정리
+        const groups = {
+            출고가: match[1] || '0',
+            공시: match[2] || '0',
+            추지: match[3] || '0',
+            전환지원금: match[4] || '0',
+            프리할부: match[5] || '0',
+            할부현금: match[6] || '현금',
+            최종구매가: match[7] || '0'
+        };
+        
+        // 고객 정보에 할당 (0이 아닌 경우에만 업데이트)
+        customerInfo['출고가'] = groups.출고가.trim();
+        customerInfo['공시'] = groups.공시.trim();
+        if (groups.추지 !== '0') customerInfo['추지'] = groups.추지.trim();
+        if (groups.전환지원금 !== '0') customerInfo['전환지원금'] = groups.전환지원금.trim();
+        if (groups.프리할부 !== '0') customerInfo['프리할부'] = groups.프리할부.trim();
+        
+        console.log('매칭된 정보:', groups); // 디버깅용
+        
+        // 할부/현금 여부 확인
+        if (groups.할부현금.includes('할부')) {
+            customerInfo['할부현금여부'] = '할부';
+            
+            // 할부개월수 추출
+            const installmentMatch = groups.할부현금.match(/(\d+)/);
+            if (installmentMatch && installmentMatch[1]) {
+                customerInfo['할부개월수'] = installmentMatch[1] + '개월';
+            } else {
+                customerInfo['할부개월수'] = '24개월'; // 기본값
+            }
+        } else {
+            customerInfo['할부현금여부'] = '현금';
+            customerInfo['할부개월수'] = '';
+        }
+        
+        customerInfo['최종구매가'] = groups.최종구매가.trim();
+    } else {
+        // 추가 패턴 시도: 추지만 있는 경우 (괄호 없음)
+        const pricePattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원)\s+([\d,]+))?(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d*|\ud604\uae08)\s*([\d,]+)/i;
+        const priceMatch = text.match(pricePattern);
+        
+        if (priceMatch) {
+            customerInfo['출고가'] = priceMatch[1].trim();
+            customerInfo['공시'] = priceMatch[2].trim();
+            if (priceMatch[3]) customerInfo['추지'] = priceMatch[3].trim();
+            if (priceMatch[4]) customerInfo['프리할부'] = priceMatch[4].trim();
+            
+            // 할부/현금 여부 확인
+            if (priceMatch[5].includes('할부')) {
+                customerInfo['할부현금여부'] = '할부';
+                
+                // 할부개월수 추출
+                const installmentMatch = priceMatch[5].match(/(\d+)/);
+                if (installmentMatch && installmentMatch[1]) {
+                    customerInfo['할부개월수'] = installmentMatch[1] + '개월';
+                } else {
+                    customerInfo['할부개월수'] = '24개월'; // 기본값
+                }
+            } else {
+                customerInfo['할부현금여부'] = '현금';
+                customerInfo['할부개월수'] = '';
+            }
+            
+            customerInfo['최종구매가'] = priceMatch[6].trim();
+        } else {
+            // 현금 형식 패턴 확인 (추지와 전환지원금이 모두 있는 경우)
+            const cashConversionPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원)\s+([\d,]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,]+))?\s*(?:-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/i;
+            const cashConversionMatch = text.match(cashConversionPattern);
+            
+            if (cashConversionMatch) {
+                customerInfo['출고가'] = cashConversionMatch[1].trim();
+                customerInfo['공시'] = cashConversionMatch[2].trim();
+                if (cashConversionMatch[3]) customerInfo['추지'] = cashConversionMatch[3].trim();
+                if (cashConversionMatch[4]) customerInfo['전환지원금'] = cashConversionMatch[4].trim();
+                if (cashConversionMatch[5]) customerInfo['프리할부'] = cashConversionMatch[5].trim();
+                customerInfo['추지'] = cashConversionMatch[3].trim();
+                customerInfo['전환지원금'] = cashConversionMatch[5].trim();
+                customerInfo['프리할부'] = cashConversionMatch[6] ? cashConversionMatch[6].trim() : '0';
+                customerInfo['할부현금여부'] = '현금';
+                customerInfo['할부개월수'] = '';
+                customerInfo['최종구매가'] = cashConversionMatch[7].trim();
+            } else {
+                // 기존 현금 형식 패턴 (전환지원금 없는 경우)
+                const cashPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/;
+                const cashMatch = text.match(cashPattern);
+                
+                if (cashMatch) {
+                    customerInfo['출고가'] = cashMatch[1].trim();
+                    customerInfo['공시'] = cashMatch[2].trim();
+                    customerInfo['추지'] = cashMatch[3].trim();
+                    customerInfo['전환지원금'] = '0';
+                    customerInfo['프리할부'] = cashMatch[4] ? cashMatch[4].trim() : '0';
+                    customerInfo['할부현금여부'] = '현금';
+                    customerInfo['할부개월수'] = '';
+                    customerInfo['최종구매가'] = cashMatch[5].trim();
+                } else {
+                    // 할부 형식 패턴 확인 (전환지원금 포함)
+                    const installmentConversionPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)\s*-\s*(전환지원금?|전환)\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*할부(\d+)\s*([\d,]+)/;
+                    const installmentConversionMatch = text.match(installmentConversionPattern);
+                    
+                    if (installmentConversionMatch) {
+                        customerInfo['출고가'] = installmentConversionMatch[1].trim();
+                        customerInfo['공시'] = installmentConversionMatch[2].trim();
+                        customerInfo['추지'] = installmentConversionMatch[3].trim();
+                        customerInfo['전환지원금'] = installmentConversionMatch[5].trim();
+                        customerInfo['프리할부'] = installmentConversionMatch[6] ? installmentConversionMatch[6].trim() : '0';
+                        customerInfo['할부현금여부'] = '할부';
+                        customerInfo['할부개월수'] = installmentConversionMatch[7] + '개월';
+                        customerInfo['최종구매가'] = installmentConversionMatch[8].trim();
+                    } else {
+                        // 기존 할부 형식 패턴 (전환지원금 없는 경우)
+                        const alternatePattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*할부(\d+)\s*([\d,]+)/;
+                        const alternateMatch = text.match(alternatePattern);
+                        
+                        if (alternateMatch) {
+                            customerInfo['출고가'] = alternateMatch[1].trim();
+                            customerInfo['공시'] = alternateMatch[2].trim();
+                            customerInfo['추지'] = alternateMatch[3].trim();
+                            customerInfo['전환지원금'] = '0';
+                            customerInfo['프리할부'] = alternateMatch[4] ? alternateMatch[4].trim() : '0';
+                            customerInfo['할부현금여부'] = '할부';
+                            customerInfo['할부개월수'] = alternateMatch[5] + '개월';
+                            customerInfo['최종구매가'] = alternateMatch[6].trim();
+                        } else {
+                            customerInfo['출고가'] = '';
+                            customerInfo['공시'] = '';
+                            customerInfo['추지'] = '';
+                            customerInfo['전환지원금'] = '0';
+                            customerInfo['프리할부'] = '0';
+                            customerInfo['할부현금여부'] = '';
+                            customerInfo['할부개월수'] = '';
+                            customerInfo['최종구매가'] = '';
+                        }
+                    }
                 }
             }
         }
     }
     
-    // 필드 간 복사 로직
-    if (!customerInfo['개통번호'] && customerInfo['전화번호']) {
-        customerInfo['개통번호'] = customerInfo['전화번호'];
-    }
-    
-    if (!customerInfo['고객명'] && customerInfo['가입자명']) {
-        customerInfo['고객명'] = customerInfo['가입자명'];
-    }
-    
-    if (!customerInfo['가입자명'] && customerInfo['고객명']) {
-        customerInfo['가입자명'] = customerInfo['고객명'];
-    }
-    
-    if (!customerInfo['생년월일'] && customerInfo['주민번호']) {
-        customerInfo['생년월일'] = customerInfo['주민번호'];
-    }
-    
-    if (!customerInfo['주민번호'] && customerInfo['생년월일']) {
-        customerInfo['주민번호'] = customerInfo['생년월일'];
-    }
-    
-    if (!customerInfo['배송주소지'] && customerInfo['택배주소']) {
-        customerInfo['배송주소지'] = customerInfo['택배주소'];
-    }
-    
-    if (!customerInfo['택배주소'] && customerInfo['배송주소지']) {
-        customerInfo['택배주소'] = customerInfo['배송주소지'];
-    }
-    
-    // 가입유형, 할인유형, 현재통신사 추가 파싱
-    if (typeof parseSubscriptionAndDiscountInfo === 'function') {
-        const subInfo = parseSubscriptionAndDiscountInfo({
-            '가입유형': customerInfo['가입유형'],
-            '할인유형': customerInfo['할인유형'],
-            '현재통신사': customerInfo['현재통신사']
-        });
+    // 모델명 변환 및 용량 정보 추출
+    if (customerInfo['모델명']) {
+        // 먼저 원본 모델명에서 용량 정보 추출 (convertModelName 실행 전)
+        let capacityMatch = null;
+        let hasUnit = false;
+        let extractedCapacity = '';
+        let originalModelName = customerInfo['모델명'];
         
-        customerInfo['가입유형'] = subInfo.subscriptionType;
-        customerInfo['할인유형'] = subInfo.discountType;
-        customerInfo['현재통신사'] = subInfo.currentTelecom;
-        customerInfo['약정개월수'] = subInfo.discountMonths;
-        customerInfo['공시선약여부'] = subInfo.discountType;
+        // 1. 단위가 있는 용량 먼저 찾기 (256G, 512GB, 1TB 등)
+        capacityMatch = originalModelName.match(/(?:^|\s|_)(\d+)(?:\s*[GT]?[B]?)(?=\s|$|_)/i);
+        
+        let capacityFound = false;
+        
+        if (capacityMatch) {
+            // 매칭된 결과에서 실제로 단위가 있는지 확인
+            const matchedText = capacityMatch[0].replace(/^[\s_]+|[\s_]+$/g, '');
+            const hasActualUnit = matchedText.match(/[GT]?[B]?$/i);
+            // 실제로 G, GB, TB 등의 단위가 있는지 확인 (빈 문자열이 아닌 경우)
+            const hasRealUnit = hasActualUnit && hasActualUnit[0] && hasActualUnit[0].length > 0;
+            
+            if (hasRealUnit) {
+                // 실제로 단위가 있는 경우
+                hasUnit = true;
+                extractedCapacity = capacityMatch[1];
+                customerInfo['용량'] = matchedText;
+                // 원본 모델명에서 용량 부분 제거
+                originalModelName = originalModelName.replace(/(?:^|\s|_)\d+(?:\s*[GT]?[B]?)(?:\s|$|_)/i, ' ').replace(/\s+/g, ' ').trim();
+                capacityFound = true;
+            }
+        }
+        
+        if (!capacityFound) {
+            // 2. 단위가 없는 용량 찾기 (256, 512 등)
+            capacityMatch = originalModelName.match(/(?:^|\s|_)(\d+)(?:\s|$|_)/i);
+            
+            if (capacityMatch) {
+                hasUnit = false;
+                extractedCapacity = capacityMatch[1];
+                customerInfo['용량'] = extractedCapacity + 'G';
+                // 원본 모델명에서 용량 부분 제거
+                originalModelName = originalModelName.replace(/(?:^|\s|_)\d+(?:\s|$|_)/i, ' ').replace(/\s+/g, ' ').trim();
+                capacityFound = true;
+            } else {
+                // 3. 용량을 찾지 못한 경우
+                customerInfo['용량'] = '';
+            }
+        }
+        
+        // 용량이 제거된 모델명으로 변환 적용 (펫네임 → 실제 모델명)
+        const convertedModelName = convertModelName(originalModelName);
+        customerInfo['모델명'] = convertedModelName;
+        
+        // 모델제조사 자동 분류 (아이폰/갤럭시)
+        if (convertedModelName.toLowerCase().includes('아이폰') || 
+            convertedModelName.toLowerCase().includes('iphone')) {
+            customerInfo['모델제조사'] = '아이폰';
+        } else {
+            customerInfo['모델제조사'] = '갤럭시';
+        }
+    } else {
+        customerInfo['용량'] = '';
+        customerInfo['모델제조사'] = '';
+    }
+    
+    // 부가서비스와 보험 분리 처리 (개선된 버전)
+    if (customerInfo['부가서비스']) {
+        const originalAddon = customerInfo['부가서비스'];
+        const parsed = parseAddonAndInsuranceEnhanced(customerInfo['부가서비스']);
+        
+        // 분리된 결과를 customerInfo에 저장
+        customerInfo['보험'] = parsed.보험;
+        customerInfo['부가서비스'] = parsed.부가서비스1;
+        customerInfo['부가서비스2'] = parsed.부가서비스2;
+        
+        console.log('부가서비스 분리 결과:', {
+            '원본': originalAddon,
+            '분리된 보험': parsed.보험,
+            '분리된 부가서비스1': parsed.부가서비스1,
+            '분리된 부가서비스2': parsed.부가서비스2
+        });
+    } else {
+        customerInfo['부가서비스2'] = '';
+    }
+    
+    // 모델제조사에 따른 보험명 자동 설정 (모델제조사 설정 후 실행)
+    if (customerInfo['보험'] && customerInfo['모델제조사']) {
+        if (customerInfo['모델제조사'] === '갤럭시') {
+            customerInfo['보험'] = 'T ALL케어플러스5 파손80(5300)';
+            console.log('갤럭시 보험명 자동 설정: T ALL케어플러스5 파손80(5300)');
+        } else if (customerInfo['모델제조사'] === '아이폰') {
+            customerInfo['보험'] = 'T올케어+5 I파손';
+            console.log('아이폰 보험명 자동 설정: T올케어+5 I파손');
+        }
     }
     
     return customerInfo;
