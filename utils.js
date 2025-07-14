@@ -11,6 +11,7 @@ const MODEL_NAME_MAPPING = {
     '갤럭시S25플러스': 'S936',
     '갤럭시S25': 'S931',
     '갤럭시S25엣지' : 'S937',
+    '갤럭시엣지' : 'S937',
     'S25울트라': 'S938',
     'S25+': 'S936',
     'S25': 'S931',
@@ -493,7 +494,10 @@ function parseAddonAndInsuranceEnhanced(addonText) {
         /\s*총\s*\d+\s*개월/gi,
         /\d+\s*개월\s*무료/gi,
         /\s*무료\s*\d+/gi,
-        /\(\s*총\s*\d+\s*개월\s*\)/gi
+        /\(\s*총\s*\d+\s*개월\s*유지\s*\)/gi,  // 유지 텍스트가 포함된 경우만 제거
+        /\(\s*총\s*\d+\s*개월\s*\)/gi,          // 유지 텍스트가 없는 경우
+        /\(\s*유지\s*\)/gi,                       // (유지)만 있는 경우
+        /\s*유지\s*/gi                              // ' 유지' 단독 또는 띄어쓰기 포함
     ];
     
     let insuranceItems = [];
@@ -534,6 +538,11 @@ function parseAddonAndInsuranceEnhanced(addonText) {
         
         // 3단계: 앞뒤 공백 및 특수문자 정리
         cleanItem = cleanItem.replace(/^[-\s]+|[-\s]+$/g, '').trim();
+        
+        // 4단계: "유지" 텍스트가 단독으로 남은 경우 제거
+        if (cleanItem === '유지' || cleanItem === '(유지)') {
+            cleanItem = '';
+        }
         
         // 정리 후 빈 문자열이면 스킵
         if (!cleanItem || cleanItem.length < 2) {
