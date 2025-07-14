@@ -24,6 +24,33 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                             installmentInfo = info.최종구매가 || '';
                         }
                         
+                        // 보험과 부가서비스를 위한 배열
+                        const additionalServices = [];
+                        
+                        // 보험 정보 추가
+                        const insurance = info.보험 || '';
+                        if (insurance && insurance !== '무') {
+                            additionalServices.push(`${insurance}`);
+                        }
+                        
+                        // 부가서비스 정보 추가
+                        const addon = info.부가서비스 || '';
+                        if (addon && addon !== '무') {
+                            additionalServices.push(`${addon}`);
+                        }
+                        
+                        // 부가서비스2 정보 추가
+                        const addon2 = info.부가서비스2 || '';
+                        if (addon2 && addon2.trim() !== '') {
+                            additionalServices.push(`${addon2}`);
+                        }
+                        
+                        // 기타특이사항 구성
+                        let specialNotes = '도매C';
+                        if (additionalServices.length > 0) {
+                            specialNotes += ' / ' + additionalServices.join(' / ');
+                        }
+                        
                         return `도매c
 1. 고객명 : ${info.고객명 || info.가입자명 || ''}
 2. 전화번호 : ${info.전화번호 || info.개통번호 || ''}
@@ -42,7 +69,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 15. 추가지원금 : ${info.추지 || ''}
 16. 프리할부 : ${info.프리할부 || ''}
 17. 최종할부원금/개월수 : ${installmentInfo}
-18. 기타특이사항 : 도매C
+18. 기타특이사항 : ${specialNotes}
 19. 판매점명 : 도담`;
                     }
                 }
@@ -294,7 +321,39 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                         const contact = info['개통번호'] || info['전화번호'] || '';
                         const jumin = info['주민번호'] || info['생년월일'] || '';
                         
-                        return `[큐브 우주패스양식]
+                        // 부가서비스에서 G마켓 또는 편의점&카페 확인
+                        const addon1 = info['부가서비스'] || '';
+                        const addon2 = info['부가서비스2'] || '';
+                        const allAddons = `${addon1} ${addon2}`.toLowerCase();
+                        
+                        let universeType = '';
+                        if (allAddons.includes('g마켓')) {
+                            universeType = 'G마켓';
+                        } else if (allAddons.includes('편의점') || allAddons.includes('카페')) {
+                            universeType = '편의점&카페';
+                        }
+                        
+                        if (universeType === 'G마켓') {
+                            return `★우주패스 G마켓		
+명의자 : ${name}		
+생년월일 : ${jumin}		
+개통번호 : ${contact}		
+상품명(옵션) :G마켓+웨이브		
+		
+결제정보 : 기존자동이체 결제		
+결제카드주 정보 : `;
+                        } else if (universeType === '편의점&카페') {
+                            return `★우주패스편의점&카페			
+명의자 : ${name}			
+생년월일 : ${jumin}			
+개통번호 : ${contact}			
+상품명(옵션) :편의점&카페 -웨이브			
+			
+결제정보 : 기존자동이체 결제			
+결제카드주 정보 : `;
+                        } else {
+                            // 기본 양식 (부가서비스에 해당하는 항목이 없는 경우)
+                            return `[큐브 우주패스양식]
 고객명: ${name}
 개통번호: ${contact}
 주민번호: ${jumin}
@@ -303,6 +362,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 가입유형: ${info['가입유형'] || ''}
 요금제: ${info['요금제'] || ''}
 현재통신사: ${info['현재통신사'] || ''}`;
+                        }
                     }
                 }
             },
@@ -377,6 +437,22 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                             birthOrRegNum = birthOrRegNum.replace(/-/g, '').substring(0, 6);
                         }
                         
+                        // 부가서비스 정보 구성
+                        let addonInfo = '';
+                        if (info['부가서비스'] && info['부가서비스'] !== '무') {
+                            addonInfo = info['부가서비스'];
+                        }
+                        
+                        // 부가서비스2가 있으면 추가
+                        if (info['부가서비스2'] && info['부가서비스2'].trim() !== '') {
+                            addonInfo = addonInfo ? `${addonInfo} / ${info['부가서비스2']}` : info['부가서비스2'];
+                        }
+                        
+                        // 부가서비스가 없으면 X
+                        if (!addonInfo) {
+                            addonInfo = 'X';
+                        }
+                        
                         return `개통요청 / 전문화	
 유형: ${naSubscriptionType}
 고객명 : ${naName}
@@ -390,7 +466,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 선납 : ${prepayInfo}
 원금 : ${principalInfo}	
 개월 : ${monthsInfo}
-부가 : ${info['부가서비스'] && info['부가서비스'] !== '무' ? info['부가서비스'] : 'X'}
+부가 : ${addonInfo}
 보험 : ${info['보험'] || 'X'}`;
                     }
                 }
@@ -419,6 +495,30 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 * USIM 발송여부 : ${usimRequest}`;
                     },
                     openRequest: (info) => {
+                        // 보험과 부가서비스를 위한 배열
+                        const additionalServices = [];
+                        
+                        // 보험 정보 추가
+                        const insurance = info.보험 || '';
+                        if (insurance && insurance !== '무') {
+                            additionalServices.push(insurance);
+                        }
+                        
+                        // 부가서비스 정보 추가
+                        const addon = info.부가서비스 || '';
+                        if (addon && addon !== '무') {
+                            additionalServices.push(addon);
+                        }
+                        
+                        // 부가서비스2 정보 추가
+                        const addon2 = info.부가서비스2 || '';
+                        if (addon2 && addon2.trim() !== '') {
+                            additionalServices.push(addon2);
+                        }
+                        
+                        // 보험/부가서비스 정보 구성
+                        const serviceInfo = additionalServices.length > 0 ? additionalServices.join(' / ') : 'X';
+                        
                         return `★판매점명★에이치엘
 개통유형>${info.가입유형 || ''}
 고객명>${info.고객명 || ''}
@@ -429,7 +529,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 일련번호>${info.단말기일련번호 || ''}
 유심번호>${info.유심일련번호 || ''}
 요금제>${info.요금제 || ''}
-부가서비스>${info.부가서비스 === '무'? 'X' : info.부가서비스 || ''}
+부가서비스>${serviceInfo}
 약정유형>${info.공시선약여부 || ''} ${info.약정개월수 || ''}
 할부개월수>${info.할부현금여부 === '할부' ? (info.할부개월수 || '24') : 'X'}
 프리할부>${info.프리할부 || ''}
@@ -503,6 +603,12 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                         const addon = info.부가서비스 || '';
                         if (addon && addon !== '무') {
                             additionalServices.push(addon);
+                        }
+                        
+                        // 부가서비스2 정보 추가
+                        const addon2 = info.부가서비스2 || '';
+                        if (addon2 && addon2.trim() !== '') {
+                            additionalServices.push(addon2);
                         }
                         
                         // 보험/부가서비스가 있으면 줄바꿈 후 추가
@@ -620,6 +726,9 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
                         if (info.부가서비스 && info.부가서비스 !== '무') {
                             additionalServices.push(info.부가서비스);
                         }
+                        if (info.부가서비스2 && info.부가서비스2.trim() !== '') {
+                            additionalServices.push(info.부가서비스2);
+                        }
                         if (info.보험) {
                             additionalServices.push(info.보험);
                         }
@@ -677,6 +786,30 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
                         // 현재통신사 인증값 처리
                         const carrierAuth = info.현재통신사 ? `${info.현재통신사} & 인증값` : '';
                         
+                        // 보험과 부가서비스를 위한 배열
+                        const additionalServices = [];
+                        
+                        // 보험 정보 추가
+                        const insurance = info.보험 || '';
+                        if (insurance && insurance !== '무') {
+                            additionalServices.push(insurance);
+                        }
+                        
+                        // 부가서비스 정보 추가
+                        const addon = info.부가서비스 || '';
+                        if (addon && addon !== '무') {
+                            additionalServices.push(addon);
+                        }
+                        
+                        // 부가서비스2 정보 추가
+                        const addon2 = info.부가서비스2 || '';
+                        if (addon2 && addon2.trim() !== '') {
+                            additionalServices.push(addon2);
+                        }
+                        
+                        // 보험/부가서비스 정보 구성
+                        const serviceInfo = additionalServices.length > 0 ? additionalServices.join(' / ') : 'X';
+                        
                         if (isMinor) {
                             // 미성년자 (청소년) 양식
                             return `[ 청소년개통요청 양식 ]
@@ -696,8 +829,7 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
 ㅇ모델명 : ${info.모델명 || ''} ${info.용량 || ''} ${info.색상 || ''}
 ㅇ일련번호 : ${info.단말기일련번호 || ''}
 ㅇ유심번호 : ${info.유심일련번호 || ''}
-ㅇ부가서비스 : ${info.부가서비스 || 'X'}
-ㅇ보험가입 : ${info.보험 || 'X'}
+ㅇ부가서비스 : ${serviceInfo}
 ㅇ지정번호 : X
 ㅇ복지 : X`;
                         } else {
@@ -716,8 +848,7 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
 ㅇ모델명 : ${info.모델명 || ''} ${info.용량 || ''} ${info.색상 || ''}
 ㅇ일련번호 : ${info.단말기일련번호 || ''}
 ㅇ유심번호 : ${info.유심일련번호 || ''}
-ㅇ부가서비스 : ${info.부가서비스 || 'X'}
-ㅇ보험가입 : ${info.보험 || 'X'}
+ㅇ부가서비스 : ${serviceInfo}
 ㅇ복지 : X`;
                         }
                     }
@@ -792,17 +923,29 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                         const discountType = info['할인유형'] || '';
                         const contractMonths = info['약정개월수'] || '';
                         
-                        // 부가서비스/보험 조합 (보험이 없으면 / 제거)
+                        // 부가서비스/보험/부가서비스2 조합
+                        const additionalServices = [];
+                        
+                        // 부가서비스 정보 추가
                         const addonService = info['부가서비스'] || '';
-                        const insurance = info['보험'] || '';
-                        let addon = '';
-                        if (addonService && insurance) {
-                            addon = `${addonService} / ${insurance}`;
-                        } else if (addonService) {
-                            addon = addonService;
-                        } else if (insurance) {
-                            addon = insurance;
+                        if (addonService && addonService !== '무') {
+                            additionalServices.push(addonService);
                         }
+                        
+                        // 보험 정보 추가
+                        const insurance = info['보험'] || '';
+                        if (insurance && insurance !== '무') {
+                            additionalServices.push(insurance);
+                        }
+                        
+                        // 부가서비스2 정보 추가
+                        const addon2 = info['부가서비스2'] || '';
+                        if (addon2 && addon2.trim() !== '') {
+                            additionalServices.push(addon2);
+                        }
+                        
+                        // 보험/부가서비스 정보 구성
+                        const addon = additionalServices.length > 0 ? additionalServices.join(' / ') : '';
                         
                         // 할부원금/개월수 처리
                         let installmentInfo = '';
@@ -913,6 +1056,30 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                             paymentType = info.할부현금여부 || '';
                         }
                         
+                        // 보험과 부가서비스를 위한 배열
+                        const additionalServices = [];
+                        
+                        // 부가서비스 정보 추가
+                        const addon = info.부가서비스 || '';
+                        if (addon && addon !== '무') {
+                            additionalServices.push(addon);
+                        }
+                        
+                        // 보험 정보 추가
+                        const insurance = info.보험 || '';
+                        if (insurance && insurance !== '무') {
+                            additionalServices.push(insurance);
+                        }
+                        
+                        // 부가서비스2 정보 추가
+                        const addon2 = info.부가서비스2 || '';
+                        if (addon2 && addon2.trim() !== '') {
+                            additionalServices.push(addon2);
+                        }
+                        
+                        // 보험/부가서비스 정보 구성
+                        const serviceInfo = additionalServices.length > 0 ? additionalServices.join(' / ') : '';
+                        
                         return `★정책명
 ▶판매점 : 신풍
 ▶고객명 : ${info.고객명 || ''}
@@ -928,7 +1095,7 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
 ▶할부선할인 : ${installmentDiscount}
 ▶요금제 : ${info.요금제 || ''}
 ▶지정번호 : ${designatedNumber}
-▶부가 : ${info.부가서비스 && info.부가서비스 !== '무' ? info.부가서비스 : ''}${info.보험 ? '\n▶보험 : ' + info.보험 : ''}
+▶부가 : ${serviceInfo}
 ▶티게이트 접수 : `;
                     }
                 }
