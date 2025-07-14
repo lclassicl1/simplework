@@ -244,6 +244,21 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                             }
                         }
                         
+                        // 부가서비스 정보 구성
+                        let addonInfo = '';
+                        if (info.부가서비스 && info.보험) {
+                            addonInfo = `${info.부가서비스} / ${info.보험}`;
+                        } else if (info.부가서비스) {
+                            addonInfo = info.부가서비스;
+                        } else if (info.보험) {
+                            addonInfo = info.보험;
+                        }
+                        
+                        // 부가서비스2가 있으면 추가
+                        if (info.부가서비스2 && info.부가서비스2.trim() !== '') {
+                            addonInfo = addonInfo ? `${addonInfo} / ${info.부가서비스2}` : info.부가서비스2;
+                        }
+                        
                         return `■SK3 개통요청		
 ◎ 고객명 / 번호 : ${info.고객명 || ''} / ${info.전화번호 || ''}	
 ◎ 주민번호 : ${formatBirthDate(info.주민번호 || info.생년월일 || '')}	
@@ -257,7 +272,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 ◎ 추가지원금 : ${info.추지 || '0'}	
 ◎ 할부원금 : ${paymentInfo}
 ◎ 약정유형 : ${info.할인유형 || ''} ${info.약정개월수 || ''}
-◎ 부가서비스 : ${info.부가서비스 && info.보험 ? `${info.부가서비스} / ${info.보험}` : (info.부가서비스 || info.보험 || '')}`;
+◎ 부가서비스 : ${addonInfo}`;
                     },
                     stockRequest: (info) => {
                         // 유심 값에 '이심' 또는 '기존유심' 키워드가 있으면 X, 그렇지 않으면 O
