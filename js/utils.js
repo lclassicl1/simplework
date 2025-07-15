@@ -1152,39 +1152,75 @@ function extractCustomerInfo(text) {
                 // 법대정보가 있는 경우 (미성년자)
                 customerInfo['미성년자여부'] = 'Y';
                 
-                // 이름은 항상 첫 번째 그룹
-                const name = match[1].trim();
-                customerInfo['법정대리인이름'] = name;
+                // 세 개의 그룹을 모두 가져옴
+                let firstItem = match[1].trim();
+                let secondItem = match[2].trim();
+                let thirdItem = match[3].trim();
                 
-                // 두 번째와 세 번째 그룹에서 전화번호와 주민번호 구분
-                const secondItem = match[2].trim();
-                const thirdItem = match[3].trim();
+                // 각 항목에서 불필요한 텍스트 제거 (줄바꿈 이후 텍스트 제거)
+                firstItem = firstItem.split('\n')[0].trim();
+                secondItem = secondItem.split('\n')[0].trim();
+                thirdItem = thirdItem.split('\n')[0].trim();
                 
-                // 전화번호 패턴: 010-1234-5678 또는 01012345678
+                // 전화번호 패턴: 010-1234-5678 또는 01012345678 (더 유연하게)
                 const phonePattern = /^(\d{3})[-\s]*(\d{3,4})[-\s]*(\d{4})$/;
                 // 주민번호 패턴: 821018-1804813 또는 8210181804813
                 const idPattern = /^(\d{6})[-\s]*(\d{7})$/;
+                // 이름 패턴: 한글 2-4자리
+                const namePattern = /^[가-힣]{2,4}$/;
                 
+                let name = '';
                 let phone = '';
                 let idNumber = '';
                 
-                // 두 번째 항목 확인
-                if (phonePattern.test(secondItem.replace(/[^\d]/g, ''))) {
-                    phone = secondItem;
-                    idNumber = thirdItem;
-                } else if (idPattern.test(secondItem.replace(/[^\d]/g, ''))) {
-                    idNumber = secondItem;
-                    phone = thirdItem;
-                } else {
-                    // 세 번째 항목 확인
-                    if (phonePattern.test(thirdItem.replace(/[^\d]/g, ''))) {
-                        phone = thirdItem;
-                        idNumber = secondItem;
-                    } else if (idPattern.test(thirdItem.replace(/[^\d]/g, ''))) {
-                        idNumber = thirdItem;
-                        phone = secondItem;
+                // 각 항목을 분석하여 타입 판별
+                const items = [
+                    { value: firstItem, type: 'unknown' },
+                    { value: secondItem, type: 'unknown' },
+                    { value: thirdItem, type: 'unknown' }
+                ];
+                
+                // 각 항목의 타입을 판별
+                items.forEach(item => {
+                    const cleanValue = item.value.replace(/[^\d가-힣]/g, '');
+                    const numbersOnly = item.value.replace(/[^\d]/g, '');
+                    
+                    // 전화번호 판별 (010으로 시작하고 10-11자리)
+                    if (numbersOnly.startsWith('010') && (numbersOnly.length === 10 || numbersOnly.length === 11)) {
+                        item.type = 'phone';
+                    } 
+                    // 주민번호 판별 (6자리-7자리 또는 13자리)
+                    else if (idPattern.test(numbersOnly) || numbersOnly.length === 13) {
+                        item.type = 'id';
+                    } 
+                    // 이름 판별 (한글 2-4자리)
+                    else if (namePattern.test(item.value)) {
+                        item.type = 'name';
                     }
+                });
+                
+                // 타입에 따라 할당
+                items.forEach(item => {
+                    if (item.type === 'name') {
+                        name = item.value;
+                    } else if (item.type === 'phone') {
+                        phone = item.value;
+                    } else if (item.type === 'id') {
+                        idNumber = item.value;
+                    }
+                });
+                
+                // 이름이 판별되지 않은 경우, 전화번호나 주민번호가 아닌 항목을 이름으로 처리
+                if (!name) {
+                    items.forEach(item => {
+                        if (item.type === 'unknown' && !phonePattern.test(item.value.replace(/[^\d]/g, '')) && !idPattern.test(item.value.replace(/[^\d]/g, ''))) {
+                            name = item.value;
+                        }
+                    });
                 }
+                
+                // 법정대리인 이름 저장
+                customerInfo['법정대리인이름'] = name;
                 
                 // 전화번호 포맷 정규화
                 if (phone) {

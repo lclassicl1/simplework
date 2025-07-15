@@ -1878,6 +1878,23 @@
                     }
                 });
                 
+                // 미성년자인 경우 법정대리인 정보 필수 체크
+                if (customerInfo['미성년자여부'] === 'Y') {
+                    const guardianFields = ['법정대리인이름', '법정대리인연락처', '법정대리인주민번호'];
+                    const emptyGuardianFields = [];
+                    
+                    guardianFields.forEach(field => {
+                        if (!customerInfo[field] || customerInfo[field].trim() === '') {
+                            emptyGuardianFields.push(field);
+                        }
+                    });
+                    
+                    if (emptyGuardianFields.length > 0) {
+                        const missingGuardianItems = emptyGuardianFields.join(', ');
+                        alert(`미성년자 고객입니다. 다음 법정대리인 정보가 비어있습니다: ${missingGuardianItems}\n 어드민 메모를 확인해보세요.`);
+                    }
+                }
+                
                 if (emptyFields.length > 0) {
                     const missingItems = emptyFields.join(', ');
                     alert(`다음 항목들이 비어있습니다: ${missingItems}\n 어드민 메모를 확인해보세요.`);
