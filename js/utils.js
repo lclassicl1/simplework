@@ -2059,3 +2059,77 @@ const HistoryManager = {
 
 // 전역으로 노출
 window.HistoryManager = HistoryManager;
+
+// 출시색상 검색 관련 함수들
+
+/**
+ * 모델명 정규화 함수 (iPhone16 → 아이폰16)
+ * @param {string} modelName - 모델명
+ * @returns {string} - 정규화된 모델명
+ */
+function normalizeModelName(modelName) {
+    const normalized = modelName.toLowerCase()
+        .replace(/iphone/g, '아이폰')
+        .replace(/galaxy/g, '갤럭시')
+        .replace(/samsung/g, '삼성')
+        .replace(/\s+/g, '');
+    
+    return normalized;
+}
+
+/**
+ * 모델 색상 검색 함수
+ * @param {string} searchTerm - 검색어
+ * @returns {Array} - 검색 결과 배열
+ */
+function searchModelColors(searchTerm) {
+    if (!searchTerm || searchTerm.trim() === '') {
+        return [];
+    }
+    
+    const normalizedSearch = normalizeModelName(searchTerm);
+    const results = [];
+    
+    for (const [model, colors] of Object.entries(MODEL_COLORS)) {
+        const normalizedModel = normalizeModelName(model);
+        
+        if (normalizedModel.includes(normalizedSearch) || 
+            normalizedSearch.includes(normalizedModel)) {
+            results.push({
+                model: model,
+                colors: colors
+            });
+        }
+    }
+    
+    return results;
+}
+
+/**
+ * 출시색상 검색 결과 표시 함수
+ * @param {Array} results - 검색 결과 배열
+ */
+function displayModelColorResults(results) {
+    const searchResults = document.getElementById('modelSearchResults');
+    if (!searchResults) return;
+    
+    if (results.length === 0) {
+        searchResults.style.display = 'none';
+        return;
+    }
+    
+    let html = '';
+    results.forEach(result => {
+        html += `<div class="model-result" style="padding: 10px; border-bottom: 1px solid #eee;">`;
+        html += `<div style="font-weight: bold; margin-bottom: 5px; color: #333;">${result.model}</div>`;
+        html += `<div style="display: flex; flex-wrap: wrap; gap: 8px;">`;
+        result.colors.forEach(color => {
+            html += `<span style="padding: 4px 8px; background: #f5f5f5; border-radius: 12px; font-size: 12px; color: #555;">${color}</span>`;
+        });
+        html += `</div>`;
+        html += `</div>`;
+    });
+    
+    searchResults.innerHTML = html;
+    searchResults.style.display = 'block';
+}
