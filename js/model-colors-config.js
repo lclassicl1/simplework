@@ -28,6 +28,7 @@ const MODEL_COLORS = {
     // 갤럭시 A 시리즈
     "갤럭시A16": ["라이트 그린 <span class='color-dot' style='background-color: #90EE90;'></span>", "블랙 <span class='color-dot' style='background-color: #000000;'></span>", "라이트 그레이 <span class='color-dot' style='background-color: #D3D3D3;'></span>"],
     "갤럭시퀀텀5": ["어썸 네이비 <span class='color-dot' style='background-color: #000080;'></span>", "어썸 아이스블루 <span class='color-dot' style='background-color: #87CEEB;'></span>", "어썸 라일락 <span class='color-dot' style='background-color: #E6E6FA;'></span>", "어썸 레몬 <span class='color-dot' style='background-color: #FFFACD;'></span>"],
+    "갤럭시A36": ["어썸 블랙 <span class='color-dot' style='background-color: #000000;'></span>", "어썸 화이트 <span class='color-dot' style='background-color: #FFFFFF;'></span>", "어썸 라임 <span class='color-dot' style='background-color: #32CD32;'></span>", "어썸 라벤더 <span class='color-dot' style='background-color: #E6E6FA;'></span>"],
 
     //갤럭시 M 시리즈
     "갤럭시와이드8": ["블랙 <span class='color-dot' style='background-color: #000000;'></span>", "라이트 핑크 <span class='color-dot' style='background-color: #FFB6C1;'></span>", "라이트 그린 <span class='color-dot' style='background-color: #90EE90;'></span>"]
