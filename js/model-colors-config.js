@@ -5,6 +5,7 @@ const MODEL_COLORS = {
     "아이폰16플러스": ["울트라 마린 <span class='color-dot' style='background-color: #1E3A8A;'></span>", "틸 <span class='color-dot' style='background-color: #0F766E;'></span>", "핑크 <span class='color-dot' style='background-color: #F472B6;'></span>", "화이트 <span class='color-dot' style='background-color: #FFFFFF;'></span>", "블랙 <span class='color-dot' style='background-color: #000000;'></span>"],
     "아이폰16프로": ["데저트 티타늄 <span class='color-dot' style='background-color: #D2B48C;'></span>", "내추럴 티타늄 <span class='color-dot' style='background-color: #C0C0C0;'></span>", "화이트 티타늄 <span class='color-dot' style='background-color: #F5F5F5;'></span>", "블랙 티타늄 <span class='color-dot' style='background-color: #1F2937;'></span>"],
     "아이폰16프로맥스": ["데저트 티타늄 <span class='color-dot' style='background-color: #D2B48C;'></span>", "내추럴 티타늄 <span class='color-dot' style='background-color: #C0C0C0;'></span>", "화이트 티타늄 <span class='color-dot' style='background-color: #F5F5F5;'></span>", "블랙 티타늄 <span class='color-dot' style='background-color: #1F2937;'></span>"],
+    "아이폰16e": ["화이트 <span class='color-dot' style='background-color: #FFFFFF;'></span>", "블랙 <span class='color-dot' style='background-color: #000000;'></span>"],
     
     // 갤럭시 시리즈
     "갤럭시S24": ["코발트 바이올렛 <span class='color-dot' style='background-color: #7C3AED;'></span>", "앰버 옐로우 <span class='color-dot' style='background-color: #F59E0B;'></span>", "마블 그레이 <span class='color-dot' style='background-color: #6B7280;'></span>", "오닉스 블랙 <span class='color-dot' style='background-color: #1F2937;'></span>"],
