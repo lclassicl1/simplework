@@ -2282,8 +2282,24 @@
             const outputContainer = document.getElementById('outputContainer');
             outputContainer.style.display = 'block';
             
-            // Reset to the original structure with proper agency labels for both 럭스 and 드블랙
+            // Reset to the original structure with all agency textareas
             outputContainer.innerHTML = `
+                <!-- 큐브 전용 추가 textarea (재고/개통/우주패스) -->
+                <div id="cubeExtraOutputs" style="display:none;">
+                    <div class="form-group">
+                        <label for="cubeStockText">큐브 재고요청양식:</label>
+                        <textarea id="cubeStockText" class="output-textarea compact-textarea" placeholder="재고 요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="cubeOpenText">큐브 개통요청양식:</label>
+                        <textarea id="cubeOpenText" class="output-textarea compact-textarea" placeholder="개통 요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="cubeUniverseText">큐브 우주패스양식:</label>
+                        <textarea id="cubeUniverseText" class="output-textarea compact-textarea" placeholder="우주패스 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                </div>
+                
                 <!-- 럭스 전용 추가 textarea (신조/재고/개통) -->
                 <div id="luxExtraOutputs" style="display:none;">
                     <div class="form-group">
@@ -2315,7 +2331,125 @@
                         <textarea id="dblackMemoText" class="output-textarea compact-textarea" placeholder="개통 요청 양식이 여기에 표시됩니다."></textarea>
                     </div>
                 </div>
+                
+                <!-- ACT(택배) 전용 추가 textarea (접수확인/개통요청) -->
+                <div id="actExtraOutputs" style="display:none;">
+                    <div class="form-group">
+                        <label for="actStockText">ACT(택배) 접수확인양식:</label>
+                        <textarea id="actStockText" class="output-textarea compact-textarea act-stock-textarea" placeholder="접수확인 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="actOpenText">ACT(택배) 개통요청양식:</label>
+                        <textarea id="actOpenText" class="output-textarea compact-textarea" placeholder="개통요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                </div>
+                
+                <!-- 비앤컴 전용 추가 textarea (접수확인&신조요청/개통요청) -->
+                <div id="bncomExtraOutputs" style="display:none;">
+                    <div class="form-group">
+                        <label for="bncomStockText">비앤컴 접수확인&신조요청:</label>
+                        <textarea id="bncomStockText" class="output-textarea compact-textarea" placeholder="접수확인&신조요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="bncomOpenText">비앤컴 개통요청:</label>
+                        <textarea id="bncomOpenText" class="output-textarea compact-textarea" placeholder="개통요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                </div>
+                
+                <!-- 휴넷 전용 추가 textarea (접수확인/배송요청/개통요청) -->
+                <div id="hunetExtraOutputs" style="display:none;">
+                    <div class="form-group">
+                        <label for="hunetConfirmText">휴넷 접수확인양식:</label>
+                        <textarea id="hunetConfirmText" class="output-textarea compact-textarea" placeholder="접수확인 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="hunetDeliveryText">휴넷 배송요청양식:</label>
+                        <textarea id="hunetDeliveryText" class="output-textarea compact-textarea" placeholder="배송요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="hunetOpenText">휴넷 개통요청양식:</label>
+                        <textarea id="hunetOpenText" class="output-textarea compact-textarea" placeholder="개통요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                </div>
+                
+                <!-- 밀리언 전용 추가 textarea (신조요청/배정요청/개통요청) -->
+                <div id="millionExtraOutputs" style="display:none;">
+                    <div class="form-group">
+                        <label for="millionRequestText">밀리언 신조요청:</label>
+                        <textarea id="millionRequestText" class="output-textarea compact-textarea" placeholder="신조요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="millionStockText">밀리언 배정요청:</label>
+                        <textarea id="millionStockText" class="output-textarea compact-textarea" placeholder="배정요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="millionMemoText">밀리언 개통요청:</label>
+                        <textarea id="millionMemoText" class="output-textarea compact-textarea" placeholder="개통요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                </div>
+                
+                <!-- 오앤티 전용 추가 textarea (신조요청/배정요청/개통요청) -->
+                <div id="ontExtraOutputs" style="display:none;">
+                    <div class="form-group">
+                        <label for="ontRequestText">오앤티 신조요청:</label>
+                        <textarea id="ontRequestText" class="output-textarea compact-textarea" placeholder="신조요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="ontStockText">오앤티 배정요청:</label>
+                        <textarea id="ontStockText" class="output-textarea compact-textarea" placeholder="배정요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="ontMemoText">오앤티 개통요청:</label>
+                        <textarea id="ontMemoText" class="output-textarea compact-textarea" placeholder="개통요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                </div>
+                
+                <!-- 장천 전용 추가 textarea (배송요청/개통요청) -->
+                <div id="jangcheonExtraOutputs" style="display:none;">
+                    <div class="form-group">
+                        <label for="jangcheonDeliveryText">장천 배송요청:</label>
+                        <textarea id="jangcheonDeliveryText" class="output-textarea compact-textarea" placeholder="배송요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="jangcheonOpenText">장천 개통요청:</label>
+                        <textarea id="jangcheonOpenText" class="output-textarea compact-textarea" placeholder="개통요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                </div>
+                
+                <!-- 한올 전용 추가 textarea (접수확인/배송요청/개통요청) -->
+                <div id="hanolExtraOutputs" style="display:none;">
+                    <div class="form-group">
+                        <label for="hanolConfirmText">한올 접수확인양식:</label>
+                        <textarea id="hanolConfirmText" class="output-textarea compact-textarea" placeholder="접수확인 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="hanolDeliveryText">한올 배송요청양식:</label>
+                        <textarea id="hanolDeliveryText" class="output-textarea compact-textarea" placeholder="배송요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="hanolOpenText">한올 개통요청양식:</label>
+                        <textarea id="hanolOpenText" class="output-textarea compact-textarea" placeholder="개통요청 양식이 여기에 표시됩니다."></textarea>
+                    </div>
+                </div>
+                
                 <style>
+                    /* 큐브 textarea 스타일 */
+                    #cubeStockText {
+                        height: 130px !important;
+                        min-height: 130px;
+                        resize: vertical;
+                    }
+                    #cubeOpenText {
+                        height: 150px !important;
+                        min-height: 150px;
+                        resize: vertical;
+                    }
+                    #cubeUniverseText {
+                        height: 120px !important;
+                        min-height: 120px;
+                        resize: vertical;
+                    }
+                    
                     /* 럭스 텍스트에리어 스타일 */
                     #luxRequestText, #dblackRequestText {
                         height: 130px !important;
@@ -2332,9 +2466,77 @@
                         min-height: 150px;
                         resize: vertical;
                     }
+                    
+                    /* 드블랙 신조요청 textarea 스타일 */
+                    #dblackRequestText {
+                        height: 150px !important;
+                        min-height: 150px;
+                        resize: vertical;
+                    }
+                    
+                    /* 휴넷 textarea 스타일 */
+                    #hunetConfirmText {
+                        height: 150px !important;
+                        min-height: 150px;
+                        resize: vertical;
+                    }
+                    #hunetDeliveryText {
+                        height: 150px !important;
+                        min-height: 150px;
+                        resize: vertical;
+                    }
+                    #hunetOpenText {
+                        height: 150px !important;
+                        min-height: 150px;
+                        resize: vertical;
+                    }
+                    
+                    /* 밀리언 textarea 스타일 */
+                    #millionRequestText {
+                        height: 100px !important;
+                        min-height: 100px;
+                        resize: vertical;
+                    }
+                    
+                    /* 밀리언 배정요청 textarea 스타일 (절반 크기) */
+                    #millionStockText {
+                        height: 100px !important;
+                        min-height: 100px;
+                        resize: vertical;
+                    }
+                    
                     #outputText1 {
                         height: 170px !important;
                         min-height: 170px;
+                    }
+                    
+                    /* 장천 textarea 스타일 */
+                    #jangcheonDeliveryText {
+                        height: 150px !important;
+                        min-height: 150px;
+                        resize: vertical;
+                    }
+                    #jangcheonOpenText {
+                        height: 150px !important;
+                        min-height: 150px;
+                        resize: vertical;
+                    }
+                    
+                    /* 한올 textarea 스타일 */
+                    #hanolConfirmText {
+                        height: 120px !important;
+                        min-height: 120px;
+                        resize: vertical;
+                    }
+                    #hanolDeliveryText {
+                        height: 150px !important;
+                        min-height: 150px;
+                        resize: vertical;
+                    }
+                    #hanolOpenText {
+                        height: 150px !important;
+                        min-height: 150px;
+                        resize: vertical;
                     }
                 </style>
                 <div id="singleOutputContainer">
