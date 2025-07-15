@@ -569,7 +569,7 @@ function parseAddonAndInsuranceEnhanced(addonText) {
             for (const keyword of addonKeywords) {
                 if (cleanItem.toLowerCase().includes(keyword.toLowerCase())) {
                     // 마이스마트콜은 자동으로 마이스마트콜3로 보정
-                    if (keyword === '마이스마트콜' && cleanItem.toLowerCase() === '마이스마트콜') {
+                    if (keyword === '마이스마트콜' && cleanItem.toLowerCase().includes('마이스마트콜')) {
                         cleanItem = '마이스마트콜3';
                     }
                     

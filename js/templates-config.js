@@ -55,9 +55,9 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 1. 고객명 : ${info.고객명 || info.가입자명 || ''}
 2. 전화번호 : ${info.전화번호 || info.개통번호 || ''}
 3. 주민번호전체 : ${formatBirthDate(info.주민번호 || info.생년월일 || '')}
-4. 법대명 : ${info.법정대리인이름 || ''}
-5. 법대주민번호전체 : ${info.법정대리인주민번호 || ''}
-6. 법대연락처 : ${info.법정대리인연락처 || ''}
+4. 법대명 : ${info.법정대리인이름 || 'X'}
+5. 법대주민번호전체 : ${info.법정대리인주민번호 || 'X'}
+6. 법대연락처 : ${info.법정대리인연락처 || 'X'}
 7. 전통신사 : ${info.현재통신사 || ''}
 8. 모델명 : ${info.모델명 || ''} ${info.용량 || ''}
 9. 일련번호 : ${info.단말기일련번호 || ''}
@@ -90,7 +90,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                         if (isMinor) {
                             const idInfo = info.주민번호 || info.생년월일 || '';
                             const legalGuardianName = info.법정대리인이름 || '';
-                            const legalGuardianContact = info.법정대리인연락처 || '';
+                            const legalGuardianContact = info.법정대리인주민번호 || '';
                             
                             return `■미성년자 번호이동 & 기변 신조요청■
 ＃고객명	${name}
@@ -218,6 +218,16 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                         let benefitInfo = [insurance, addon, addon2, welfare].filter(item => item && item.trim()).join(' / ');
                         if (!benefitInfo) benefitInfo = 'X';
                         
+                        // 미성년자인 경우 법정대리인 정보 추가
+                        const isMinor = info.미성년자여부 === 'Y';
+                        let guardianInfo = '';
+                        if (isMinor) {
+                            guardianInfo = `
+▶법정대리인이름 : ${info.법정대리인이름 || ''}
+▶법정대리인연락처 : ${info.법정대리인연락처 || ''}
+▶법정대리인주민번호 : ${info.법정대리인주민번호 || ''}`;
+                        }
+                        
                         return `▶가입유형 / 전통신사 : ${subscriptionType} / ${currentTelecom}
 ▶고객명 : ${name}
 ▶생년월일 : ${birthDate}
@@ -234,7 +244,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 ▶프리 금액 : ${freeAmount}
 ▶전환 지원금 (MNP만 적용) : ${transferSupport}
 ▶할부원금 (기재 안할시 현금완납) : ${installmentPrincipal}
-▶*보험 / *부가 / *복지 : ${benefitInfo}
+▶*보험 / *부가 / *복지 : ${benefitInfo}${guardianInfo}
 ▶클럽기변 진행 여부 : X
 ▶판매처 / 연락처 : 라온아이/010-4671-4834`;
                     }
@@ -461,6 +471,16 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                             addonInfo = 'X';
                         }
                         
+                        // 미성년자인 경우 법정대리인 정보 추가
+                        const isMinor = info.미성년자여부 === 'Y';
+                        let guardianInfo = '';
+                        if (isMinor) {
+                            guardianInfo = `
+법정대리인이름 : ${info.법정대리인이름 || ''}
+법정대리인연락처 : ${info.법정대리인연락처 || ''}
+법정대리인주민번호 : ${info.법정대리인주민번호 || ''}`;
+                        }
+                        
                         return `개통요청 / 전문화	
 유형: ${naSubscriptionType}
 고객명 : ${naName}
@@ -475,7 +495,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 원금 : ${principalInfo}	
 개월 : ${monthsInfo}
 부가 : ${addonInfo}
-보험 : ${info['보험'] || 'X'}`;
+보험 : ${info['보험'] || 'X'}${guardianInfo}`;
                     }
                 }
             },
@@ -527,6 +547,16 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                         // 보험/부가서비스 정보 구성
                         const serviceInfo = additionalServices.length > 0 ? additionalServices.join(' / ') : 'X';
                         
+                        // 미성년자인 경우 법정대리인 정보 추가
+                        const isMinor = info.미성년자여부 === 'Y';
+                        let guardianInfo = '';
+                        if (isMinor) {
+                            guardianInfo = `
+법정대리인이름>${info.법정대리인이름 || ''}
+법정대리인연락처>${info.법정대리인연락처 || ''}
+법정대리인주민번호>${info.법정대리인주민번호 || ''}`;
+                        }
+                        
                         return `★판매점명★에이치엘
 개통유형>${info.가입유형 || ''}
 고객명>${info.고객명 || ''}
@@ -542,7 +572,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 할부개월수>${info.할부현금여부 === '할부' ? (info.할부개월수 || '24') : 'X'}
 프리할부>${info.프리할부 || ''}
 할부원금>${info.할부현금여부 === '할부' ? (info.최종구매가 || '0') : '0'}
-번호이동인증>	`;
+번호이동인증>	${guardianInfo}`;
                     }
                 }
             },
@@ -742,6 +772,16 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
                         }
                         const servicesText = additionalServices.length > 0 ? additionalServices.join(' / ') : '';
                         
+                        // 미성년자인 경우 법정대리인 정보 추가
+                        const isMinor = info.미성년자여부 === 'Y';
+                        let guardianInfo = '';
+                        if (isMinor) {
+                            guardianInfo = `
+법정대리인이름 : ${info.법정대리인이름 || ''}
+법정대리인연락처 : ${info.법정대리인연락처 || ''}
+법정대리인주민번호 : ${info.법정대리인주민번호 || ''}`;
+                        }
+                        
                         return `개통요청(${info.가입유형 || ''})
 현통신사 : ${info.현재통신사 || ''}
 이름 : ${info.가입자명 || info.고객명 || ''}
@@ -751,7 +791,7 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
 유심 : ${usimStatus}
 요금제 : ${info.요금제 || ''}
 할부원금 (프리할부) / 개월수 : ${paymentInfo}
-부가서비스 : ${servicesText}`;
+부가서비스 : ${servicesText}${guardianInfo}`;
                     }
                 }
             },
@@ -825,7 +865,7 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
 ㅇ개통번호 : ${info.개통번호 || info.전화번호 || ''}
 ㅇ주민번호(풀로) : ${info.주민번호 || info.생년월일 || ''}
 ㅇ전통신사&인증값 : ${carrierAuth}
-ㅇ법대이름 : ${info.법정대리인명 || info.보호자명 || ''}
+ㅇ법대이름 : ${info.법정대리인이름 || info.보호자명 || ''}
 ㅇ법대 연락처 : ${info.법정대리인연락처 || info.보호자연락처 || ''}
 ㅇ법대 주민번호 : ${info.법정대리인주민번호 || info.보호자주민번호 || ''}
 ㅇ고객청구주소 : ${info.청구주소 || info.배송주소지 || info.택배주소 || ''}
@@ -981,12 +1021,21 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                             prepayment = '0';
                         }
                         
+                        // 미성년자 정보 추가
+                        let minorInfo = '';
+                        if (info.미성년자여부 === 'Y') {
+                            minorInfo = `
+법정대리인명 : ${info.법정대리인이름 || info.보호자명 || ''}
+법정대리인연락처 : ${info.법정대리인연락처 || info.보호자연락처 || ''}
+법정대리인주민번호 : ${info.법정대리인주민번호 || info.보호자주민번호 || ''}`;
+                        }
+                        
                         return `ㅇ 개통요청 (제휴)/케이뱅크
 고객명 : ${openName}
 생년월일 : ${formatBirthDate(openJumin)}
 개통번호 : ${openPhone}
-가입유형 : ${openSubscriptionType}
-모델명 : ${model} / ${color}
+가입유형 : ${openSubscriptionType}${minorInfo}
+모델명 : ${model} ${info.용량 || ''} / ${color}
 일련번호 : ${serialNumber}
 유심번호 : ${usimNumber}
 요금제 : ${plan}
@@ -1088,12 +1137,21 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                         // 보험/부가서비스 정보 구성
                         const serviceInfo = additionalServices.length > 0 ? additionalServices.join(' / ') : '';
                         
+                        // 미성년자 정보 추가
+                        let minorInfo = '';
+                        if (info.미성년자여부 === 'Y') {
+                            minorInfo = `
+▶법정대리인명 : ${info.법정대리인이름 || info.보호자명 || ''}
+▶법정대리인연락처 : ${info.법정대리인연락처 || info.보호자연락처 || ''}
+▶법정대리인주민번호 : ${info.법정대리인주민번호 || info.보호자주민번호 || ''}`;
+                        }
+                        
                         return `★정책명
 ▶판매점 : 신풍
 ▶고객명 : ${info.고객명 || ''}
 ▶개통번호 : ${info.전화번호 || ''}
 ▶주민번호 : ${formatBirthDate(info.주민번호 || info.생년월일 || '')}
-▶전통신사 : ${info.현재통신사 || ''}
+▶전통신사 : ${info.현재통신사 || ''}${minorInfo}
 ▶모델/색상 : ${info.모델명 || ''} ${info.용량 || ''} / ${info.색상 || ''}
 ▶단말일련번호 : ${info.단말기일련번호 || ''}
 ▶유심(즉납/후납/기존) : ${usimType}
@@ -1156,11 +1214,20 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                         const subscriptionType = info['가입유형'] || '';
                         const subscriptionTypeWithCarrier = info['현재통신사'] ? `${subscriptionType}(${info['현재통신사']})` : subscriptionType;
                         
+                        // 미성년자 정보 추가
+                        let minorInfo = '';
+                        if (info.미성년자여부 === 'Y') {
+                            minorInfo = `
+법정대리인명 : ${info.법정대리인이름 || info.보호자명 || ''}
+법정대리인연락처 : ${info.법정대리인연락처 || info.보호자연락처 || ''}
+법정대리인주민번호 : ${info.법정대리인주민번호 || info.보호자주민번호 || ''}`;
+                        }
+                        
                         // 기존 조건부 로직 그대로 복원
                         if (info['공시선약여부'] === '공시지원' && info['할부현금여부'] === '현금') {
                             return `판매점명 : 에이치엘
 고객명 : ${name}	
-개통번호 : ${contact}	
+개통번호 : ${contact}${minorInfo}	
 모델명 / 색상 / 일련번호 : ${modelColor}	
 유심 일련번호 :	${info['유심일련번호'] || ''}	
 요금제명(혜택) : ${plan}	
@@ -1178,7 +1245,7 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                         } else if (info['공시선약여부'] === '공시지원' && info['할부현금여부'] === '할부') {
                             return `판매점명 : 에이치엘
 고객명 : ${name}	
-개통번호 : ${contact}	
+개통번호 : ${contact}${minorInfo}	
 모델명 / 색상 / 일련번호 : ${modelColor}	
 유심 일련번호 :	${info['유심일련번호'] || ''}	
 요금제명(혜택) : ${plan}	
@@ -1197,7 +1264,7 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                         } else if ((info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') && info['할부현금여부'] === '현금') {
                             return `판매점명 : 에이치엘
 고객명 : ${name}	
-개통번호 : ${contact}	
+개통번호 : ${contact}${minorInfo}	
 모델명 / 색상 / 일련번호 : ${modelColor}	
 유심 일련번호 :	${info['유심일련번호'] || ''}	
 요금제명(혜택) : ${plan}	
@@ -1213,7 +1280,7 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                         } else if ((info['공시선약여부'] === '선택약정' || info['공시선약여부'] === '선약') && info['할부현금여부'] === '할부') {
                             return `판매점명 : 에이치엘
 고객명 : ${name}	
-개통번호 : ${contact}	
+개통번호 : ${contact}${minorInfo}	
 모델명 / 색상 / 일련번호 : ${modelColor}	
 유심 일련번호 :	${info['유심일련번호'] || ''}	
 요금제명(혜택) : ${plan}	
@@ -1394,10 +1461,19 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                                              installmentInfo = paymentType ? `${paymentType} (${finalPrice})` : '';
                                          }
                                          
+                                         // 미성년자 정보 추가
+                                         let minorInfo = '';
+                                         if (info.미성년자여부 === 'Y') {
+                                             minorInfo = `
+◆ 법정대리인명 : ${info.법정대리인이름 || info.보호자명 || ''}
+◆ 법정대리인연락처 : ${info.법정대리인연락처 || info.보호자연락처 || ''}
+◆ 법정대리인주민번호 : ${info.법정대리인주민번호 || info.보호자주민번호 || ''}`;
+                                         }
+                                         
                                          return `◆ 개통 조건 : ${contractMonths} ${contractType} / ${joinType}
 ◆ 성함: ${customerName}
 ◆ 주민번호 13자리 : ${birthDate}
-◆ 이전 통신사 : ${currentTelecom}
+◆ 이전 통신사 : ${currentTelecom}${minorInfo}
 ◆ 모델 : ${model}-${capacity}
 ◆ 색상 : ${color} / ${serialNumber}
 ◆ 요금제 : ${plan}
@@ -1481,13 +1557,22 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
                         // 보험/부가서비스 정보 구성
                         const serviceInfo = additionalServices.length > 0 ? additionalServices.join(' / ') : 'X';
                         
+                        // 미성년자 정보 추가
+                        let minorInfo = '';
+                        if (info.미성년자여부 === 'Y') {
+                            minorInfo = `
+법정대리인명 : ${info.법정대리인이름 || info.보호자명 || ''}
+법정대리인연락처 : ${info.법정대리인연락처 || info.보호자연락처 || ''}
+법정대리인주민번호 : ${info.법정대리인주민번호 || info.보호자주민번호 || ''}`;
+                        }
+                        
                         return `판매자 : 라온
 판매자연락처 : 010-4671-4834
 
 고객명 : ${info.고객명 || info.가입자명 || ''}
 가입유형 : ${info.가입유형 || ''}${info.현재통신사 ? '(' + info.현재통신사 + ')' : ''}
 생년월일 : ${info.생년월일 || info.주민번호 || ''}
-개통번호 : ${info.개통번호 || info.전화번호 || ''}
+개통번호 : ${info.개통번호 || info.전화번호 || ''}${minorInfo}
 모델명 : ${info.모델명 || ''} ${info.용량 || ''}
 색상 : ${info.색상 || ''}
 일련번호 : ${info.단말기일련번호 || ''}
