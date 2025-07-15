@@ -1687,3 +1687,375 @@ if (document.readyState === 'loading') {
 }
 
 console.log('✅ Utils.js 로드 완료 - 모든 유틸리티 함수들이 통합되었습니다.'); 
+
+// 대리점별 textarea 관리를 위한 유틸리티 클래스
+const TextareaManager = {
+    // 모든 textarea 초기화
+    clearAllTextareas() {
+        const outputContainer = document.getElementById('outputContainer');
+        if (!outputContainer) return;
+        
+        const allTextareas = outputContainer.querySelectorAll('textarea');
+        allTextareas.forEach(textarea => {
+            textarea.value = '';
+        });
+    },
+    
+    // 모든 ExtraOutputs 컨테이너 숨기기
+    hideAllExtraOutputs() {
+        const outputContainer = document.getElementById('outputContainer');
+        if (!outputContainer) return;
+        
+        const allExtraOutputs = outputContainer.querySelectorAll('[id$="ExtraOutputs"]');
+        allExtraOutputs.forEach(container => {
+            container.style.display = 'none';
+        });
+    },
+    
+    // 특정 대리점의 ExtraOutputs 컨테이너 표시
+    showAgencyExtraOutputs(agencyName) {
+        const outputContainer = document.getElementById('outputContainer');
+        if (!outputContainer) return;
+        
+        // 먼저 모든 ExtraOutputs 숨기기
+        this.hideAllExtraOutputs();
+        
+        // 해당 대리점의 ExtraOutputs 표시
+        const agencyExtraOutputs = document.getElementById(`${agencyName.toLowerCase()}ExtraOutputs`);
+        if (agencyExtraOutputs) {
+            agencyExtraOutputs.style.display = 'block';
+        }
+    },
+    
+    // 대리점별 textarea ID 매핑 (필요시 확장 가능)
+    getAgencyTextareaIds(agencyName) {
+        const textareaMappings = {
+            '큐브': ['cubeStockText', 'cubeOpenText', 'cubeUniverseText'],
+            '럭스': ['luxRequestText', 'luxStockText', 'luxMemoText'],
+            '드블랙': ['dblackRequestText', 'dblackStockText', 'dblackMemoText'],
+            'ACT(택배)': ['actStockText', 'actOpenText'],
+            '비앤컴': ['bncomStockText', 'bncomOpenText'],
+            '휴넷': ['hunetConfirmText', 'hunetDeliveryText', 'hunetOpenText'],
+            '밀리언': ['millionRequestText', 'millionStockText', 'millionMemoText'],
+            '오앤티': ['ontRequestText', 'ontStockText', 'ontMemoText'],
+            '장천': ['jangcheonDeliveryText', 'jangcheonOpenText'],
+            '한올': ['hanolConfirmText', 'hanolDeliveryText', 'hanolOpenText']
+        };
+        
+        return textareaMappings[agencyName] || [];
+    },
+    
+    // 대리점별 textarea에 값 설정
+    setAgencyTextareaValues(agencyName, values) {
+        const textareaIds = this.getAgencyTextareaIds(agencyName);
+        textareaIds.forEach((id, index) => {
+            const textarea = document.getElementById(id);
+            if (textarea && values[index] !== undefined) {
+                textarea.value = values[index];
+            }
+        });
+    }
+};
+
+// 모두 지우기 함수 (동적 방식으로 개선)
+function clearAll() {
+    // 입력 필드 초기화
+    document.getElementById('inputText').value = '';
+    document.getElementById('deviceSerial').value = '';
+    document.getElementById('simSerial').value = '';
+    
+    // 엑셀 파일 입력 초기화 (excel-manager.js와 연동)
+    if (typeof clearExcelInputs === 'function') {
+        clearExcelInputs();
+    } else {
+        // fallback: 직접 초기화
+        document.getElementById('excelFile').value = '';
+        document.getElementById('extractCount').textContent = '';
+        
+        const excelFile2 = document.getElementById('excelFile2');
+        if (excelFile2) excelFile2.value = '';
+        
+        const extractCount2Element = document.getElementById('extractCount2');
+        if (extractCount2Element) {
+            extractCount2Element.textContent = '';
+        }
+        
+        const downloadBtn = document.getElementById('downloadDeliveryBtn');
+        if (downloadBtn) {
+            downloadBtn.style.display = 'none';
+            downloadBtn.removeAttribute('data-telecom');
+            downloadBtn.removeAttribute('data-agency');
+            downloadBtn.removeAttribute('data-count');
+        }
+    }
+    
+    // 통신사 및 대리점 선택 초기화
+    const telecomSelect = document.getElementById('telecom');
+    const agencySelect = document.getElementById('agency');
+    const currentTelecom = telecomSelect.value;
+    const currentAgency = agencySelect.value;
+    
+    // 출력 컨테이너 초기화 (TextareaManager 사용)
+    const outputContainer = document.getElementById('outputContainer');
+    outputContainer.style.display = 'block';
+    
+    // TextareaManager를 사용하여 모든 textarea 초기화 및 컨테이너 숨기기
+    TextareaManager.clearAllTextareas();
+    TextareaManager.hideAllExtraOutputs();
+    
+    // 기본 출력 컨테이너 표시
+    const singleOutputContainer = document.getElementById('singleOutputContainer');
+    const splitOutputContainer = document.getElementById('splitOutputContainer');
+    const keyValueTableContainer = document.getElementById('keyValueTableContainer');
+    
+    if (singleOutputContainer) singleOutputContainer.style.display = 'block';
+    if (splitOutputContainer) splitOutputContainer.style.display = 'none';
+    if (keyValueTableContainer) keyValueTableContainer.style.display = 'none';
+    
+    // Reset telecom and agency selects after updating the output container
+    telecomSelect.value = '';
+    agencySelect.innerHTML = '<option value="">대리점을 선택하세요</option>';
+    agencySelect.disabled = true;
+    
+    // 더블클릭 이벤트 설정
+    setupDoubleClickCopy();
+    
+    // 입력 필드에 포커스
+    document.getElementById('inputText').focus();
+    
+    // If the current selection was 럭스 or 드블랙, re-enable the agency select
+    if (currentTelecom === 'SK' && (currentAgency === '럭스' || currentAgency === '드블랙')) {
+        updateAgencies();
+        document.getElementById('agency').value = currentAgency;
+    }
+}
+
+// 전역으로 노출
+window.TextareaManager = TextareaManager;
+window.clearAll = clearAll; 
+
+// 변환 이력 관리 유틸리티
+const HistoryManager = {
+    // 변환 이력 저장
+    saveToHistory(customerInfo, telecom, agency) {
+        try {
+            let history = JSON.parse(localStorage.getItem('conversionHistory') || '[]');
+            
+            // 원본 텍스트가 없으면 저장하지 않음 (불필요한 데이터 방지)
+            const inputText = document.getElementById('inputText');
+            if (inputText && inputText.value.trim()) {
+                customerInfo.원본텍스트 = inputText.value.trim();
+            } else {
+                return; // 원본 텍스트가 없으면 저장하지 않음
+            }
+            
+            // 개선된 중복 체크 (더 유연한 매칭)
+            const exists = history.some(item => {
+                const currentName = String(customerInfo.고객명 || '').trim();
+                const currentPhone = String(customerInfo.전화번호 || '').trim();
+                const currentAgency = String(agency || '').trim();
+                
+                const savedName = String(item.customerInfo.고객명 || '').trim();
+                const savedPhone = String(item.customerInfo.전화번호 || '').trim();
+                const savedAgency = String(item.agency || '').trim();
+                
+                // 이름과 전화번호가 모두 일치하고, 동일한 대리점인 경우에만 중복으로 판단
+                // 전화번호는 하이픈 제거 후 비교
+                const normalizePhone = (phone) => phone.replace(/[-\s]/g, '');
+                const normalizedCurrentPhone = normalizePhone(currentPhone);
+                const normalizedSavedPhone = normalizePhone(savedPhone);
+                
+                return currentName && savedName && 
+                       currentName === savedName && 
+                       normalizedCurrentPhone && normalizedSavedPhone &&
+                       normalizedCurrentPhone === normalizedSavedPhone && 
+                       currentAgency === savedAgency;
+            });
+            
+            if (!exists) {
+                // 최대 50개까지 저장
+                if (history.length >= 50) {
+                    history.pop(); // 가장 오래된 항목 제거
+                }
+                
+                // 새 항목 추가 (최신순으로 정렬하기 위해 unshift 사용)
+                history.unshift({
+                    id: Date.now(),
+                    customerInfo: customerInfo,
+                    telecom: telecom,
+                    agency: agency,
+                    timestamp: new Date().toISOString()
+                });
+                
+                localStorage.setItem('conversionHistory', JSON.stringify(history));
+            }
+        } catch (e) {
+            console.error('이력 저장 중 오류 발생:', e);
+        }
+    },
+    
+    // 변환 이력 불러오기
+    loadHistory() {
+        try {
+            const history = JSON.parse(localStorage.getItem('conversionHistory') || '[]');
+            const historyList = document.getElementById('historyList');
+            
+            if (!historyList) return;
+            
+            if (history.length === 0) {
+                historyList.innerHTML = '<div class="no-history">저장된 이력이 없습니다.</div>';
+                return;
+            }
+            
+            historyList.innerHTML = history.map(item => `
+                <div class="history-item" onclick="HistoryManager.loadFromHistory('${item.id}')">
+                    <div class="history-header">
+                        <span class="history-name">${item.customerInfo.고객명 || '이름 없음'}</span>
+                        <span class="history-phone">${item.customerInfo.전화번호 || item.customerInfo.연락처 || '전화번호 없음'}</span>
+                        <span class="history-time">${new Date(item.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div class="history-details">
+                        <span class="history-model">${item.customerInfo.모델명 || ''} ${item.customerInfo.색상 || ''}</span>
+                        <span class="history-plan">${item.customerInfo.요금제 || ''}</span>
+                    </div>
+                    <div class="history-footer">
+                        <span class="history-agency">${item.telecom} / ${item.agency}</span>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error('이력 불러오기 중 오류 발생:', e);
+        }
+    },
+    
+    // 이력에서 불러오기 (개선된 버전)
+    loadFromHistory(id) {
+        try {
+            const history = JSON.parse(localStorage.getItem('conversionHistory') || '[]');
+            const item = history.find(item => item.id.toString() === id.toString());
+            
+            if (item) {
+                // 통신사와 대리점 선택
+                const telecomSelect = document.getElementById('telecom');
+                const agencySelect = document.getElementById('agency');
+                
+                // 현재 선택된 값 저장
+                const currentTelecom = telecomSelect.value;
+                const currentAgency = agencySelect.value;
+                
+                // 새 값으로 설정
+                telecomSelect.value = item.telecom;
+                
+                // 대리점이 로드될 때까지 기다렸다가 선택 (타임아웃 추가)
+                let attempts = 0;
+                const maxAttempts = 100; // 최대 5초 (50ms * 100)
+                
+                const checkAgency = setInterval(() => {
+                    attempts++;
+                    
+                    // updateAgencies 함수가 존재하는지 확인
+                    if (typeof updateAgencies === 'function') {
+                        updateAgencies();
+                    }
+                    
+                    // 대리점이 로드되었는지 확인 (옵션 목록에 있는지)
+                    const agencyOptions = Array.from(agencySelect.options).map(opt => opt.value);
+                    if (agencyOptions.includes(item.agency)) {
+                        clearInterval(checkAgency);
+                        
+                        // 대리점 선택
+                        agencySelect.value = item.agency;
+                        
+                        // 입력 필드 채우기
+                        const info = item.customerInfo;
+                        const inputText = document.getElementById('inputText');
+                        const deviceSerial = document.getElementById('deviceSerial');
+                        const simSerial = document.getElementById('simSerial');
+                        
+                        // 원본 텍스트가 없으면 기본 텍스트 생성
+                        if (!info.원본텍스트) {
+                            let defaultText = '';
+                            if (info.고객명) defaultText += `고객명: ${info.고객명}\n`;
+                            if (info.전화번호) defaultText += `전화번호: ${info.전화번호}\n`;
+                            if (info.모델명) defaultText += `모델명: ${info.모델명}\n`;
+                            if (info.색상) defaultText += `색상: ${info.색상}\n`;
+                            if (info.요금제) defaultText += `요금제: ${info.요금제}\n`;
+                            if (info.가입유형) defaultText += `가입유형: ${info.가입유형}\n`;
+                            if (info.할부현금여부) defaultText += `할부/현금: ${info.할부현금여부}\n`;
+                            if (info.최종구매가) defaultText += `최종구매가: ${info.최종구매가}원\n`;
+                            
+                            inputText.value = defaultText.trim();
+                        } else {
+                            inputText.value = info.원본텍스트 || '';
+                        }
+                        
+                        if (deviceSerial) deviceSerial.value = info.단말기일련번호 || '';
+                        if (simSerial) simSerial.value = info.유심일련번호 || '';
+                        
+                        // 변환 실행 (안전한 방식으로 개선)
+                        setTimeout(() => {
+                            this.safeConvertFromHistory(item.agency);
+                            this.closeHistoryPopup();
+                        }, 300);
+                    } else if (attempts >= maxAttempts) {
+                        // 타임아웃 발생 시 처리
+                        clearInterval(checkAgency);
+                        console.error('대리점 로드 타임아웃:', item.agency);
+                        alert(`대리점 "${item.agency}" 로드에 실패했습니다. 수동으로 선택해주세요.`);
+                    }
+                }, 50);
+            }
+        } catch (e) {
+            console.error('이력 불러오기 중 오류 발생:', e);
+            alert('이력 불러오기에 실패했습니다.');
+        }
+    },
+    
+    // 이력에서 안전하게 변환 실행하는 함수
+    safeConvertFromHistory(agencyName) {
+        try {
+            // 먼저 해당 대리점의 ExtraOutputs 컨테이너 표시
+            if (TextareaManager && TextareaManager.showAgencyExtraOutputs) {
+                TextareaManager.showAgencyExtraOutputs(agencyName);
+            }
+            
+            // 변환 실행
+            if (typeof convertFormat === 'function') {
+                convertFormat();
+            } else {
+                console.error('convertFormat 함수를 찾을 수 없습니다.');
+            }
+        } catch (error) {
+            console.error('이력에서 변환 실행 중 오류:', error);
+            alert('이력에서 변환 실행 중 오류가 발생했습니다: ' + error.message);
+        }
+    },
+    
+    // 이력 팝업 열기
+    openHistoryPopup() {
+        const popup = document.getElementById('historyPopup');
+        if (popup) {
+            this.loadHistory();
+            popup.style.display = 'flex';
+        }
+    },
+    
+    // 이력 팝업 닫기
+    closeHistoryPopup() {
+        const popup = document.getElementById('historyPopup');
+        if (popup) {
+            popup.style.display = 'none';
+        }
+    },
+    
+    // 이력 전체 삭제
+    clearHistory() {
+        if (confirm('모든 변환 이력을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+            localStorage.removeItem('conversionHistory');
+            this.loadHistory();
+        }
+    }
+};
+
+// 전역으로 노출
+window.HistoryManager = HistoryManager;

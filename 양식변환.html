@@ -671,7 +671,7 @@
                 
                 <div class="button-group">
                     <button id="convertBtn" onclick="convertFormat()">변환하기</button>
-                    <button id="historyBtn" onclick="openHistoryPopup()">변환내역조회</button>
+                    <button id="historyBtn" onclick="HistoryManager.openHistoryPopup()">변환내역조회</button>
                     <button id="clearBtn" onclick="clearAll()">모두 지우기</button>
                 </div>
             </div>
@@ -968,13 +968,13 @@
     <!-- 변환 이력 팝업 -->
     <div id="historyPopup" class="popup-overlay">
         <div class="popup-content" style="max-width: 800px;">
-            <span class="popup-close" onclick="closeHistoryPopup()">&times;</span>
+                            <span class="popup-close" onclick="HistoryManager.closeHistoryPopup()">&times;</span>
             <h3 class="popup-title">변환 이력</h3>
             <div id="historyList" class="history-list">
                 <!-- 이력 목록이 여기에 표시됩니다 -->
             </div>
             <div class="history-actions">
-                <button onclick="clearHistory()" class="btn-clear-history">전체 삭제</button>
+                <button onclick="HistoryManager.clearHistory()" class="btn-clear-history">전체 삭제</button>
             </div>
         </div>
     </div>
@@ -1804,27 +1804,16 @@
             const ontExtraOutputs = document.getElementById('ontExtraOutputs');
             const keyValueTableContainer = document.getElementById('keyValueTableContainer');
             
-            // 모든 출력 컨테이너 숨기기
+            // 모든 출력 컨테이너 숨기기 (TextareaManager 사용)
             if (splitOutputContainer) splitOutputContainer.style.display = 'none';
-            if (luxExtraOutputs) luxExtraOutputs.style.display = 'none';
-            if (dblackExtraOutputs) dblackExtraOutputs.style.display = 'none';
-            if (actExtraOutputs) actExtraOutputs.style.display = 'none';
-            if (bncomExtraOutputs) bncomExtraOutputs.style.display = 'none';
-            if (hunetExtraOutputs) hunetExtraOutputs.style.display = 'none';
-            if (millionExtraOutputs) millionExtraOutputs.style.display = 'none';
-            if (ontExtraOutputs) ontExtraOutputs.style.display = 'none';
-            const jangcheonExtraOutputs = document.getElementById('jangcheonExtraOutputs');
-            if (jangcheonExtraOutputs) jangcheonExtraOutputs.style.display = 'none';
             if (keyValueTableContainer) keyValueTableContainer.style.display = 'none';
+            
+            // TextareaManager를 사용하여 모든 ExtraOutputs 숨기기 및 textarea 초기화
+            TextareaManager.hideAllExtraOutputs();
+            TextareaManager.clearAllTextareas();
             
             // 기본 출력 컨테이너 표시
             if (singleOutputContainer) singleOutputContainer.style.display = 'block';
-            
-            // 모든 textarea 내용 초기화
-            const allTextareas = outputContainer.getElementsByTagName('textarea');
-            for (let textarea of allTextareas) {
-                textarea.value = '';
-            }
             
             // 모든 DOM 요소 참조 가져오기
             const agencySelect = document.getElementById('agency');
@@ -1917,8 +1906,10 @@
                     throw new Error(`선택하신 대리점 (${selectedAgency})에 대한 템플릿을 찾을 수 없습니다. TELECOM_CONFIG에 추가가 필요합니다.`);
                 }
                 
-                // 변환 이력 저장
-                saveToHistory(customerInfo, selectedTelecom, selectedAgency);
+                // 변환 이력 저장 (HistoryManager 사용)
+                if (HistoryManager && HistoryManager.saveToHistory) {
+                    HistoryManager.saveToHistory(customerInfo, selectedTelecom, selectedAgency);
+                }
                     
                     // 더블클릭 이벤트 설정
                     setupDoubleClickCopy();
@@ -2066,505 +2057,8 @@
         
         
         
-        // 변환 이력 저장
-        function saveToHistory(customerInfo, telecom, agency) {
-            try {
-                let history = JSON.parse(localStorage.getItem('conversionHistory') || '[]');
-                
-                // 원본 텍스트가 없으면 저장하지 않음 (불필요한 데이터 방지)
-                const inputText = document.getElementById('inputText');
-                if (inputText && inputText.value.trim()) {
-                    customerInfo.원본텍스트 = inputText.value.trim();
-                } else {
-                    return; // 원본 텍스트가 없으면 저장하지 않음
-                }
-                
-                // 중복 체크 (동일한 고객명과 전화번호가 있는지)
-                const exists = history.some(item => {
-                    const sameName = String(item.customerInfo.고객명 || '') === String(customerInfo.고객명 || '');
-                    const samePhone = String(item.customerInfo.전화번호 || '') === String(customerInfo.전화번호 || '');
-                    const sameAgency = String(item.agency || '') === String(agency || '');
-                    
-                    // 고객명과 전화번호가 모두 일치하고, 동일한 대리점인 경우에만 중복으로 판단
-                    return sameName && samePhone && sameAgency;
-                });
-                
-                if (!exists) {
-                    // 최대 50개까지 저장
-                    if (history.length >= 50) {
-                        history.pop(); // 가장 오래된 항목 제거
-                    }
-                    
-                    // 새 항목 추가 (최신순으로 정렬하기 위해 unshift 사용)
-                    history.unshift({
-                        id: Date.now(),
-                        customerInfo: customerInfo,
-                        telecom: telecom,
-                        agency: agency,
-                        timestamp: new Date().toISOString()
-                    });
-                    
-                    localStorage.setItem('conversionHistory', JSON.stringify(history));
-                }
-            } catch (e) {
-                console.error('이력 저장 중 오류 발생:', e);
-            }
-        }
+        // 변환 이력 관련 함수들은 HistoryManager에서 관리됩니다.
         
-        // 변환 이력 불러오기
-        function loadHistory() {
-            try {
-                const history = JSON.parse(localStorage.getItem('conversionHistory') || '[]');
-                const historyList = document.getElementById('historyList');
-                
-                if (!historyList) return;
-                
-                if (history.length === 0) {
-                    historyList.innerHTML = '<div class="no-history">저장된 이력이 없습니다.</div>';
-                    return;
-                }
-                
-                historyList.innerHTML = history.map(item => `
-                    <div class="history-item" onclick="loadFromHistory('${item.id}')">
-                        <div class="history-header">
-                            <span class="history-name">${item.customerInfo.고객명 || '이름 없음'}</span>
-                            <span class="history-phone">${item.customerInfo.전화번호 || item.customerInfo.연락처 || '전화번호 없음'}</span>
-                            <span class="history-time">${new Date(item.timestamp).toLocaleString()}</span>
-                        </div>
-                        <div class="history-details">
-                            <span class="history-model">${item.customerInfo.모델명 || ''} ${item.customerInfo.색상 || ''}</span>
-                            <span class="history-plan">${item.customerInfo.요금제 || ''}</span>
-                        </div>
-                        <div class="history-footer">
-                            <span class="history-agency">${item.telecom} / ${item.agency}</span>
-                        </div>
-                    </div>
-                `).join('');
-            } catch (e) {
-                console.error('이력 불러오기 중 오류 발생:', e);
-            }
-        }
-        
-        // 이력에서 불러오기
-        function loadFromHistory(id) {
-            try {
-                const history = JSON.parse(localStorage.getItem('conversionHistory') || '[]');
-                const item = history.find(item => item.id.toString() === id.toString());
-                
-                if (item) {
-                    // 통신사와 대리점 선택
-                    const telecomSelect = document.getElementById('telecom');
-                    const agencySelect = document.getElementById('agency');
-                    
-                    // 현재 선택된 값 저장
-                    const currentTelecom = telecomSelect.value;
-                    const currentAgency = agencySelect.value;
-                    
-                    // 새 값으로 설정
-                    telecomSelect.value = item.telecom;
-                    
-                    // 대리점이 로드될 때까지 기다렸다가 선택
-                    const checkAgency = setInterval(() => {
-                        updateAgencies();
-                        
-                        // 대리점이 로드되었는지 확인 (옵션 목록에 있는지)
-                        const agencyOptions = Array.from(agencySelect.options).map(opt => opt.value);
-                        if (agencyOptions.includes(item.agency)) {
-                            clearInterval(checkAgency);
-                            
-                            // 대리점 선택
-                            agencySelect.value = item.agency;
-                            
-                            // 입력 필드 채우기
-                            const info = item.customerInfo;
-                            const inputText = document.getElementById('inputText');
-                            const deviceSerial = document.getElementById('deviceSerial');
-                            const simSerial = document.getElementById('simSerial');
-                            
-                            // 원본 텍스트가 없으면 기본 텍스트 생성
-                            if (!info.원본텍스트) {
-                                let defaultText = '';
-                                if (info.고객명) defaultText += `고객명: ${info.고객명}\n`;
-                                if (info.전화번호) defaultText += `전화번호: ${info.전화번호}\n`;
-                                if (info.모델명) defaultText += `모델명: ${info.모델명}\n`;
-                                if (info.색상) defaultText += `색상: ${info.색상}\n`;
-                                if (info.요금제) defaultText += `요금제: ${info.요금제}\n`;
-                                if (info.가입유형) defaultText += `가입유형: ${info.가입유형}\n`;
-                                if (info.할부현금여부) defaultText += `할부/현금: ${info.할부현금여부}\n`;
-                                if (info.최종구매가) defaultText += `최종구매가: ${info.최종구매가}원\n`;
-                                
-                                inputText.value = defaultText.trim();
-                            } else {
-                                inputText.value = info.원본텍스트 || '';
-                            }
-                            
-                            if (deviceSerial) deviceSerial.value = info.단말기일련번호 || '';
-                            if (simSerial) simSerial.value = info.유심일련번호 || '';
-                            
-                            // 변환 실행 (약간의 지연을 두어 UI 업데이트가 완료되도록)
-                            setTimeout(() => {
-                                convertFormat();
-                                closeHistoryPopup();
-                            }, 300);
-                        }
-                    }, 50);
-                }
-            } catch (e) {
-                console.error('이력 불러오기 중 오류 발생:', e);
-                alert('이력 불러오기에 실패했습니다.');
-            }
-        }
-        
-        // 이력 팝업 열기
-        function openHistoryPopup() {
-            const popup = document.getElementById('historyPopup');
-            if (popup) {
-                loadHistory();
-                popup.style.display = 'flex';
-            }
-        }
-        
-        // 이력 팝업 닫기
-        function closeHistoryPopup() {
-            const popup = document.getElementById('historyPopup');
-            if (popup) {
-                popup.style.display = 'none';
-            }
-        }
-        
-        // 이력 전체 삭제
-        function clearHistory() {
-            if (confirm('모든 변환 이력을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
-                localStorage.removeItem('conversionHistory');
-                loadHistory();
-            }
-        }
-        
-        // 모두 지우기 함수
-        function clearAll() {
-            // 입력 필드 초기화
-            document.getElementById('inputText').value = '';
-            document.getElementById('deviceSerial').value = '';
-            document.getElementById('simSerial').value = '';
-            
-            // 엑셀 파일 입력 초기화 (excel-manager.js와 연동)
-            if (typeof clearExcelInputs === 'function') {
-                clearExcelInputs();
-            } else {
-                // fallback: 직접 초기화
-                document.getElementById('excelFile').value = '';
-                document.getElementById('extractCount').textContent = '';
-                
-                const excelFile2 = document.getElementById('excelFile2');
-                if (excelFile2) excelFile2.value = '';
-                
-                const extractCount2Element = document.getElementById('extractCount2');
-                if (extractCount2Element) {
-                    extractCount2Element.textContent = '';
-                }
-                
-                const downloadBtn = document.getElementById('downloadDeliveryBtn');
-                if (downloadBtn) {
-                    downloadBtn.style.display = 'none';
-                    downloadBtn.removeAttribute('data-telecom');
-                    downloadBtn.removeAttribute('data-agency');
-                    downloadBtn.removeAttribute('data-count');
-                }
-            }
-            
-            // 통신사 및 대리점 선택 초기화
-            const telecomSelect = document.getElementById('telecom');
-            const agencySelect = document.getElementById('agency');
-            const currentTelecom = telecomSelect.value;
-            const currentAgency = agencySelect.value;
-            
-            // 출력 컨테이너 초기화 (기존 구조 유지)
-            const outputContainer = document.getElementById('outputContainer');
-            outputContainer.style.display = 'block';
-            
-            // Reset to the original structure with all agency textareas
-            outputContainer.innerHTML = `
-                <!-- 큐브 전용 추가 textarea (재고/개통/우주패스) -->
-                <div id="cubeExtraOutputs" style="display:none;">
-                    <div class="form-group">
-                        <label for="cubeStockText">큐브 재고요청양식:</label>
-                        <textarea id="cubeStockText" class="output-textarea compact-textarea" placeholder="재고 요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="cubeOpenText">큐브 개통요청양식:</label>
-                        <textarea id="cubeOpenText" class="output-textarea compact-textarea" placeholder="개통 요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="cubeUniverseText">큐브 우주패스양식:</label>
-                        <textarea id="cubeUniverseText" class="output-textarea compact-textarea" placeholder="우주패스 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                </div>
-                
-                <!-- 럭스 전용 추가 textarea (신조/재고/개통) -->
-                <div id="luxExtraOutputs" style="display:none;">
-                    <div class="form-group">
-                        <label for="luxRequestText">신조요청양식:</label>
-                        <textarea id="luxRequestText" class="output-textarea compact-textarea" placeholder="신조 요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="luxStockText">재고요청양식:</label>
-                        <textarea id="luxStockText" class="output-textarea compact-textarea" placeholder="재고 요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="luxMemoText">개통요청양식:</label>
-                        <textarea id="luxMemoText" class="output-textarea compact-textarea" placeholder="개통 요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                </div>
-                
-                <!-- 드블랙 전용 추가 textarea (신조/재고/개통) -->
-                <div id="dblackExtraOutputs" style="display:none;">
-                    <div class="form-group">
-                        <label for="dblackRequestText">신조요청양식:</label>
-                        <textarea id="dblackRequestText" class="output-textarea compact-textarea" placeholder="신조 요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="dblackStockText">재고요청양식:</label>
-                        <textarea id="dblackStockText" class="output-textarea compact-textarea" placeholder="재고 요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="dblackMemoText">개통요청양식:</label>
-                        <textarea id="dblackMemoText" class="output-textarea compact-textarea" placeholder="개통 요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                </div>
-                
-                <!-- ACT(택배) 전용 추가 textarea (접수확인/개통요청) -->
-                <div id="actExtraOutputs" style="display:none;">
-                    <div class="form-group">
-                        <label for="actStockText">ACT(택배) 접수확인양식:</label>
-                        <textarea id="actStockText" class="output-textarea compact-textarea act-stock-textarea" placeholder="접수확인 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="actOpenText">ACT(택배) 개통요청양식:</label>
-                        <textarea id="actOpenText" class="output-textarea compact-textarea" placeholder="개통요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                </div>
-                
-                <!-- 비앤컴 전용 추가 textarea (접수확인&신조요청/개통요청) -->
-                <div id="bncomExtraOutputs" style="display:none;">
-                    <div class="form-group">
-                        <label for="bncomStockText">비앤컴 접수확인&신조요청:</label>
-                        <textarea id="bncomStockText" class="output-textarea compact-textarea" placeholder="접수확인&신조요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="bncomOpenText">비앤컴 개통요청:</label>
-                        <textarea id="bncomOpenText" class="output-textarea compact-textarea" placeholder="개통요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                </div>
-                
-                <!-- 휴넷 전용 추가 textarea (접수확인/배송요청/개통요청) -->
-                <div id="hunetExtraOutputs" style="display:none;">
-                    <div class="form-group">
-                        <label for="hunetConfirmText">휴넷 접수확인양식:</label>
-                        <textarea id="hunetConfirmText" class="output-textarea compact-textarea" placeholder="접수확인 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="hunetDeliveryText">휴넷 배송요청양식:</label>
-                        <textarea id="hunetDeliveryText" class="output-textarea compact-textarea" placeholder="배송요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="hunetOpenText">휴넷 개통요청양식:</label>
-                        <textarea id="hunetOpenText" class="output-textarea compact-textarea" placeholder="개통요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                </div>
-                
-                <!-- 밀리언 전용 추가 textarea (신조요청/배정요청/개통요청) -->
-                <div id="millionExtraOutputs" style="display:none;">
-                    <div class="form-group">
-                        <label for="millionRequestText">밀리언 신조요청:</label>
-                        <textarea id="millionRequestText" class="output-textarea compact-textarea" placeholder="신조요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="millionStockText">밀리언 배정요청:</label>
-                        <textarea id="millionStockText" class="output-textarea compact-textarea" placeholder="배정요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="millionMemoText">밀리언 개통요청:</label>
-                        <textarea id="millionMemoText" class="output-textarea compact-textarea" placeholder="개통요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                </div>
-                
-                <!-- 오앤티 전용 추가 textarea (신조요청/배정요청/개통요청) -->
-                <div id="ontExtraOutputs" style="display:none;">
-                    <div class="form-group">
-                        <label for="ontRequestText">오앤티 신조요청:</label>
-                        <textarea id="ontRequestText" class="output-textarea compact-textarea" placeholder="신조요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="ontStockText">오앤티 배정요청:</label>
-                        <textarea id="ontStockText" class="output-textarea compact-textarea" placeholder="배정요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="ontMemoText">오앤티 개통요청:</label>
-                        <textarea id="ontMemoText" class="output-textarea compact-textarea" placeholder="개통요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                </div>
-                
-                <!-- 장천 전용 추가 textarea (배송요청/개통요청) -->
-                <div id="jangcheonExtraOutputs" style="display:none;">
-                    <div class="form-group">
-                        <label for="jangcheonDeliveryText">장천 배송요청:</label>
-                        <textarea id="jangcheonDeliveryText" class="output-textarea compact-textarea" placeholder="배송요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="jangcheonOpenText">장천 개통요청:</label>
-                        <textarea id="jangcheonOpenText" class="output-textarea compact-textarea" placeholder="개통요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                </div>
-                
-                <!-- 한올 전용 추가 textarea (접수확인/배송요청/개통요청) -->
-                <div id="hanolExtraOutputs" style="display:none;">
-                    <div class="form-group">
-                        <label for="hanolConfirmText">한올 접수확인양식:</label>
-                        <textarea id="hanolConfirmText" class="output-textarea compact-textarea" placeholder="접수확인 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="hanolDeliveryText">한올 배송요청양식:</label>
-                        <textarea id="hanolDeliveryText" class="output-textarea compact-textarea" placeholder="배송요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="hanolOpenText">한올 개통요청양식:</label>
-                        <textarea id="hanolOpenText" class="output-textarea compact-textarea" placeholder="개통요청 양식이 여기에 표시됩니다."></textarea>
-                    </div>
-                </div>
-                
-                <style>
-                    /* 큐브 textarea 스타일 */
-                    #cubeStockText {
-                        height: 130px !important;
-                        min-height: 130px;
-                        resize: vertical;
-                    }
-                    #cubeOpenText {
-                        height: 150px !important;
-                        min-height: 150px;
-                        resize: vertical;
-                    }
-                    #cubeUniverseText {
-                        height: 120px !important;
-                        min-height: 120px;
-                        resize: vertical;
-                    }
-                    
-                    /* 럭스 텍스트에리어 스타일 */
-                    #luxRequestText, #dblackRequestText {
-                        height: 130px !important;
-                        min-height: 130px;
-                        resize: vertical;
-                    }
-                    #luxStockText, #dblackStockText {
-                        height: 220px !important;
-                        min-height: 220px;
-                        resize: vertical;
-                    }
-                    #luxMemoText, #dblackMemoText {
-                        height: 150px !important;
-                        min-height: 150px;
-                        resize: vertical;
-                    }
-                    
-                    /* 드블랙 신조요청 textarea 스타일 */
-                    #dblackRequestText {
-                        height: 150px !important;
-                        min-height: 150px;
-                        resize: vertical;
-                    }
-                    
-                    /* 휴넷 textarea 스타일 */
-                    #hunetConfirmText {
-                        height: 150px !important;
-                        min-height: 150px;
-                        resize: vertical;
-                    }
-                    #hunetDeliveryText {
-                        height: 150px !important;
-                        min-height: 150px;
-                        resize: vertical;
-                    }
-                    #hunetOpenText {
-                        height: 150px !important;
-                        min-height: 150px;
-                        resize: vertical;
-                    }
-                    
-                    /* 밀리언 textarea 스타일 */
-                    #millionRequestText {
-                        height: 100px !important;
-                        min-height: 100px;
-                        resize: vertical;
-                    }
-                    
-                    /* 밀리언 배정요청 textarea 스타일 (절반 크기) */
-                    #millionStockText {
-                        height: 100px !important;
-                        min-height: 100px;
-                        resize: vertical;
-                    }
-                    
-                    #outputText1 {
-                        height: 170px !important;
-                        min-height: 170px;
-                    }
-                    
-                    /* 장천 textarea 스타일 */
-                    #jangcheonDeliveryText {
-                        height: 150px !important;
-                        min-height: 150px;
-                        resize: vertical;
-                    }
-                    #jangcheonOpenText {
-                        height: 150px !important;
-                        min-height: 150px;
-                        resize: vertical;
-                    }
-                    
-                    /* 한올 textarea 스타일 */
-                    #hanolConfirmText {
-                        height: 120px !important;
-                        min-height: 120px;
-                        resize: vertical;
-                    }
-                    #hanolDeliveryText {
-                        height: 150px !important;
-                        min-height: 150px;
-                        resize: vertical;
-                    }
-                    #hanolOpenText {
-                        height: 150px !important;
-                        min-height: 150px;
-                        resize: vertical;
-                    }
-                </style>
-                <div id="singleOutputContainer">
-                    <div class="form-group">
-                        <label id="outputTextLabel" for="outputText">변환된 텍스트:</label>
-                        <textarea id="outputText" class="output-textarea" placeholder="여기에 변환된 결과가 표시됩니다. 더블클릭하면 복사됩니다."></textarea>
-                    </div>
-                </div>
-                <div id="splitOutputContainer" style="display: none;"></div>
-            `;
-            
-            // Reset telecom and agency selects after updating the output container
-            telecomSelect.value = '';
-            agencySelect.innerHTML = '<option value="">대리점을 선택하세요</option>';
-            agencySelect.disabled = true;
-            
-            // 더블클릭 이벤트 설정
-            setupDoubleClickCopy();
-            
-            // 입력 필드에 포커스
-            document.getElementById('inputText').focus();
-            
-            // If the current selection was 럭스 or 드블랙, re-enable the agency select
-            if (currentTelecom === 'SK' && (currentAgency === '럭스' || currentAgency === '드블랙')) {
-                updateAgencies();
-                document.getElementById('agency').value = currentAgency;
-            }
-        }
         // 대리점 정보 팝업 함수
         function showAgencyInfo() {
             const telecomSelect = document.getElementById('telecom');
@@ -2604,7 +2098,9 @@
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 closeAgencyInfo();
-                closeHistoryPopup();
+                if (HistoryManager && HistoryManager.closeHistoryPopup) {
+                    HistoryManager.closeHistoryPopup();
+                }
             }
         });
         
@@ -2612,6 +2108,15 @@
         document.getElementById('memoPopup').addEventListener('click', function(event) {
             if (event.target === this) {
                 closeAgencyInfo();
+            }
+        });
+        
+        // 이력 팝업 외부 클릭 시 닫기
+        document.getElementById('historyPopup').addEventListener('click', function(event) {
+            if (event.target === this) {
+                if (HistoryManager && HistoryManager.closeHistoryPopup) {
+                    HistoryManager.closeHistoryPopup();
+                }
             }
         });     
 
@@ -2921,7 +2426,6 @@
         // 전역 함수로 노출
         window.setAutoLockTime = setAutoLockTime;
         window.getAutoLockStatus = getAutoLockStatus;
-        
     </script>
     </div> <!-- main-content 닫는 태그 -->
 </body>
