@@ -621,7 +621,7 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                         if (info.할부현금여부 === '현금') {
                             paymentInfo = `현금완납(${info.최종구매가 || ''})`;
                         } else if (info.할부현금여부 === '할부') {
-                            paymentInfo = `할부${info.할부개월수 || '24개월'} (${info.최종구매가 || ''})`;
+                            paymentInfo = `할부${info.할부개월수 || '24'} (${info.최종구매가 || ''})`;
                         }
                         
                         if (paymentInfo) {
@@ -912,29 +912,46 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
             '코웨어': {
                 name: '코웨어',
                 type: 'special',
-                outputType: 'single',
+                outputType: 'multi',
                 memo: agencyMemos['SK']['코웨어'],
-                template: (info) => {
-                    let result = `[개통요청]\n고객명 - ${info.고객명 || ''}\n주민번호 - ${info.주민번호 || info.생년월일 || ''}\n개통번호 - ${info.전화번호 || info.개통번호 || info.연락처 || ''}\n단말정보 - ${info.모델명 || ''} ${info.색상 || ''}\n일련번호 - ${info.단말기일련번호 || ''}\n요금제 - ${info.요금제 || ''}\n`;
-                    
-                    if (info.할부현금여부 === '할부') {
-                        result += `할부 - ${info.할부개월수 || '24'}\n`;
-                        if (info.프리할부 && info.프리할부 !== '0') {
-                            result += `프리 - ${info.프리할부}\n`;
+                templates: {
+                    openRequest: (info) => {
+                        return `* 개통요청
+고객명 - ${info.고객명 || ''}
+주민번호 - ${formatBirthDate(info.주민번호 || info.생년월일 || '')}
+개통번호 - ${info.개통번호 || info.전화번호 || ''}
+단말정보 - ${info.모델명 || ''} ${info.용량 || ''} ${info.색상 || ''}
+일련번호 - ${info.단말기일련번호 || ''}
+요금제 - ${info.요금제 || ''}
+할부 - ${info.할부현금여부 === '현금' ? 'X' : (info.할부개월수 || '24')}
+프리 - ${info.프리할부 || ''}
+할부원금 - ${info.할부현금여부 === '현금' ? '0' : (info.최종구매가 || '')}
+현금완납 - ${info.할부현금여부 === '현금' ? 'O' : ''}
+선약&공시 - ${info.공시선약여부 || ''} ${info.약정개월수 || ''}
+유심 - ${info.유심일련번호 || info.유심 || ''}
+부가 - ${[info.부가서비스, info.부가서비스2].filter(Boolean).join(' / ') || ''}
+보험가입여부 - ${info.보험 || ''}`;
+                    },
+                    spacePass: (info) => {
+                        // 우주패스/옵션 분리
+                        let spacePass = '';
+                        let option = '';
+                        if (info.부가서비스 && info.부가서비스.includes('우주패스')) {
+                            spacePass = '우주패스';
+                            option = info.부가서비스2 || '';
+                        } else if (info.부가서비스2 && info.부가서비스2.includes('우주패스')) {
+                            spacePass = '우주패스';
+                            option = info.부가서비스 || '';
                         }
-                        result += `할부원금 - ${info.최종구매가 || '0'}\n`;
-                    } else if (info.할부현금여부 === '현금') {
-                        result += `할부 - 0\n`;
-                        result += `할부원금 - 0\n`;
-                        result += `현금완납 - O\n`;
+                        
+                        return `★우주패스 가입양식
+고객명 : ${info.고객명 || ''}
+가입번호 : ${info.개통번호 || info.전화번호 || ''}
+생년월일 : ${info.주민번호 || info.생년월일 || ''}
+우주패스 : ${spacePass}
+옵션 : ${option}
+자동이체 : `;
                     }
-                    
-                    if (info.공시선약여부 === '공시지원' || info.공시선약여부 === '선택약정' || info.공시선약여부 === '선약') {
-                        result += `선약&공시 - ${info.공시선약여부} ${info.약정개월수 || '24'}\n`;
-                    }
-                    
-                    result += `유심 - ${info.유심일련번호 || info.유심 || ''}\n`;
-                    return result;
                 }
             },
             '비앤컴': {

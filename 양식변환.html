@@ -944,6 +944,18 @@
                         </div>
                     </div>
                     
+                    <!-- 코웨어 전용 추가 textarea (개통요청/우주패스) -->
+                    <div id="cowareExtraOutputs" style="display:none;">
+                        <div class="form-group">
+                            <label for="cowareOpenText">코웨어 개통요청 양식:</label>
+                            <textarea id="cowareOpenText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="cowareSpacePassText">코웨어 우주패스 양식:</label>
+                            <textarea id="cowareSpacePassText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                    </div>
+                    
                     <div id="keyValueTableContainer" style="display: none;">
                         <div class="copy-notice">각 항목을 클릭하면 해당 값이 클립보드에 복사됩니다.</div>
                         <table class="key-value-table" id="keyValueTable">
@@ -1065,6 +1077,11 @@
                                 delivery: template.delivery(customerInfo), // 배송요청양식
                                 open: template.open(customerInfo)          // 개통요청양식
                             };
+                        } else if (agency === '코웨어') {
+                            return {
+                                openRequest: template.openRequest(customerInfo),   // 개통요청양식
+                                spacePass: template.spacePass(customerInfo)        // 우주패스양식
+                            };
                     } else {
                             return {
                                 request: template.request(customerInfo),
@@ -1114,7 +1131,8 @@
                     'millionExtraOutputs',
                     'ontExtraOutputs',
                     'jangcheonExtraOutputs',
-                    'hanolExtraOutputs'
+                    'hanolExtraOutputs',
+                    'cowareExtraOutputs'
                 ];
                 
                 containers.forEach(id => {
@@ -1184,7 +1202,9 @@
                     container = document.getElementById('luxExtraOutputs');
                 } else if (agency === '큐브') {
                     container = document.getElementById('cubeExtraOutputs');
-                    } else {
+                } else if (agency === '코웨어') {
+                    container = document.getElementById('cowareExtraOutputs');
+                } else {
                     container = document.getElementById('luxExtraOutputs');
                 }
                 
@@ -1270,6 +1290,13 @@
                     if (stockText) stockText.value = result.stock || '';
                     if (openText) openText.value = result.open || '';
                     if (universeText) universeText.value = result.universe || '';
+                } else if (agency === '코웨어') {
+                    // 코웨어 대리점용 출력 처리 (2개 textarea)
+                    const openText = document.getElementById('cowareOpenText');
+                    const spacePassText = document.getElementById('cowareSpacePassText');
+                    
+                    if (openText) openText.value = result.openRequest || '';
+                    if (spacePassText) spacePassText.value = result.spacePass || '';
                 } else {
                     // 기타 대리점용 출력 처리 (기본 럭스 형태)
                     container.innerHTML = `

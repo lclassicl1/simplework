@@ -504,7 +504,7 @@ function parseAddonAndInsuranceEnhanced(addonText) {
     let addonItems1 = [];
     let addonItems2 = [];
     
-    // 주요 구분자로 분리 (/, 번호순서 등)
+    // 주요 구분자로 분리 (/, +, 번호순서 등)
     let items = [];
     
     // 먼저 "/숫자." 패턴으로 분리 시도
@@ -517,6 +517,11 @@ function parseAddonAndInsuranceEnhanced(addonText) {
         if (items[0] && /^\d+\.\s*/.test(items[0])) {
             items[0] = items[0].replace(/^\d+\.\s*/, '').trim();
         }
+    } else if (addonText.includes('+')) {
+        // "+" 구분자로 분리 (우주패스 + 마이스마트콜3 같은 경우)
+        items = addonText.split(/\s*\+\s*/)
+            .map(item => item.trim())
+            .filter(item => item.length > 0);
     } else {
         // 일반적인 "/" 구분자로 분리
         items = addonText.split('/')
