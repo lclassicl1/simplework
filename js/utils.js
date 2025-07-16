@@ -1417,70 +1417,76 @@ function extractCustomerInfo(text) {
     customerInfo['전환지원금'] = '0';
     customerInfo['프리할부'] = '0';
     
-    // 2. 괄호 포함 패턴 (예: **출고가 (1,540,000)- 공시(700,000)- 전지(100,000) = 현금(740,000))
-    const parenthesizedPattern = /\*\*\s*출고가\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*-\s*공시\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*(?:-\s*(?:추지|추가지원)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*(?:-\s*(?:전지|전환지원금?|전환)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*(?:-\s*프리할부\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*=\s*(할부\d*|\ud604\uae08)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?/i;
+    // 새로운 패턴: **출고가 숫자 =공시-추가= 형식 (공시, 추가 값이 있을 수도 없을 수도 있음)
+    const newPricePattern = /\*\*\s*출고가\s+([\d,]+)\s*=공시(?:([\d,]+))?-추가(?:([\d,]+))?=\s*(?:현금\s*([\d,]+)|할부(\d+)\s*([\d,]+))?/i;
+    const newPriceMatch = text.match(newPricePattern);
     
-    // 3. 일반 패턴 (괄호 없음, 기존 형식 유지)
-    const normalPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*(?:-\s*(?:추지|추가지원)\s+([\d,]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,]+))?\s*(?:-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d*|\ud604\uae08)\s*([\d,]+)/i;
-    
-    // 4. 패턴 매칭 시도 (괄호 포함 패턴 먼저 시도)
-    let match = text.match(parenthesizedPattern) || text.match(normalPattern);
-    
-    if (match) {
-        // 매칭된 그룹 인덱스 정리
-        const groups = {
-            출고가: match[1] || '0',
-            공시: match[2] || '0',
-            추지: match[3] || '0',
-            전환지원금: match[4] || '0',
-            프리할부: match[5] || '0',
-            할부현금: match[6] || '현금',
-            최종구매가: match[7] || '0'
-        };
+    if (newPriceMatch) {
+        customerInfo['출고가'] = newPriceMatch[1].trim();
+        customerInfo['공시'] = newPriceMatch[2] ? newPriceMatch[2].trim() : '0'; // 공시 금액이 있으면 추출, 없으면 0
+        customerInfo['추지'] = newPriceMatch[3] ? newPriceMatch[3].trim() : '0'; // 추가 금액이 있으면 추출, 없으면 0
+        customerInfo['전환지원금'] = '0';
+        customerInfo['프리할부'] = '0';
         
-        // 고객 정보에 할당 (0이 아닌 경우에만 업데이트)
-        customerInfo['출고가'] = groups.출고가.trim();
-        customerInfo['공시'] = groups.공시.trim();
-        if (groups.추지 !== '0') customerInfo['추지'] = groups.추지.trim();
-        if (groups.전환지원금 !== '0') customerInfo['전환지원금'] = groups.전환지원금.trim();
-        if (groups.프리할부 !== '0') customerInfo['프리할부'] = groups.프리할부.trim();
-        
-        console.log('매칭된 정보:', groups); // 디버깅용
-        
-        // 할부/현금 여부 확인
-        if (groups.할부현금.includes('할부')) {
+        // 할부/현금 여부 확인 (기존 패턴과 동일한 로직)
+        if (newPriceMatch[5]) {
+            // 할부인 경우
             customerInfo['할부현금여부'] = '할부';
-            
-            // 할부개월수 추출
-            const installmentMatch = groups.할부현금.match(/(\d+)/);
-            if (installmentMatch && installmentMatch[1]) {
-                customerInfo['할부개월수'] = installmentMatch[1] + '개월';
-            } else {
-                customerInfo['할부개월수'] = '24개월'; // 기본값
-            }
+            customerInfo['할부개월수'] = newPriceMatch[5] + '개월';
+            customerInfo['최종구매가'] = newPriceMatch[6] ? newPriceMatch[6].trim() : '';
         } else {
+            // 현금인 경우
             customerInfo['할부현금여부'] = '현금';
             customerInfo['할부개월수'] = '';
+            customerInfo['최종구매가'] = newPriceMatch[4] ? newPriceMatch[4].trim() : '';
         }
         
-        customerInfo['최종구매가'] = groups.최종구매가.trim();
+        console.log('새로운 출고가 패턴 매칭:', {
+            출고가: customerInfo['출고가'],
+            공시: customerInfo['공시'],
+            추지: customerInfo['추지'],
+            할부현금여부: customerInfo['할부현금여부'],
+            할부개월수: customerInfo['할부개월수'],
+            최종구매가: customerInfo['최종구매가']
+        });
     } else {
-        // 추가 패턴 시도: 추지만 있는 경우 (괄호 없음)
-        const pricePattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원)\s+([\d,]+))?(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d*|\ud604\uae08)\s*([\d,]+)/i;
-        const priceMatch = text.match(pricePattern);
+    
+        // 2. 괄호 포함 패턴 (예: **출고가 (1,540,000)- 공시(700,000)- 전지(100,000) = 현금(740,000))
+        const parenthesizedPattern = /\*\*\s*출고가\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*-\s*공시\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*(?:-\s*(?:추지|추가지원)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*(?:-\s*(?:전지|전환지원금?|전환)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*(?:-\s*프리할부\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*=\s*(할부\d*|\ud604\uae08)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?/i;
         
-        if (priceMatch) {
-            customerInfo['출고가'] = priceMatch[1].trim();
-            customerInfo['공시'] = priceMatch[2].trim();
-            if (priceMatch[3]) customerInfo['추지'] = priceMatch[3].trim();
-            if (priceMatch[4]) customerInfo['프리할부'] = priceMatch[4].trim();
+        // 3. 일반 패턴 (괄호 없음, 기존 형식 유지)
+        const normalPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*(?:-\s*(?:추지|추가지원)\s+([\d,]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,]+))?\s*(?:-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d*|\ud604\uae08)\s*([\d,]+)/i;
+        
+        // 4. 패턴 매칭 시도 (괄호 포함 패턴 먼저 시도)
+        let match = text.match(parenthesizedPattern) || text.match(normalPattern);
+        
+        if (match) {
+            // 매칭된 그룹 인덱스 정리
+            const groups = {
+                출고가: match[1] || '0',
+                공시: match[2] || '0',
+                추지: match[3] || '0',
+                전환지원금: match[4] || '0',
+                프리할부: match[5] || '0',
+                할부현금: match[6] || '현금',
+                최종구매가: match[7] || '0'
+            };
+            
+            // 고객 정보에 할당 (0이 아닌 경우에만 업데이트)
+            customerInfo['출고가'] = groups.출고가.trim();
+            customerInfo['공시'] = groups.공시.trim();
+            if (groups.추지 !== '0') customerInfo['추지'] = groups.추지.trim();
+            if (groups.전환지원금 !== '0') customerInfo['전환지원금'] = groups.전환지원금.trim();
+            if (groups.프리할부 !== '0') customerInfo['프리할부'] = groups.프리할부.trim();
+            
+            console.log('매칭된 정보:', groups); // 디버깅용
             
             // 할부/현금 여부 확인
-            if (priceMatch[5].includes('할부')) {
+            if (groups.할부현금.includes('할부')) {
                 customerInfo['할부현금여부'] = '할부';
                 
                 // 할부개월수 추출
-                const installmentMatch = priceMatch[5].match(/(\d+)/);
+                const installmentMatch = groups.할부현금.match(/(\d+)/);
                 if (installmentMatch && installmentMatch[1]) {
                     customerInfo['할부개월수'] = installmentMatch[1] + '개월';
                 } else {
@@ -1491,82 +1497,110 @@ function extractCustomerInfo(text) {
                 customerInfo['할부개월수'] = '';
             }
             
-            customerInfo['최종구매가'] = priceMatch[6].trim();
+            customerInfo['최종구매가'] = groups.최종구매가.trim();
         } else {
-            // 현금 형식 패턴 확인 (추지와 전환지원금이 모두 있는 경우)
-            const cashConversionPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원)\s+([\d,]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,]+))?\s*(?:-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/i;
-            const cashConversionMatch = text.match(cashConversionPattern);
+            // 추가 패턴 시도: 추지만 있는 경우 (괄호 없음)
+            const pricePattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원)\s+([\d,]+))?(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d*|\ud604\uae08)\s*([\d,]+)/i;
+            const priceMatch = text.match(pricePattern);
             
-            if (cashConversionMatch) {
-                customerInfo['출고가'] = cashConversionMatch[1].trim();
-                customerInfo['공시'] = cashConversionMatch[2].trim();
-                if (cashConversionMatch[3]) customerInfo['추지'] = cashConversionMatch[3].trim();
-                if (cashConversionMatch[4]) customerInfo['전환지원금'] = cashConversionMatch[4].trim();
-                if (cashConversionMatch[5]) customerInfo['프리할부'] = cashConversionMatch[5].trim();
-                customerInfo['추지'] = cashConversionMatch[3].trim();
-                customerInfo['전환지원금'] = cashConversionMatch[5].trim();
-                customerInfo['프리할부'] = cashConversionMatch[6] ? cashConversionMatch[6].trim() : '0';
-                customerInfo['할부현금여부'] = '현금';
-                customerInfo['할부개월수'] = '';
-                customerInfo['최종구매가'] = cashConversionMatch[7].trim();
-            } else {
-                // 기존 현금 형식 패턴 (전환지원금 없는 경우)
-                const cashPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/;
-                const cashMatch = text.match(cashPattern);
+            if (priceMatch) {
+                customerInfo['출고가'] = priceMatch[1].trim();
+                customerInfo['공시'] = priceMatch[2].trim();
+                if (priceMatch[3]) customerInfo['추지'] = priceMatch[3].trim();
+                if (priceMatch[4]) customerInfo['프리할부'] = priceMatch[4].trim();
                 
-                if (cashMatch) {
-                    customerInfo['출고가'] = cashMatch[1].trim();
-                    customerInfo['공시'] = cashMatch[2].trim();
-                    customerInfo['추지'] = cashMatch[3].trim();
-                    customerInfo['전환지원금'] = '0';
-                    customerInfo['프리할부'] = cashMatch[4] ? cashMatch[4].trim() : '0';
+                // 할부/현금 여부 확인
+                if (priceMatch[5].includes('할부')) {
+                    customerInfo['할부현금여부'] = '할부';
+                    
+                    // 할부개월수 추출
+                    const installmentMatch = priceMatch[5].match(/(\d+)/);
+                    if (installmentMatch && installmentMatch[1]) {
+                        customerInfo['할부개월수'] = installmentMatch[1] + '개월';
+                    } else {
+                        customerInfo['할부개월수'] = '24개월'; // 기본값
+                    }
+                } else {
                     customerInfo['할부현금여부'] = '현금';
                     customerInfo['할부개월수'] = '';
-                    customerInfo['최종구매가'] = cashMatch[5].trim();
+                }
+                
+                customerInfo['최종구매가'] = priceMatch[6].trim();
+            } else {
+                // 현금 형식 패턴 확인 (추지와 전환지원금이 모두 있는 경우)
+                const cashConversionPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원)\s+([\d,]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,]+))?\s*(?:-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/i;
+                const cashConversionMatch = text.match(cashConversionPattern);
+                
+                if (cashConversionMatch) {
+                    customerInfo['출고가'] = cashConversionMatch[1].trim();
+                    customerInfo['공시'] = cashConversionMatch[2].trim();
+                    if (cashConversionMatch[3]) customerInfo['추지'] = cashConversionMatch[3].trim();
+                    if (cashConversionMatch[4]) customerInfo['전환지원금'] = cashConversionMatch[4].trim();
+                    if (cashConversionMatch[5]) customerInfo['프리할부'] = cashConversionMatch[5].trim();
+                    customerInfo['추지'] = cashConversionMatch[3].trim();
+                    customerInfo['전환지원금'] = cashConversionMatch[5].trim();
+                    customerInfo['프리할부'] = cashConversionMatch[6] ? cashConversionMatch[6].trim() : '0';
+                    customerInfo['할부현금여부'] = '현금';
+                    customerInfo['할부개월수'] = '';
+                    customerInfo['최종구매가'] = cashConversionMatch[7].trim();
                 } else {
-                    // 할부 형식 패턴 확인 (전환지원금 포함)
-                    const installmentConversionPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)\s*-\s*(전환지원금?|전환)\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*할부(\d+)\s*([\d,]+)/;
-                    const installmentConversionMatch = text.match(installmentConversionPattern);
+                    // 기존 현금 형식 패턴 (전환지원금 없는 경우)
+                    const cashPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/;
+                    const cashMatch = text.match(cashPattern);
                     
-                    if (installmentConversionMatch) {
-                        customerInfo['출고가'] = installmentConversionMatch[1].trim();
-                        customerInfo['공시'] = installmentConversionMatch[2].trim();
-                        customerInfo['추지'] = installmentConversionMatch[3].trim();
-                        customerInfo['전환지원금'] = installmentConversionMatch[5].trim();
-                        customerInfo['프리할부'] = installmentConversionMatch[6] ? installmentConversionMatch[6].trim() : '0';
-                        customerInfo['할부현금여부'] = '할부';
-                        customerInfo['할부개월수'] = installmentConversionMatch[7] + '개월';
-                        customerInfo['최종구매가'] = installmentConversionMatch[8].trim();
+                    if (cashMatch) {
+                        customerInfo['출고가'] = cashMatch[1].trim();
+                        customerInfo['공시'] = cashMatch[2].trim();
+                        customerInfo['추지'] = cashMatch[3].trim();
+                        customerInfo['전환지원금'] = '0';
+                        customerInfo['프리할부'] = cashMatch[4] ? cashMatch[4].trim() : '0';
+                        customerInfo['할부현금여부'] = '현금';
+                        customerInfo['할부개월수'] = '';
+                        customerInfo['최종구매가'] = cashMatch[5].trim();
                     } else {
-                        // 기존 할부 형식 패턴 (전환지원금 없는 경우)
-                        const alternatePattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*할부(\d+)\s*([\d,]+)/;
-                        const alternateMatch = text.match(alternatePattern);
+                        // 할부 형식 패턴 확인 (전환지원금 포함)
+                        const installmentConversionPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)\s*-\s*(전환지원금?|전환)\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*할부(\d+)\s*([\d,]+)/;
+                        const installmentConversionMatch = text.match(installmentConversionPattern);
                         
-                        if (alternateMatch) {
-                            customerInfo['출고가'] = alternateMatch[1].trim();
-                            customerInfo['공시'] = alternateMatch[2].trim();
-                            customerInfo['추지'] = alternateMatch[3].trim();
-                            customerInfo['전환지원금'] = '0';
-                            customerInfo['프리할부'] = alternateMatch[4] ? alternateMatch[4].trim() : '0';
+                        if (installmentConversionMatch) {
+                            customerInfo['출고가'] = installmentConversionMatch[1].trim();
+                            customerInfo['공시'] = installmentConversionMatch[2].trim();
+                            customerInfo['추지'] = installmentConversionMatch[3].trim();
+                            customerInfo['전환지원금'] = installmentConversionMatch[5].trim();
+                            customerInfo['프리할부'] = installmentConversionMatch[6] ? installmentConversionMatch[6].trim() : '0';
                             customerInfo['할부현금여부'] = '할부';
-                            customerInfo['할부개월수'] = alternateMatch[5] + '개월';
-                            customerInfo['최종구매가'] = alternateMatch[6].trim();
+                            customerInfo['할부개월수'] = installmentConversionMatch[7] + '개월';
+                            customerInfo['최종구매가'] = installmentConversionMatch[8].trim();
                         } else {
-                            customerInfo['출고가'] = '';
-                            customerInfo['공시'] = '';
-                            customerInfo['추지'] = '';
-                            customerInfo['전환지원금'] = '0';
-                            customerInfo['프리할부'] = '0';
-                            customerInfo['할부현금여부'] = '';
-                            customerInfo['할부개월수'] = '';
-                            customerInfo['최종구매가'] = '';
+                            // 기존 할부 형식 패턴 (전환지원금 없는 경우)
+                            const alternatePattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*할부(\d+)\s*([\d,]+)/;
+                            const alternateMatch = text.match(alternatePattern);
+                            
+                            if (alternateMatch) {
+                                customerInfo['출고가'] = alternateMatch[1].trim();
+                                customerInfo['공시'] = alternateMatch[2].trim();
+                                customerInfo['추지'] = alternateMatch[3].trim();
+                                customerInfo['전환지원금'] = '0';
+                                customerInfo['프리할부'] = alternateMatch[4] ? alternateMatch[4].trim() : '0';
+                                customerInfo['할부현금여부'] = '할부';
+                                customerInfo['할부개월수'] = alternateMatch[5] + '개월';
+                                customerInfo['최종구매가'] = alternateMatch[6].trim();
+                            } else {
+                                customerInfo['출고가'] = '';
+                                customerInfo['공시'] = '';
+                                customerInfo['추지'] = '';
+                                customerInfo['전환지원금'] = '0';
+                                customerInfo['프리할부'] = '0';
+                                customerInfo['할부현금여부'] = '';
+                                customerInfo['할부개월수'] = '';
+                                customerInfo['최종구매가'] = '';
+                            }
                         }
                     }
                 }
             }
         }
-    }
-    
+    }    
     // 모델명 변환 및 용량 정보 추출
     if (customerInfo['모델명']) {
         // 먼저 원본 모델명에서 용량 정보 추출 (convertModelName 실행 전)
