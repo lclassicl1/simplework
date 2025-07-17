@@ -391,7 +391,7 @@
                         };
                     case 'multi':
                         // 휴넷과 오앤티의 경우 특별한 처리
-                        if (agency === '제이/휴넷') {
+                        if (agency === '휴넷') {
                             return {
                                 confirm: template.confirm(customerInfo),
                                 delivery: template.delivery(customerInfo),
@@ -544,7 +544,7 @@
                 // 대리점에 따른 컨테이너 선택
                 if (agency === '드블랙') {
                     container = document.getElementById('dblackExtraOutputs');
-                } else if (agency === '제이/휴넷') {
+                } else if (agency === '휴넷') {
                     container = document.getElementById('hunetExtraOutputs');
                 } else if (agency === '밀리언') {
                     container = document.getElementById('millionExtraOutputs');
@@ -585,7 +585,7 @@
                             <textarea id="dblackMemoText" class="output-textarea compact-textarea">${result.memo || ''}</textarea>
                         </div>
                     `;
-                } else if (agency === '제이/휴넷' || agency === '제이모바일') {
+                } else if (agency === '휴넷' || agency === '제이모바일') {
                     // 휴넷/제이모바일 대리점용 출력 처리 (3개 textarea)
                     const confirmText = document.getElementById('hunetConfirmText');
                     const deliveryText = document.getElementById('hunetDeliveryText');

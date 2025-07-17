@@ -1686,11 +1686,11 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
                     };
                 }
             },
-            '제이/휴넷': {
-                name: '제이/휴넷',
+            '휴넷': {
+                name: '휴넷',
                 type: 'special',
                 outputType: 'multi',
-                memo: agencyMemos['LG']['제이/휴넷'],
+                memo: agencyMemos['LG']['휴넷'],
                 templates: {
                     confirm: (info) => `★ 접수 확인 요청드립니다.
 ▶고객명 : ${info.고객명 || ''}
