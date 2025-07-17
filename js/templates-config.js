@@ -1749,6 +1749,82 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
                     }
                 }
             },
+            '제이모바일': {
+                name: '제이모바일',
+                type: 'special',
+                outputType: 'multi',
+                memo: agencyMemos['LG']['제이모바일'],
+                templates: {
+                    confirm: (info) => `L2 ★ 접수 확인 요청드립니다.
+▶고객명 : ${info.고객명 || info.가입자명 || 'X'}
+▶생년월일 : ${info.생년월일 || info.주민번호 || 'X'}
+▶개통번호 : ${info.개통번호 || info.전화번호 || 'X'}
+▶가입유형 : ${info.가입유형 || 'X'}
+▶모델명 : ${info.모델명 || 'X'} ${info.용량 || ''}
+▶접수시간 :  `,
+                    delivery: (info) => {
+                        // 이앤티와 동일한 유심 처리 로직
+                        const usimValue = info.유심 || '';
+                        const hasESim = /이심|기존유심|기존/i.test(usimValue);
+                        const usimStatus = hasESim ? '비구매' : '구매';
+                        
+                        return `■배송요청■
+
+▶업체명 : 라온아이
+▶배송방법(택배/퀵/내방) : 택배
+- 받는분 : ${info.고객명 || info.가입자명 || 'X'}
+- 연락처 : ${info.개통번호 || info.전화번호 || 'X'}
+- 주 소 : ${info.택배주소 || info.배송주소지 || 'X'}
+▶모델명/색상 : ${info.모델명 || 'X'} ${info.용량 || ''} / ${info.색상 || 'X'}
+▶기기일련 : 
+▶유심(구매/비구매) : ${usimStatus}`;
+                    },
+                    open: (info) => {
+                        // 보험과 부가서비스를 위한 배열
+                        const additionalServices = [];
+                        
+                        // 부가서비스 정보 추가
+                        const addon = info.부가서비스 || '';
+                        if (addon && addon !== '무') {
+                            additionalServices.push(addon);
+                        }
+                        
+                        // 부가서비스2 정보 추가
+                        const addon2 = info.부가서비스2 || '';
+                        if (addon2 && addon2.trim() !== '') {
+                            additionalServices.push(addon2);
+                        }
+                        
+                        // 보험/부가서비스 정보 구성
+                        const serviceInfo = additionalServices.length > 0 ? additionalServices.join(' / ') : 'X';
+                        
+                        return `■개통요청 양식■
+
+TO 가능시 회신 확인후 개통 진행부탁드립니다.
+TO 가능시 즉시개통 진행 부탁드립니다.
+
+▶판매처 : 라온아이
+▶가입유형 : ${info.가입유형 || 'X'}
+▶고객명 : ${info.고객명 || info.가입자명 || 'X'}
+▶생년월일 : ${formatBirthDate(info.생년월일 || info.주민번호 || 'X')}
+▶개통번호 : ${info.개통번호 || info.전화번호 || 'X'}
+▶법대 : ${info.법정대리인이름 || info.법정대리인명 || 'X'}
+▶모델명/색상 : ${info.모델명 || 'X'} ${info.용량 || ''} / ${info.색상 || 'X'}
+▶단말일련 : ${info.단말기일련번호 || ''}
+▶유심모델/일련 : ${info.유심일련번호 || ''}
+▶요금제 : ${info.요금제 || 'X'}
+▶공시/선약(12/24): ${info.공시선약여부 || 'X'}${info.약정개월수 ? '(' + info.약정개월수 + ')' : ''}
+▶추가지원금(15%) : ${info.추지 || 'X'}
+▶전환지원금: ${info.전환지원금 && info.전환지원금 !== '0' ? info.전환지원금 : 'X'}
+▶할부(개월)/현금 : ${info.할부현금여부 === '할부' ? `할부(${info.할부개월수 || '24개월'})` : info.할부현금여부 === '현금' ? '현금' : 'X'}
+▶출고가 : ${info.출고가 || 'X'}
+▶프리(고객선납) : ${info.프리할부 && info.프리할부 !== '0' ? info.프리할부 : 'X'}
+▶할부원금 : ${info.최종구매가 || 'X'}
+▶부가서비스 : ${serviceInfo}
+▶보험유무 : ${info.보험 || 'X'}`;
+                    }
+                }
+            },
             '신청서연장양식': {
                 name: '신청서연장양식',
                 type: 'normal',

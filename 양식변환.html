@@ -432,6 +432,12 @@
                                 openRequest: template.openRequest(customerInfo),   // 개통요청양식
                                 spacePass: template.spacePass(customerInfo)        // 우주패스양식
                             };
+                        } else if (agency === '제이모바일') {
+                            return {
+                                confirm: template.confirm(customerInfo),   // 제이 접수확인양식
+                                delivery: template.delivery(customerInfo), // 제이 배송요청양식
+                                open: template.open(customerInfo)          // 제이 개통요청양식
+                            };
                     } else {
                             return {
                                 request: template.request(customerInfo),
@@ -554,6 +560,8 @@
                     container = document.getElementById('cubeExtraOutputs');
                 } else if (agency === '코웨어') {
                     container = document.getElementById('cowareExtraOutputs');
+                } else if (agency === '제이모바일') {
+                    container = document.getElementById('hunetExtraOutputs'); // 제이모바일도 휴넷과 같은 컨테이너 사용
                 } else {
                     container = document.getElementById('luxExtraOutputs');
                 }
@@ -577,11 +585,26 @@
                             <textarea id="dblackMemoText" class="output-textarea compact-textarea">${result.memo || ''}</textarea>
                         </div>
                     `;
-                } else if (agency === '제이/휴넷') {
-                    // 휴넷 대리점용 출력 처리 (3개 textarea)
+                } else if (agency === '제이/휴넷' || agency === '제이모바일') {
+                    // 휴넷/제이모바일 대리점용 출력 처리 (3개 textarea)
                     const confirmText = document.getElementById('hunetConfirmText');
                     const deliveryText = document.getElementById('hunetDeliveryText');
                     const openText = document.getElementById('hunetOpenText');
+                    
+                    // 라벨 동적 변경
+                    const confirmLabel = document.querySelector('label[for="hunetConfirmText"]');
+                    const deliveryLabel = document.querySelector('label[for="hunetDeliveryText"]');
+                    const openLabel = document.querySelector('label[for="hunetOpenText"]');
+                    
+                    if (agency === '제이모바일') {
+                        if (confirmLabel) confirmLabel.textContent = '제이 접수확인양식:';
+                        if (deliveryLabel) deliveryLabel.textContent = '제이 배송요청양식:';
+                        if (openLabel) openLabel.textContent = '제이 개통요청양식:';
+                    } else {
+                        if (confirmLabel) confirmLabel.textContent = '휴넷 접수확인양식:';
+                        if (deliveryLabel) deliveryLabel.textContent = '휴넷 배송요청양식:';
+                        if (openLabel) openLabel.textContent = '휴넷 개통요청양식:';
+                    }
                     
                     if (confirmText) confirmText.value = result.confirm || '';
                     if (deliveryText) deliveryText.value = result.delivery || '';
