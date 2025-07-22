@@ -438,6 +438,12 @@
                                 delivery: template.delivery(customerInfo), // 제이 배송요청양식
                                 open: template.open(customerInfo)          // 제이 개통요청양식
                             };
+                        } else if (agency === '무브온') {
+                            return {
+                                confirm: template.confirm(customerInfo),      // 무브온 접수확인양식
+                                stockRequest: template.stockRequest(customerInfo), // 무브온 재고요청양식
+                                open: template.open(customerInfo)             // 무브온 개통요청양식
+                            };
                     } else {
                             return {
                                 request: template.request(customerInfo),
@@ -562,6 +568,8 @@
                     container = document.getElementById('cowareExtraOutputs');
                 } else if (agency === '제이모바일') {
                     container = document.getElementById('hunetExtraOutputs'); // 제이모바일도 휴넷과 같은 컨테이너 사용
+                } else if (agency === '무브온') {
+                    container = document.getElementById('hunetExtraOutputs'); // 무브온도 휴넷과 같은 컨테이너 사용
                 } else {
                     container = document.getElementById('luxExtraOutputs');
                 }
@@ -585,8 +593,8 @@
                             <textarea id="dblackMemoText" class="output-textarea compact-textarea">${result.memo || ''}</textarea>
                         </div>
                     `;
-                } else if (agency === '휴넷' || agency === '제이모바일') {
-                    // 휴넷/제이모바일 대리점용 출력 처리 (3개 textarea)
+                } else if (agency === '휴넷' || agency === '제이모바일' || agency === '무브온') {
+                    // 휴넷/제이모바일/무브온 대리점용 출력 처리 (3개 textarea)
                     const confirmText = document.getElementById('hunetConfirmText');
                     const deliveryText = document.getElementById('hunetDeliveryText');
                     const openText = document.getElementById('hunetOpenText');
@@ -600,6 +608,10 @@
                         if (confirmLabel) confirmLabel.textContent = '제이 접수확인양식:';
                         if (deliveryLabel) deliveryLabel.textContent = '제이 배송요청양식:';
                         if (openLabel) openLabel.textContent = '제이 개통요청양식:';
+                    } else if (agency === '무브온') {
+                        if (confirmLabel) confirmLabel.textContent = '무브온 접수확인양식:';
+                        if (deliveryLabel) deliveryLabel.textContent = '무브온 재고요청양식:';
+                        if (openLabel) openLabel.textContent = '무브온 개통요청양식:';
                     } else {
                         if (confirmLabel) confirmLabel.textContent = '휴넷 접수확인양식:';
                         if (deliveryLabel) deliveryLabel.textContent = '휴넷 배송요청양식:';
@@ -607,7 +619,7 @@
                     }
                     
                     if (confirmText) confirmText.value = result.confirm || '';
-                    if (deliveryText) deliveryText.value = result.delivery || '';
+                    if (deliveryText) deliveryText.value = result.stockRequest || result.delivery || ''; // 무브온은 stockRequest, 다른 대리점은 delivery
                     if (openText) openText.value = result.open || '';
                 } else if (agency === '밀리언') {
                     // 밀리언 대리점용 출력 처리

@@ -1644,6 +1644,109 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
                     }
                 }
             },
+            '무브온': {
+                name: '무브온',
+                type: 'special',
+                outputType: 'multi',
+                memo: '무브온 대리점 - 접수확인, 재고요청, 개통요청 양식 제공',
+                templates: {
+                    confirm: (info) => `★접수 확인 요청드립니다.
+▶고객명 : ${info.고객명 || info.가입자명 || ''}
+▶생년월일 : ${info.생년월일 || info.주민번호 || ''}
+▶개통번호 : ${info.개통번호 || info.전화번호 || ''}
+▶가입유형 : ${info.가입유형 || ''}
+▶모델명 : ${info.모델명 || ''} ${info.용량 || ''}`,
+                    stockRequest: (info) => {
+                        // 이앤티와 동일한 유심 처리 로직
+                        const usimValue = info.유심 || '';
+                        let simIncluded = '';
+                        
+                        // 기존 또는 기존유심이 포함된 경우
+                        if (/기존|기존유심/i.test(usimValue)) {
+                            simIncluded = 'X';
+                        } else {
+                            // 기존/기존유심이 없는 경우
+                            if (/이심/i.test(usimValue)) {
+                                simIncluded = 'X';
+                            } else {
+                                simIncluded = 'O';
+                            }
+                        }
+                        
+                        return `*고객명 : ${info.고객명 || info.가입자명 || ''}
+*전화번호 : ${info.개통번호 || info.전화번호 || ''}
+*생년월일 : ${info.생년월일 || info.주민번호 || ''}
+*모델명/용량 : ${info.모델명 || ''} ${info.용량 || ''}
+*색상 : ${info.색상 || ''}
+*유심필요여부 : ${simIncluded}
+*주소 : ${info.택배주소 || info.배송주소지 || ''}`;
+                    },
+                    open: (info) => {
+                        // 보험과 부가서비스를 위한 배열
+                        const additionalServices = [];
+                        
+                        // 부가서비스 정보 추가
+                        const addon = info.부가서비스 || '';
+                        if (addon && addon !== '무') {
+                            additionalServices.push(addon);
+                        }
+                        
+                        // 부가서비스2 정보 추가
+                        const addon2 = info.부가서비스2 || '';
+                        if (addon2 && addon2.trim() !== '') {
+                            additionalServices.push(addon2);
+                        }
+                        
+                        // 보험/부가서비스 정보 구성
+                        const serviceInfo = additionalServices.length > 0 ? additionalServices.join(' / ') : 'X';
+                        
+                        // 공시지원금 로직
+                        let gongsiSupport = '0';
+                        if (info.공시선약여부 && /공시/i.test(info.공시선약여부)) {
+                            const gongsi = info.공시 && info.공시 !== '0' ? info.공시 : '';
+                            const chuji = info.추지 && info.추지 !== '0' ? info.추지 : '';
+                            const jeonhwan = info.전환지원금 && info.전환지원금 !== '0' ? info.전환지원금 : '';
+                            const supportParts = [gongsi, chuji, jeonhwan].filter(part => part && part !== '');
+                            gongsiSupport = supportParts.length > 0 ? supportParts.join(' - ') : '0';
+                        }
+                        
+                        // 최종할부원금/개월수 로직
+                        let installmentInfo = '0';
+                        if (info.할부현금여부 === '할부') {
+                            const amount = info.최종구매가 || '';
+                            const months = info.할부개월수 || '24개월';
+                            installmentInfo = `${amount} ${info.할부현금여부} ${months}`;
+                        }
+                        
+                        // 유심번호 로직 (무브온 재고요청과 동일한 로직)
+                        const usimValue = info.유심 || '';
+                        let usimNumber = '';
+                        if (/기존|기존유심/i.test(usimValue)) {
+                            usimNumber = '기존';
+                        } else {
+                            usimNumber = info.유심일련번호 || '';
+                        }
+                        
+                        return `■ 고객명 : ${info.가입자명 || info.고객명 || ''}
+■ 전화번호 : ${info.개통번호 || info.전화번호 || ''}
+■ 주민등록번호 : ${formatBirthDate(info.생년월일 || info.주민번호 || '')}
+■ 전 통신사 : ${info.현재통신사 || ''}
+■ 모델명/색상 : ${info.모델명 || ''} ${info.용량 || ''} ${info.색상 || ''}
+■ 일련번호 : ${info.단말기일련번호 || ''}
+■ 유심번호(13자리): ${usimNumber}
+■ 요금제 : ${info.요금제 || ''}
+■ OTT 구독 :
+■ 보험 : ${info.보험 || ''}
+■ 공시/선약 : ${info.공시선약여부 || ''}
+■ 현금/할부 : ${info.할부현금여부 || ''}
+■ 공시지원금 : ${gongsiSupport}
+■ 선납금(프리) : ${info.프리할부 && info.프리할부 !== '0' ? info.프리할부 : 'X'}
+■ 최종할부원금/개월수 : ${installmentInfo}
+■ 기타특이사항 :
+■ 택배 발송 주소: ${info.택배주소 || info.배송주소지 || ''}`;
+                    }
+                }
+            },
             '안산/이스턴': {
                 name: '안산/이스턴',
                 type: 'normal',
