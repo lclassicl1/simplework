@@ -1731,8 +1731,16 @@ function extractCustomerInfo(text) {
     // 모델제조사에 따른 보험명 자동 설정 (모델제조사 설정 후 실행)
     if (customerInfo['보험'] && customerInfo['모델제조사']) {
         if (customerInfo['모델제조사'] === '갤럭시') {
-            customerInfo['보험'] = 'T ALL케어플러스5 파손80';
-            console.log('갤럭시 보험명 자동 설정: T ALL케어플러스5 파손80');
+            // 갤럭시 모델 중 플립, 폴드, F766, F966인 경우 특별 처리
+            const modelName = customerInfo['모델명'] || '';
+            if (modelName.includes('플립') || modelName.includes('폴드') || 
+                modelName.includes('F766') || modelName.includes('F966')) {
+                customerInfo['보험'] = 'T ALL케어플러스5 파손F';
+                console.log('갤럭시 플립/폴드 보험명 자동 설정: T ALL케어플러스5 파손F');
+            } else {
+                customerInfo['보험'] = 'T ALL케어플러스5 파손80';
+                console.log('갤럭시 보험명 자동 설정: T ALL케어플러스5 파손80');
+            }
         } else if (customerInfo['모델제조사'] === '아이폰') {
             customerInfo['보험'] = 'T올케어+5 I파손';
             console.log('아이폰 보험명 자동 설정: T올케어+5 I파손');
