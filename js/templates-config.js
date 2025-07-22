@@ -1071,7 +1071,7 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
 일련번호 : ${serialNumber}
 유심번호 : ${usimNumber}
 요금제 : ${plan}
-약정유형(공시/선약)/개월수 : ${discountType} ${contractMonths}
+약정유형(공시/선약)/개월수 : ${discountType} / ${contractMonths}
 할부원금/개월수 : ${installmentInfo}
 선납금 : ${prepayment}
 부가서비스/보험 : ${addon}`;

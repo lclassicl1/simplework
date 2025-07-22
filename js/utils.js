@@ -475,7 +475,7 @@ function parseAddonAndInsuranceEnhanced(addonText) {
     
     // 보험 관련 키워드 정의 (더 포괄적)
     const insuranceKeywords = [
-        'T올케어', 'T ALL케어', 'T All케어', '케어플러스', '케어',
+        'T올케어', 'T ALL케어', 'T All케어', '올케어', '케어플러스', '케어',
         '단말보험', '보험', '스마트케어', '안심케어', '케어서비스',
         '보장서비스', '분실보험', '파손보험', '파손', '분실'
     ];
@@ -1176,7 +1176,7 @@ function extractCustomerInfo(text) {
         '가입유형': /\*{1,2}가\s*입\s*유\s*형\s*[-:：]\s*([^\n]+)/i,
         '할인유형': /\*{1,2}할\s*인\s*(?:유\s*형|방\s*식)\s*[-:：]\s*([^\n]+)/i,
         '유심': /\*{1,2}유\s*심\s*(?:비\s*용)?\s*[-:：]\s*([^\n]+)/i,
-        '부가서비스': /\*{1,2}부\s*가\s*서\s*비\s*스\s*[-:：]\s*([^\n]+)/i,
+        '부가서비스': /\*{1,2}(?:부\s*가\s*서\s*비\s*스\s*[-:：]\s*([^\n]+)|올케어\s*\(보험\)\s*([^\n]+))/i,
         '보험': /\*{1,2}보\s*험\s*[-:：]\s*([^\n]+)/i,
         '법대정보': /\*{1,2}법\s*대\s*정\s*보\s*[-:：]\s*([^/]+)\s*\/\s*([^/]+)\s*\/\s*([^/]+)/i
     };
@@ -1287,8 +1287,8 @@ function extractCustomerInfo(text) {
             }
             
             // 일반 필드 처리
-            if (match[1]) {
-                let value = match[1].trim();
+            if (match[1] || match[2]) {
+                let value = (match[1] || match[2] || '').trim();
                 
                 // 전화번호/개통번호 포맷 정규화 (01012345678 -> 010-1234-5678)
                 if ((key === '전화번호' || key === '개통번호') && value) {
@@ -1318,6 +1318,15 @@ function extractCustomerInfo(text) {
                 if ((key === '택배주소' || key === '배송주소지') && value) {
                     // "/" 이후의 전화번호 패턴 제거 (예: / 010-8316-1294)
                     value = value.replace(/\s*\/\s*010-\d{3,4}-\d{4}.*$/, '').trim();
+                }
+                
+                // 부가서비스 특별 처리: 올케어(보험) 형식인 경우 전체 텍스트 포함
+                if (key === '부가서비스' && value && value.includes('익월말')) {
+                    // 올케어(보험) 형식인 경우, 원본 텍스트에서 전체 부가서비스 부분을 찾아서 포함
+                    const fullAddonMatch = text.match(/\*{1,2}올케어\s*\(보험\)\s*([^\n]+)/i);
+                    if (fullAddonMatch) {
+                        value = '올케어(보험) ' + fullAddonMatch[1].trim();
+                    }
                 }
                 
                 customerInfo[key] = value;
