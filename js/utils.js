@@ -497,7 +497,18 @@ function parseAddonAndInsuranceEnhanced(addonText) {
         /\(\s*총\s*\d+\s*개월\s*유지\s*\)/gi,  // 유지 텍스트가 포함된 경우만 제거
         /\(\s*총\s*\d+\s*개월\s*\)/gi,          // 유지 텍스트가 없는 경우
         /\(\s*유지\s*\)/gi,                       // (유지)만 있는 경우
-        /\s*유지\s*/gi                              // ' 유지' 단독 또는 띄어쓰기 포함
+        /\s*유지\s*/gi,                          // ' 유지' 단독 또는 띄어쓰기 포함
+        // 새로 추가할 패턴들
+        /\(\s*\d+\s*개월\s*유지\s*\)/gi,         // (3개월유지)
+        /\(\s*\d+\s*달\s*유지\s*\)/gi,           // (2달유지)
+        /\(\s*익월말\s*\)/gi,                    // (익월말)
+        /\(\s*\d+\s*개월\s*\)/gi,                // (3개월)
+        /\(\s*\d+\s*달\s*\)/gi,                  // (2달)
+        /\s*\d+\s*개월\s*유지/gi,                // 3개월유지
+        /\s*\d+\s*달\s*유지/gi,                  // 2달유지
+        /\s*익월말/gi,                           // 익월말
+        /\s*총\s*\d+\s*개월\s*유지/gi,           // 총 9개월 유지
+        /\s*회선유지기간\s*M\+\d+.*/gi           // 회선유지기간 M+8(총 9개월)
     ];
     
     let insuranceItems = [];
@@ -522,6 +533,9 @@ function parseAddonAndInsuranceEnhanced(addonText) {
         items = addonText.split(/\s*\+\s*/)
             .map(item => item.trim())
             .filter(item => item.length > 0);
+        
+        // 익월말(2달유지) 형태가 별도로 분리된 경우 제거
+        items = items.filter(item => !/^익월말\s*\(\s*\d+\s*달\s*유지\s*\)\s*$/i.test(item));
     } else {
         // 일반적인 "/" 구분자로 분리
         items = addonText.split('/')
@@ -549,6 +563,21 @@ function parseAddonAndInsuranceEnhanced(addonText) {
             cleanItem = '';
         }
         
+        // 5단계: 숫자만 남은 경우 제거 (2달, 3개월 등)
+        if (/^\s*\d+\s*(달|개월)\s*$/i.test(cleanItem)) {
+            cleanItem = '';
+        }
+        
+        // 6단계: 익월말만 남은 경우 제거
+        if (cleanItem.trim() === '익월말') {
+            cleanItem = '';
+        }
+        
+        // 7단계: 익월말(숫자달유지) 형태 제거
+        if (/^익월말\s*\(\s*\d+\s*달\s*유지\s*\)\s*$/i.test(cleanItem)) {
+            cleanItem = '';
+        }
+        
         // 정리 후 빈 문자열이면 스킵
         if (!cleanItem || cleanItem.length < 2) {
             continue;
@@ -562,9 +591,11 @@ function parseAddonAndInsuranceEnhanced(addonText) {
         // 보험 키워드 확인
         for (const keyword of insuranceKeywords) {
             if (cleanItem.toLowerCase().includes(keyword.toLowerCase())) {
-                insuranceItems.push(cleanItem);
+                // 보험 항목에서 괄호 안의 숫자 제거 (예: T ALL케어플러스5 파손80(5300) -> T ALL케어플러스5 파손80)
+                let insuranceItem = cleanItem.replace(/\(\s*\d+\s*\)/g, '').trim();
+                insuranceItems.push(insuranceItem);
                 isInsurance = true;
-                console.log('보험으로 분류:', cleanItem);
+                console.log('보험으로 분류:', insuranceItem);
                 break;
             }
         }
@@ -1452,10 +1483,10 @@ function extractCustomerInfo(text) {
     } else {
     
         // 2. 괄호 포함 패턴 (예: **출고가 (1,540,000)- 공시(700,000)- 전지(100,000) = 현금(740,000))
-        const parenthesizedPattern = /\*\*\s*출고가\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*-\s*공시\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*(?:-\s*(?:추지|추가지원)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*(?:-\s*(?:전지|전환지원금?|전환)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*(?:-\s*프리할부\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*=\s*(할부\d*|\ud604\uae08)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?/i;
+        const parenthesizedPattern = /\*\*\s*출고가\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*-\s*공시\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*(?:-\s*(?:추지|추가지원|추가)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*(?:-\s*(?:전지|전환지원금?|전환)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*(?:-\s*프리할부\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*=\s*(할부\s*(?:\(?\d*\)?)|\ud604\uae08)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?/i;
         
         // 3. 일반 패턴 (괄호 없음, 기존 형식 유지)
-        const normalPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*(?:-\s*(?:추지|추가지원)\s+([\d,]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,]+))?\s*(?:-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d*|\ud604\uae08)\s*([\d,]+)/i;
+        const normalPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*(?:-\s*(?:추지|추가지원|추가)\s+([\d,]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,]+))?\s*(?:-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\s*(?:\(?\d*\)?)|\ud604\uae08)\s*([\d,]+)/i;
         
         // 4. 패턴 매칭 시도 (괄호 포함 패턴 먼저 시도)
         let match = text.match(parenthesizedPattern) || text.match(normalPattern);
@@ -1471,6 +1502,8 @@ function extractCustomerInfo(text) {
                 할부현금: match[6] || '현금',
                 최종구매가: match[7] || '0'
             };
+            
+
             
             // 고객 정보에 할당 (0이 아닌 경우에만 업데이트)
             customerInfo['출고가'] = groups.출고가.trim();
@@ -1500,7 +1533,7 @@ function extractCustomerInfo(text) {
             customerInfo['최종구매가'] = groups.최종구매가.trim();
         } else {
             // 추가 패턴 시도: 추지만 있는 경우 (괄호 없음)
-            const pricePattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원)\s+([\d,]+))?(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\d*|\ud604\uae08)\s*([\d,]+)/i;
+            const pricePattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원|추가)\s+([\d,]+))?(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*(할부\s*(?:\(?\d*\)?)|\ud604\uae08)\s*([\d,]+)/i;
             const priceMatch = text.match(pricePattern);
             
             if (priceMatch) {
@@ -1528,7 +1561,7 @@ function extractCustomerInfo(text) {
                 customerInfo['최종구매가'] = priceMatch[6].trim();
             } else {
                 // 현금 형식 패턴 확인 (추지와 전환지원금이 모두 있는 경우)
-                const cashConversionPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원)\s+([\d,]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,]+))?\s*(?:-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/i;
+                const cashConversionPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원|추가)\s+([\d,]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,]+))?\s*(?:-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/i;
                 const cashConversionMatch = text.match(cashConversionPattern);
                 
                 if (cashConversionMatch) {
@@ -1688,8 +1721,8 @@ function extractCustomerInfo(text) {
     // 모델제조사에 따른 보험명 자동 설정 (모델제조사 설정 후 실행)
     if (customerInfo['보험'] && customerInfo['모델제조사']) {
         if (customerInfo['모델제조사'] === '갤럭시') {
-            customerInfo['보험'] = 'T ALL케어플러스5 파손80(5300)';
-            console.log('갤럭시 보험명 자동 설정: T ALL케어플러스5 파손80(5300)');
+            customerInfo['보험'] = 'T ALL케어플러스5 파손80';
+            console.log('갤럭시 보험명 자동 설정: T ALL케어플러스5 파손80');
         } else if (customerInfo['모델제조사'] === '아이폰') {
             customerInfo['보험'] = 'T올케어+5 I파손';
             console.log('아이폰 보험명 자동 설정: T올케어+5 I파손');
