@@ -983,7 +983,20 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                         const model = info['모델명'] || '';
                         const color = info['색상'] || '';
                         const serialNumber = info['단말기일련번호'] || '';
-                        const usimNumber = info['유심일련번호'] || info['유심'] || '';
+                        // 유심번호 로직 개선
+                        const usimValue = info['유심'] || '';
+                        let usimNumber = '';
+                        
+                        if (/기존|기존유심/i.test(usimValue)) {
+                            usimNumber = '기존';
+                        } else {
+                            const usimSerial = info['유심일련번호'] || '';
+                            if (usimSerial) {
+                                usimNumber = `${usimSerial} / ${usimValue}`;
+                            } else {
+                                usimNumber = usimValue;
+                            }
+                        }
                         const plan = info['요금제'] || '';
                         const discountType = info['할인유형'] || '';
                         const contractMonths = info['약정개월수'] || '';
@@ -1015,7 +1028,7 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                         // 할부원금/개월수 처리
                         let installmentInfo = '';
                         if (info['할부현금여부'] === '현금') {
-                            installmentInfo = `★현금완납 / ${info['최종구매가'] || ''}`;
+                            installmentInfo = `★현금완납`;
                         } else if (info['할부현금여부'] === '할부') {
                             installmentInfo = `${info['최종구매가'] || ''} / ${info['할부개월수'] || ''}`;
                         } else {
@@ -1026,16 +1039,17 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                         let prepayment = '0';
                         if (info['공시선약여부'] === '공시지원') {
                             // 콤마 제거 후 숫자로 변환
-                            const gongsi = parseInt((info['공시'] || '0').replace(/,/g, '')) || 0;
-                            const chuji = parseInt((info['추지'] || '0').replace(/,/g, '')) || 0;
-                            const jeonhwan = parseInt((info['전환지원금'] || '0').replace(/,/g, '')) || 0;
-                            const preFree = parseInt((info['프리할부'] || '0').replace(/,/g, '')) || 0;
+                             const gongsi = parseInt((info['공시'] || '0').replace(/,/g, '')) || 0;
+                             const chuji = parseInt((info['추지'] || '0').replace(/,/g, '')) || 0;
+                             const jeonhwan = parseInt((info['전환지원금'] || '0').replace(/,/g, '')) || 0;
+                             const preFree = parseInt((info['프리할부'] || '0').replace(/,/g, '')) || 0;
                             
-                            const total = gongsi + chuji + jeonhwan + preFree;
+                             const total = gongsi + chuji + jeonhwan + preFree;
                             // 숫자를 콤마 형태로 포맷
-                            prepayment = total.toLocaleString();
+                             prepayment = total.toLocaleString();
+                            
                         } else if (info['공시선약여부'] === '선택약정') {
-                            prepayment = '0';
+                            prepayment = `${info['최종구매가'] || ''}`;
                         }
                         
                         // 미성년자 정보 추가
@@ -1056,7 +1070,7 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
 일련번호 : ${serialNumber}
 유심번호 : ${usimNumber}
 요금제 : ${plan}
-약정유형(공시/선약)/개월수 : ${discountType} / ${contractMonths}
+약정유형(공시/선약)/개월수 : ${discountType} ${contractMonths}
 할부원금/개월수 : ${installmentInfo}
 선납금 : ${prepayment}
 부가서비스/보험 : ${addon}`;
