@@ -106,14 +106,21 @@
                 </div>
                 
                 <div class="form-row">
-                    <div class="form-group">
+                    <div class="form-group serial-group">
                         <label for="deviceSerial">단말기 일련번호:</label>
-                        <input type="text" id="deviceSerial" class="form-control" placeholder="단말기 일련번호를 입력하세요">
+                        <input type="text" id="deviceSerial" class="form-control serial-input" placeholder="단말기 일련번호를 입력하세요">
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group serial-group">
                         <label for="simSerial">유심 일련번호:</label>
-                        <input type="text" id="simSerial" class="form-control" placeholder="유심 일련번호를 입력하세요">
+                        <input type="text" id="simSerial" class="form-control serial-input" placeholder="유심 일련번호를 입력하세요">
+                    </div>
+                    
+                    <div class="form-group save-group">
+                        <label>&nbsp;</label>
+                        <button id="saveHistoryBtn" class="save-btn" onclick="saveCurrentData()" title="현재 데이터 저장">
+                            💾
+                        </button>
                     </div>
                 </div>
                 
@@ -899,6 +906,8 @@
             }
         }
         
+
+
         // 키-값 테이블 생성 함수
         function createKeyValueTable(customerInfo) {
             const tableBody = document.querySelector('#keyValueTable tbody');
