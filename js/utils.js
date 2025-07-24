@@ -1273,12 +1273,7 @@ function extractCustomerInfo(text) {
                 
                 // 주민번호 포맷 정규화
                 if (idNumber) {
-                    const cleanId = idNumber.replace(/[^\d]/g, '');
-                    if (cleanId.length === 13) {
-                        customerInfo['법정대리인주민번호'] = cleanId.replace(/(\d{6})(\d{7})/, '$1-$2');
-                    } else {
-                        customerInfo['법정대리인주민번호'] = idNumber.replace(/\s*-\s*/g, '-');
-                    }
+                    customerInfo['법정대리인주민번호'] = normalizeIdNumber(idNumber);
                 } else {
                     customerInfo['법정대리인주민번호'] = '';
                 }
@@ -1308,10 +1303,9 @@ function extractCustomerInfo(text) {
                     }
                 }
                 
-                // 생년월일/주민번호 포맷 정규화 (000718 - 3251915 -> 000718-3251915)
+                // 생년월일/주민번호 포맷 정규화 (831204.1042912 -> 831204-1042912, 831204 1042912 -> 831204-1042912)
                 if ((key === '생년월일' || key === '주민번호') && value) {
-                    // 하이픈 주변의 공백 제거
-                    value = value.replace(/\s*-\s*/g, '-');
+                    value = normalizeIdNumber(value);
                 }
                 
                 // 배송주소/택배주소에서 "/" 이후의 전화번호 부분 제거
@@ -1810,6 +1804,7 @@ window.displayDeviceSearchResults = displayDeviceSearchResults;
 window.extractCustomerInfo = extractCustomerInfo;
 window.extractFlexiblePriceInfo = extractFlexiblePriceInfo;
 window.addThousandSeparator = addThousandSeparator;
+window.normalizeIdNumber = normalizeIdNumber;
 window.deviceModelDatabase = deviceModelDatabase;
 window.defaultDeviceModels = defaultDeviceModels;
 window.MODEL_STORAGE_KEY = MODEL_STORAGE_KEY;
@@ -2538,3 +2533,42 @@ function extractFlexiblePriceInfo(text) {
     console.log('=== 최종 초유연 파싱 결과 ===', priceInfo);
     return priceInfo;
 }
+
+/**
+ * 주민번호/생년월일 포맷 정규화 함수
+ * @param {string} value - 입력값
+ * @returns {string} - 정규화된 주민번호/생년월일
+ */
+function normalizeIdNumber(value) {
+    if (!value || value === '') return value;
+    
+    // 모든 공백과 특수문자 제거 (숫자만 남김)
+    const cleanValue = value.replace(/[^\d]/g, '');
+    
+    // 13자리인 경우 (주민번호) - 8312041042912 -> 831204-1042912
+    if (cleanValue.length === 13) {
+        return cleanValue.replace(/(\d{6})(\d{7})/, '$1-$2');
+    }
+    
+    // 6자리인 경우 (생년월일) - 831204 -> 831204
+    if (cleanValue.length === 6) {
+        return cleanValue;
+    }
+    
+    // 7자리인 경우 (생년월일 + 성별) - 8312041 -> 831204-1
+    if (cleanValue.length === 7) {
+        return cleanValue.replace(/(\d{6})(\d{1})/, '$1-$2');
+    }
+    
+    // 8자리인 경우 (생년월일 + 성별 + 기타) - 83120412 -> 831204-12
+    if (cleanValue.length === 8) {
+        return cleanValue.replace(/(\d{6})(\d{2})/, '$1-$2');
+    }
+    
+    // 기타 경우는 원본 반환
+    return value;
+}
+
+/**
+ * 천 단위 구분 쉼표 추가 함수
+ */
