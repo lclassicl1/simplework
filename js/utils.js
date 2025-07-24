@@ -1463,9 +1463,9 @@ function extractCustomerInfo(text) {
     const newPriceMatch = text.match(newPricePattern);
     
     if (newPriceMatch) {
-        customerInfo['출고가'] = newPriceMatch[1].trim();
-        customerInfo['공시'] = newPriceMatch[2] ? newPriceMatch[2].trim() : '0'; // 공시 금액이 있으면 추출, 없으면 0
-        customerInfo['추지'] = newPriceMatch[3] ? newPriceMatch[3].trim() : '0'; // 추가 금액이 있으면 추출, 없으면 0
+        customerInfo['출고가'] = addThousandSeparator(newPriceMatch[1].trim());
+        customerInfo['공시'] = addThousandSeparator(newPriceMatch[2] ? newPriceMatch[2].trim() : '0'); // 공시 금액이 있으면 추출, 없으면 0
+        customerInfo['추지'] = addThousandSeparator(newPriceMatch[3] ? newPriceMatch[3].trim() : '0'); // 추가 금액이 있으면 추출, 없으면 0
         customerInfo['전환지원금'] = '';
         customerInfo['프리할부'] = '';
         
@@ -1474,12 +1474,12 @@ function extractCustomerInfo(text) {
             // 할부인 경우
             customerInfo['할부현금여부'] = '할부';
             customerInfo['할부개월수'] = newPriceMatch[5] + '개월';
-            customerInfo['최종구매가'] = newPriceMatch[6] ? newPriceMatch[6].trim() : '';
+            customerInfo['최종구매가'] = addThousandSeparator(newPriceMatch[6] ? newPriceMatch[6].trim() : '');
         } else {
             // 현금인 경우
             customerInfo['할부현금여부'] = '현금';
             customerInfo['할부개월수'] = '';
-            customerInfo['최종구매가'] = newPriceMatch[4] ? newPriceMatch[4].trim() : '';
+            customerInfo['최종구매가'] = addThousandSeparator(newPriceMatch[4] ? newPriceMatch[4].trim() : '');
         }
         
         console.log('새로운 출고가 패턴 매칭:', {
@@ -1534,11 +1534,11 @@ function extractCustomerInfo(text) {
         }
         
         // 고객 정보에 할당 (값이 있는 경우에만 업데이트)
-        customerInfo['출고가'] = groups.출고가.trim();
-        customerInfo['공시'] = groups.공시.trim();
-        if (groups.추지 !== '0') customerInfo['추지'] = groups.추지.trim();
-        if (groups.전환지원금 && groups.전환지원금.trim() !== '') customerInfo['전환지원금'] = groups.전환지원금.trim();
-        if (groups.프리할부 && groups.프리할부.trim() !== '') customerInfo['프리할부'] = groups.프리할부.trim();
+        customerInfo['출고가'] = addThousandSeparator(groups.출고가.trim());
+        customerInfo['공시'] = addThousandSeparator(groups.공시.trim());
+        if (groups.추지 !== '0') customerInfo['추지'] = addThousandSeparator(groups.추지.trim());
+        if (groups.전환지원금 && groups.전환지원금.trim() !== '') customerInfo['전환지원금'] = addThousandSeparator(groups.전환지원금.trim());
+        if (groups.프리할부 && groups.프리할부.trim() !== '') customerInfo['프리할부'] = addThousandSeparator(groups.프리할부.trim());
         
         console.log('매칭된 정보:', groups); // 디버깅용
         
@@ -1562,17 +1562,17 @@ function extractCustomerInfo(text) {
             customerInfo['할부개월수'] = '';
         }
         
-        customerInfo['최종구매가'] = groups.최종구매가.trim();
+        customerInfo['최종구매가'] = addThousandSeparator(groups.최종구매가.trim());
     } else {
         // 추가 패턴 시도: 추지만 있는 경우 (괄호 없음)
             const pricePattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원|추가)\s+([\d,]+))?(?:\s*-\s*(?:프리할부|프리)\s+([\d,]+))?\s*=\s*(할부\s*(?:\(?\d*\)?)|\ud604\uae08)\s*([\d,]+)/i;
         const priceMatch = text.match(pricePattern);
         
         if (priceMatch) {
-            customerInfo['출고가'] = priceMatch[1].trim();
-            customerInfo['공시'] = priceMatch[2].trim();
-            if (priceMatch[3]) customerInfo['추지'] = priceMatch[3].trim();
-            if (priceMatch[4] && priceMatch[4].trim() !== '') customerInfo['프리할부'] = priceMatch[4].trim();
+            customerInfo['출고가'] = addThousandSeparator(priceMatch[1].trim());
+            customerInfo['공시'] = addThousandSeparator(priceMatch[2].trim());
+            if (priceMatch[3]) customerInfo['추지'] = addThousandSeparator(priceMatch[3].trim());
+            if (priceMatch[4] && priceMatch[4].trim() !== '') customerInfo['프리할부'] = addThousandSeparator(priceMatch[4].trim());
             
             // 할부/현금 여부 확인
             if (priceMatch[5].includes('할부')) {
@@ -1590,72 +1590,100 @@ function extractCustomerInfo(text) {
                 customerInfo['할부개월수'] = '';
             }
             
-            customerInfo['최종구매가'] = priceMatch[6].trim();
+            customerInfo['최종구매가'] = addThousandSeparator(priceMatch[6].trim());
         } else {
             // 현금 형식 패턴 확인 (추지와 전환지원금이 모두 있는 경우)
                 const cashConversionPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원|추가)\s+([\d,]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,]+))?\s*(?:-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/i;
             const cashConversionMatch = text.match(cashConversionPattern);
             
             if (cashConversionMatch) {
-                customerInfo['출고가'] = cashConversionMatch[1].trim();
-                customerInfo['공시'] = cashConversionMatch[2].trim();
-                if (cashConversionMatch[3]) customerInfo['추지'] = cashConversionMatch[3].trim();
-                if (cashConversionMatch[4] && cashConversionMatch[4].trim() !== '') customerInfo['전환지원금'] = cashConversionMatch[4].trim();
-                if (cashConversionMatch[5] && cashConversionMatch[5].trim() !== '') customerInfo['프리할부'] = cashConversionMatch[5].trim();
+                customerInfo['출고가'] = addThousandSeparator(cashConversionMatch[1].trim());
+                customerInfo['공시'] = addThousandSeparator(cashConversionMatch[2].trim());
+                if (cashConversionMatch[3]) customerInfo['추지'] = addThousandSeparator(cashConversionMatch[3].trim());
+                if (cashConversionMatch[4] && cashConversionMatch[4].trim() !== '') customerInfo['전환지원금'] = addThousandSeparator(cashConversionMatch[4].trim());
+                if (cashConversionMatch[5] && cashConversionMatch[5].trim() !== '') customerInfo['프리할부'] = addThousandSeparator(cashConversionMatch[5].trim());
                 customerInfo['할부현금여부'] = '현금';
                 customerInfo['할부개월수'] = '';
-                customerInfo['최종구매가'] = cashConversionMatch[7].trim();
+                customerInfo['최종구매가'] = addThousandSeparator(cashConversionMatch[7].trim());
             } else {
                 // 기존 현금 형식 패턴 (전환지원금 없는 경우)
                 const cashPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/;
                 const cashMatch = text.match(cashPattern);
                 
                 if (cashMatch) {
-                    customerInfo['출고가'] = cashMatch[1].trim();
-                    customerInfo['공시'] = cashMatch[2].trim();
-                    customerInfo['추지'] = cashMatch[3].trim();
+                    customerInfo['출고가'] = addThousandSeparator(cashMatch[1].trim());
+                    customerInfo['공시'] = addThousandSeparator(cashMatch[2].trim());
+                    customerInfo['추지'] = addThousandSeparator(cashMatch[3].trim());
                     customerInfo['전환지원금'] = '';
-                    customerInfo['프리할부'] = cashMatch[4] && cashMatch[4].trim() !== '' ? cashMatch[4].trim() : '';
+                    customerInfo['프리할부'] = cashMatch[4] && cashMatch[4].trim() !== '' ? addThousandSeparator(cashMatch[4].trim()) : '';
                     customerInfo['할부현금여부'] = '현금';
                     customerInfo['할부개월수'] = '';
-                    customerInfo['최종구매가'] = cashMatch[5].trim();
+                    customerInfo['최종구매가'] = addThousandSeparator(cashMatch[5].trim());
                 } else {
                     // 할부 형식 패턴 확인 (전환지원금 포함)
                     const installmentConversionPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)\s*-\s*(전환지원금?|전환)\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*할부(\d+)\s*([\d,]+)/;
                     const installmentConversionMatch = text.match(installmentConversionPattern);
                     
                     if (installmentConversionMatch) {
-                        customerInfo['출고가'] = installmentConversionMatch[1].trim();
-                        customerInfo['공시'] = installmentConversionMatch[2].trim();
-                        customerInfo['추지'] = installmentConversionMatch[3].trim();
-                        customerInfo['전환지원금'] = installmentConversionMatch[5].trim();
-                        customerInfo['프리할부'] = installmentConversionMatch[6] && installmentConversionMatch[6].trim() !== '' ? installmentConversionMatch[6].trim() : '';
+                        customerInfo['출고가'] = addThousandSeparator(installmentConversionMatch[1].trim());
+                        customerInfo['공시'] = addThousandSeparator(installmentConversionMatch[2].trim());
+                        customerInfo['추지'] = addThousandSeparator(installmentConversionMatch[3].trim());
+                        customerInfo['전환지원금'] = addThousandSeparator(installmentConversionMatch[5].trim());
+                        customerInfo['프리할부'] = installmentConversionMatch[6] && installmentConversionMatch[6].trim() !== '' ? addThousandSeparator(installmentConversionMatch[6].trim()) : '';
                         customerInfo['할부현금여부'] = '할부';
                         customerInfo['할부개월수'] = installmentConversionMatch[7] + '개월';
-                        customerInfo['최종구매가'] = installmentConversionMatch[8].trim();
+                        customerInfo['최종구매가'] = addThousandSeparator(installmentConversionMatch[8].trim());
                     } else {
                         // 기존 할부 형식 패턴 (전환지원금 없는 경우)
                         const alternatePattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*할부(\d+)\s*([\d,]+)/;
                         const alternateMatch = text.match(alternatePattern);
                         
                         if (alternateMatch) {
-                            customerInfo['출고가'] = alternateMatch[1].trim();
-                            customerInfo['공시'] = alternateMatch[2].trim();
-                            customerInfo['추지'] = alternateMatch[3].trim();
+                            customerInfo['출고가'] = addThousandSeparator(alternateMatch[1].trim());
+                            customerInfo['공시'] = addThousandSeparator(alternateMatch[2].trim());
+                            customerInfo['추지'] = addThousandSeparator(alternateMatch[3].trim());
                             customerInfo['전환지원금'] = '';
-                            customerInfo['프리할부'] = alternateMatch[4] && alternateMatch[4].trim() !== '' ? alternateMatch[4].trim() : '';
+                            customerInfo['프리할부'] = alternateMatch[4] && alternateMatch[4].trim() !== '' ? addThousandSeparator(alternateMatch[4].trim()) : '';
                             customerInfo['할부현금여부'] = '할부';
                             customerInfo['할부개월수'] = alternateMatch[5] + '개월';
-                            customerInfo['최종구매가'] = alternateMatch[6].trim();
+                            customerInfo['최종구매가'] = addThousandSeparator(alternateMatch[6].trim());
                         } else {
-                            customerInfo['출고가'] = '';
-                            customerInfo['공시'] = '';
-                            customerInfo['추지'] = '';
-                            customerInfo['전환지원금'] = '';
-                            customerInfo['프리할부'] = '';
-                            customerInfo['할부현금여부'] = '';
-                            customerInfo['할부개월수'] = '';
-                            customerInfo['최종구매가'] = '';
+                            // 모든 기존 패턴이 실패한 경우 초유연 파싱 시도
+                            console.log('기존 패턴 실패, 초유연 파싱 시작...');
+                            const flexiblePriceInfo = extractFlexiblePriceInfo(text);
+                            
+                            if (Object.keys(flexiblePriceInfo).length > 0) {
+                                // 초유연 파싱으로 얻은 정보 적용 (이미 천 단위 구분 쉼표가 적용되어 있음)
+                                if (flexiblePriceInfo['출고가']) customerInfo['출고가'] = flexiblePriceInfo['출고가'];
+                                if (flexiblePriceInfo['공시']) customerInfo['공시'] = flexiblePriceInfo['공시'];
+                                if (flexiblePriceInfo['추지']) customerInfo['추지'] = flexiblePriceInfo['추지'];
+                                if (flexiblePriceInfo['전환지원금']) customerInfo['전환지원금'] = flexiblePriceInfo['전환지원금'];
+                                if (flexiblePriceInfo['프리할부']) customerInfo['프리할부'] = flexiblePriceInfo['프리할부'];
+                                if (flexiblePriceInfo['최종구매가']) customerInfo['최종구매가'] = flexiblePriceInfo['최종구매가'];
+                                if (flexiblePriceInfo['현금가']) customerInfo['현금가'] = flexiblePriceInfo['현금가'];
+                                
+                                // 할부/현금 여부는 텍스트에서 추정
+                                if (text.match(/할부/i)) {
+                                    customerInfo['할부현금여부'] = '할부';
+                                    customerInfo['할부개월수'] = '24개월'; // 기본값
+                                } else if (text.match(/현금/i)) {
+                                    customerInfo['할부현금여부'] = '현금';
+                                    customerInfo['할부개월수'] = '';
+                                }
+                                
+                                console.log('초유연 파싱 성공:', flexiblePriceInfo);
+                            } else {
+                                // 초유연 파싱도 실패한 경우 기본값 설정
+                                customerInfo['출고가'] = '';
+                                customerInfo['공시'] = '';
+                                customerInfo['추지'] = '';
+                                customerInfo['전환지원금'] = '';
+                                customerInfo['프리할부'] = '';
+                                customerInfo['할부현금여부'] = '';
+                                customerInfo['할부개월수'] = '';
+                                customerInfo['최종구매가'] = '';
+                                console.log('초유연 파싱도 실패, 기본값 설정');
+                            }
                         }
                     }
                 }
@@ -1780,6 +1808,8 @@ window.initializeModelDatabase = initializeModelDatabase;
 window.searchDeviceModel = searchDeviceModel;
 window.displayDeviceSearchResults = displayDeviceSearchResults;
 window.extractCustomerInfo = extractCustomerInfo;
+window.extractFlexiblePriceInfo = extractFlexiblePriceInfo;
+window.addThousandSeparator = addThousandSeparator;
 window.deviceModelDatabase = deviceModelDatabase;
 window.defaultDeviceModels = defaultDeviceModels;
 window.MODEL_STORAGE_KEY = MODEL_STORAGE_KEY;
@@ -2241,4 +2271,270 @@ function displayModelColorResults(results) {
     
     searchResults.innerHTML = html;
     searchResults.style.display = 'block';
+}
+
+/**
+ * 천 단위 구분 쉼표 추가 함수
+ * @param {string} value - 숫자 문자열
+ * @returns {string} - 천 단위 구분 쉼표가 추가된 문자열
+ */
+function addThousandSeparator(value) {
+    if (!value || value === '' || value === '0') return value;
+    
+    // 숫자가 아닌 문자 제거 후 숫자만 추출
+    const cleanValue = value.toString().replace(/[^\d]/g, '');
+    
+    if (cleanValue === '') return value;
+    
+    // 천 단위 구분 쉼표 추가
+    return cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/**
+ * 초유연 가격 파싱 함수 - 어떤 형태의 입력이든 처리 가능
+ * @param {string} text - 입력 텍스트
+ * @returns {Object} - 파싱된 가격 정보
+ */
+function extractFlexiblePriceInfo(text) {
+    const priceInfo = {};
+    
+    console.log('=== 초유연 파싱 시작 ===');
+    console.log('입력 텍스트:', text);
+    
+    // 1단계: 키워드 기반 추출 (가장 정확)
+    const keywordPatterns = {
+        '출고가': [
+            /출고가\s*[^\d]*?([\d,.]+)/i,
+            /출고\s*[^\d]*?([\d,.]+)/i
+        ],
+        '공시': [
+            /공시\s*[^\d]*?([\d,.]+)/i,
+            /공시지원\s*[^\d]*?([\d,.]+)/i
+        ],
+        '추지': [
+            /추지\s*[^\d]*?([\d,.]+)/i,
+            /추가지원\s*[^\d]*?([\d,.]+)/i,
+            /추가\s*[^\d]*?([\d,.]+)/i
+        ],
+        '전환지원금': [
+            /전환지원금\s*[^\d]*?([\d,.]+)/i,
+            /전환\s*[^\d]*?([\d,.]+)/i,
+            /전지\s*[^\d]*?([\d,.]+)/i
+        ],
+        '프리할부': [
+            /프리할부\s*[^\d]*?([\d,.]+)/i,
+            /프리\s*[^\d]*?([\d,.]+)/i
+        ],
+        '최종구매가': [
+            /최종구매가\s*[^\d]*?([\d,.]+)/i,
+            /실구매가\s*[^\d]*?([\d,.]+)/i,
+            /구매가\s*[^\d]*?([\d,.]+)/i
+        ],
+        '현금가': [
+            /현금가\s*[^\d]*?([\d,.]+)/i,
+            /현금\s*[^\d]*?([\d,.]+)/i
+        ]
+    };
+    
+    // 키워드 기반 추출 시도
+    console.log('=== 1단계: 키워드 기반 추출 ===');
+    for (const [key, patterns] of Object.entries(keywordPatterns)) {
+        if (!priceInfo[key]) {
+            for (const pattern of patterns) {
+                const match = text.match(pattern);
+                if (match && match[1]) {
+                    const cleanValue = match[1].replace(/[,.]/g, '');
+                    priceInfo[key] = addThousandSeparator(cleanValue);
+                    console.log(`${key} 매칭됨: ${match[1]} → ${priceInfo[key]}`);
+                    break;
+                }
+            }
+        }
+    }
+    console.log('1단계 결과:', priceInfo);
+    
+    // 2단계: 위치 기반 추출 (키워드가 없어도)
+    console.log('=== 2단계: 위치 기반 추출 ===');
+    const lines = text.split(/\n|\r/);
+    for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+        
+        // 가격 관련 라인인지 확인
+        const lowerLine = trimmedLine.toLowerCase();
+        const isPriceLine = lowerLine.includes('출고가') || 
+                           lowerLine.includes('공시') || 
+                           lowerLine.includes('추지') || 
+                           lowerLine.includes('추가') || 
+                           lowerLine.includes('전환') || 
+                           lowerLine.includes('프리') || 
+                           lowerLine.includes('구매가') || 
+                           lowerLine.includes('현금가') ||
+                           lowerLine.includes('현금') ||
+                           /[\d,.]+\s*[=@→|~><&#]+\s*[\d,.]+\s*[=@→|~><&#]+\s*[\d,.]+\s*[=@→|~><&#]+\s*[\d,.]+/.test(trimmedLine);
+        
+        if (!isPriceLine) {
+            console.log(`가격 관련 라인이 아님, 건너뜀: ${trimmedLine}`);
+            continue;
+        }
+        
+        console.log(`가격 관련 라인 처리: ${trimmedLine}`);
+        
+        // 숫자들을 모두 찾기
+        const numbers = trimmedLine.match(/[\d,.]+/g);
+        if (!numbers || numbers.length < 2) {
+            console.log(`숫자가 부족함: ${numbers}`);
+            continue;
+        }
+        
+        console.log(`찾은 숫자들: ${numbers}`);
+        
+        // 첫 번째 숫자는 출고가로 추정
+        if (!priceInfo['출고가']) {
+            const cleanValue = numbers[0].replace(/[,.]/g, '');
+            priceInfo['출고가'] = addThousandSeparator(cleanValue);
+            console.log(`출고가 설정: ${numbers[0]} → ${priceInfo['출고가']}`);
+        }
+        
+        // 두 번째 숫자는 공시로 추정
+        if (!priceInfo['공시']) {
+            const cleanValue = numbers[1].replace(/[,.]/g, '');
+            priceInfo['공시'] = addThousandSeparator(cleanValue);
+            console.log(`공시 설정: ${numbers[1]} → ${priceInfo['공시']}`);
+        }
+        
+        // 세 번째 숫자는 추지로 추정
+        if (!priceInfo['추지'] && numbers.length > 2) {
+            const cleanValue = numbers[2].replace(/[,.]/g, '');
+            priceInfo['추지'] = addThousandSeparator(cleanValue);
+            console.log(`추지 설정: ${numbers[2]} → ${priceInfo['추지']}`);
+        }
+        
+        // 마지막 숫자는 최종구매가로 추정
+        if (!priceInfo['최종구매가'] && numbers.length > 3) {
+            const cleanValue = numbers[numbers.length - 1].replace(/[,.]/g, '');
+            priceInfo['최종구매가'] = addThousandSeparator(cleanValue);
+            console.log(`최종구매가 설정: ${numbers[numbers.length - 1]} → ${priceInfo['최종구매가']}`);
+        }
+    }
+    console.log('2단계 결과:', priceInfo);
+    
+    // 3단계: 전체 텍스트에서 순서 기반 추출 (최후수단)
+    console.log('=== 3단계: 전체 텍스트에서 순서 기반 추출 ===');
+    if (!priceInfo['출고가'] || !priceInfo['공시'] || !priceInfo['추지'] || !priceInfo['최종구매가']) {
+        // 가격 관련 키워드가 있는 라인에서만 숫자 추출
+        const priceLines = text.split(/\n|\r/).filter(line => {
+            const lowerLine = line.toLowerCase();
+            return lowerLine.includes('출고가') || 
+                   lowerLine.includes('공시') || 
+                   lowerLine.includes('추지') || 
+                   lowerLine.includes('추가') || 
+                   lowerLine.includes('전환') || 
+                   lowerLine.includes('프리') || 
+                   lowerLine.includes('구매가') || 
+                   lowerLine.includes('현금가') ||
+                   lowerLine.includes('현금') ||
+                   /[\d,.]+\s*[=@→|~><&#]+\s*[\d,.]+\s*[=@→|~><&#]+\s*[\d,.]+\s*[=@→|~><&#]+\s*[\d,.]+/.test(line);
+        });
+        
+        console.log('가격 관련 라인들:', priceLines);
+        
+        if (priceLines.length > 0) {
+            // 가격 관련 라인에서만 숫자 추출
+            const priceNumbers = [];
+            for (const line of priceLines) {
+                const numbers = line.match(/[\d,.]+/g);
+                if (numbers) {
+                    // 가격 관련 숫자인지 필터링 (전화번호, 주민번호 등 제외)
+                    const filteredNumbers = numbers.filter(num => {
+                        const cleanNum = num.replace(/[,.]/g, '');
+                        // 전화번호 패턴 제외 (010으로 시작하는 10-11자리)
+                        if (/^010\d{7,8}$/.test(cleanNum)) return false;
+                        // 주민번호 패턴 제외 (6자리 또는 13자리)
+                        if (/^\d{6}$/.test(cleanNum) || /^\d{13}$/.test(cleanNum)) return false;
+                        // 주소 관련 숫자 제외 (3자리 이하)
+                        if (cleanNum.length <= 3) return false;
+                        // 용량 관련 숫자 제외 (256, 512 등)
+                        if (/^(256|512|128|64|32|16|8|4|2|1)$/.test(cleanNum)) return false;
+                        // 개월수 관련 숫자 제외 (12, 24, 36 등)
+                        if (/^(12|24|36|48|60)$/.test(cleanNum)) return false;
+                        // 요금제 관련 숫자 제외 (99000 등)
+                        if (/^99\d{3}$/.test(cleanNum)) return false;
+                        // 이심 관련 숫자 제외 (2750 등)
+                        if (/^27\d{2}$/.test(cleanNum)) return false;
+                        
+                        return true;
+                    });
+                    priceNumbers.push(...filteredNumbers);
+                }
+            }
+            
+            console.log('필터링된 가격 관련 숫자들:', priceNumbers);
+            
+            if (priceNumbers.length >= 4) {
+                const cleanNumbers = priceNumbers.map(num => num.replace(/[,.]/g, ''));
+                console.log('정리된 숫자들:', cleanNumbers);
+                
+                // 키워드 순서대로 매칭
+                const keywords = ['출고가', '공시', '추지', '최종구매가'];
+                let numberIndex = 0;
+                
+                for (const keyword of keywords) {
+                    if (!priceInfo[keyword] && numberIndex < cleanNumbers.length) {
+                        // 해당 키워드가 텍스트에 있는지 확인
+                        if (text.toLowerCase().includes(keyword.toLowerCase())) {
+                            priceInfo[keyword] = addThousandSeparator(cleanNumbers[numberIndex]);
+                            console.log(`${keyword} 키워드 매칭으로 설정: ${addThousandSeparator(cleanNumbers[numberIndex])}`);
+                            numberIndex++;
+                        }
+                    }
+                }
+                
+                // 키워드가 없어도 순서대로 할당 (가격 관련 숫자만)
+                if (!priceInfo['출고가'] && cleanNumbers.length > 0) {
+                    priceInfo['출고가'] = addThousandSeparator(cleanNumbers[0]);
+                    console.log(`출고가 순서대로 설정: ${addThousandSeparator(cleanNumbers[0])}`);
+                }
+                if (!priceInfo['공시'] && cleanNumbers.length > 1) {
+                    priceInfo['공시'] = addThousandSeparator(cleanNumbers[1]);
+                    console.log(`공시 순서대로 설정: ${addThousandSeparator(cleanNumbers[1])}`);
+                }
+                if (!priceInfo['추지'] && cleanNumbers.length > 2) {
+                    priceInfo['추지'] = addThousandSeparator(cleanNumbers[2]);
+                    console.log(`추지 순서대로 설정: ${addThousandSeparator(cleanNumbers[2])}`);
+                }
+                if (!priceInfo['최종구매가'] && cleanNumbers.length > 3) {
+                    priceInfo['최종구매가'] = addThousandSeparator(cleanNumbers[3]);
+                    console.log(`최종구매가 순서대로 설정: ${addThousandSeparator(cleanNumbers[3])}`);
+                }
+            }
+        }
+    }
+    console.log('3단계 결과:', priceInfo);
+    
+    // 4단계: 현금가 별도 처리
+    console.log('=== 4단계: 현금가 별도 처리 ===');
+    if (!priceInfo['현금가']) {
+        const 현금가Match = text.match(/현금가\s*[^\d]*?([\d,.]+)/i);
+        if (현금가Match) {
+            const cleanValue = 현금가Match[1].replace(/[,.]/g, '');
+            priceInfo['현금가'] = addThousandSeparator(cleanValue);
+            console.log(`현금가 매칭됨: ${현금가Match[1]} → ${priceInfo['현금가']}`);
+        }
+    }
+    console.log('4단계 결과:', priceInfo);
+    
+    // 5단계: 기본값 설정
+    console.log('=== 5단계: 기본값 설정 ===');
+    if (!priceInfo['공시']) {
+        priceInfo['공시'] = '0';
+        console.log('공시 기본값 설정: 0');
+    }
+    if (!priceInfo['추지']) {
+        priceInfo['추지'] = '0';
+        console.log('추지 기본값 설정: 0');
+    }
+    
+    console.log('=== 최종 초유연 파싱 결과 ===', priceInfo);
+    return priceInfo;
 }
