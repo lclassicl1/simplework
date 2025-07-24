@@ -473,15 +473,21 @@ function parseAddonAndInsuranceEnhanced(addonText) {
         return { 보험: '', 부가서비스1: '', 부가서비스2: '' };
     }
     
-    // 보험 관련 키워드 정의 (더 포괄적)
+    // 보험 관련 키워드 정의 (더 구체적인 것부터 순서대로)
     const insuranceKeywords = [
-        'T올케어', 'T ALL케어', 'T All케어', '올케어', '케어플러스', '케어',
+        '365 케어 보험', '365케어 보험',  // 가장 구체적인 것부터
+        'T ALL케어플러스5 파손80', 'T ALL케어플러스5 파손F',
+        'T올케어+5 I파손', 'T올케어',
+        'T ALL케어', 'T All케어', '올케어', '케어플러스',
+        '365 케어', '365케어', '케어',
         '단말보험', '보험', '스마트케어', '안심케어', '케어서비스',
         '보장서비스', '분실보험', '파손보험', '파손', '분실'
     ];
     
-    // 부가서비스 관련 키워드 정의
+    // 부가서비스 관련 키워드 정의 (더 구체적인 것부터 순서대로)
     const addonKeywords = [
+        '필수팩 M1', '필수팩 M2', '필수팩 M3',  // 가장 구체적인 것부터
+        '필수팩', '필수 팩',
         '우주패스', '마이스마트콜', '스마트콜', '벨소리', '컬러링',
         '네이버플러스', '멜론', '지니뮤직', '플로', '티맵', '네비게이션',
         '클라우드', '백업', '바이브', '카카오VIP', '모바일TV', 'DMB',
@@ -509,7 +515,11 @@ function parseAddonAndInsuranceEnhanced(addonText) {
         /\s*\d+\s*달\s*유지/gi,                  // 2달유지
         /\s*익월말/gi,                           // 익월말
         /\s*총\s*\d+\s*개월\s*유지/gi,           // 총 9개월 유지
-        /\s*회선유지기간\s*M\+\d+.*/gi           // 회선유지기간 M+8(총 9개월)
+        /\s*회선유지기간\s*M\+\d+.*/gi,          // 회선유지기간 M+8(총 9개월)
+        // 추가 패턴들
+        /\s*부가\s*\d+\s*가지\s*모두\s*M\+\d+/gi,  // 부가 2가지 모두 M+3
+        /\s*총\s*\d+\s*개월\s*유지/gi,            // 총4개월유지
+        /\s*부가\s*\d+\s*가지\s*모두/gi           // 부가 2가지 모두
     ];
     
     let insuranceItems = [];
@@ -519,8 +529,26 @@ function parseAddonAndInsuranceEnhanced(addonText) {
     // 주요 구분자로 분리 (/, +, 번호순서 등)
     let items = [];
     
-    // 먼저 "/숫자." 패턴으로 분리 시도
-    if (addonText.includes('/') && /\/\s*\d+\.\s*/.test(addonText)) {
+    // 먼저 "-" 구분자로 분리 (부가서비스- 필수팩 M1 / 365 케어 보험 - 부가 2가지 모두 M+3 같은 경우)
+    if (addonText.includes('-') && addonText.includes('/')) {
+        // "-" 구분자로 먼저 분리
+        const parts = addonText.split('-')
+            .map(item => item.trim())
+            .filter(item => item.length > 0);
+        
+        // 각 부분에서 "/" 구분자로 다시 분리
+        for (const part of parts) {
+            if (part.includes('/')) {
+                const subItems = part.split('/')
+                    .map(item => item.trim())
+                    .filter(item => item.length > 0);
+                items.push(...subItems);
+            } else {
+                items.push(part);
+            }
+        }
+    } else if (addonText.includes('/') && /\/\s*\d+\.\s*/.test(addonText)) {
+        // "/숫자." 패턴으로 분리 시도
         items = addonText.split(/\/\s*\d+\.\s*/)
             .map(item => item.trim())
             .filter(item => item.length > 0);
@@ -1769,22 +1797,29 @@ function extractCustomerInfo(text) {
         customerInfo['부가서비스2'] = '';
     }
     
-    // 모델제조사에 따른 보험명 자동 설정 (모델제조사 설정 후 실행)
+    // 모델제조사에 따른 보험명 자동 설정 (SK 통신사에만 적용)
     if (customerInfo['보험'] && customerInfo['모델제조사']) {
-        if (customerInfo['모델제조사'] === '갤럭시') {
-            // 갤럭시 모델 중 플립, 폴드, F766, F966인 경우 특별 처리
-            const modelName = customerInfo['모델명'] || '';
-            if (modelName.includes('플립') || modelName.includes('폴드') || 
-                modelName.includes('F766') || modelName.includes('F966')) {
-                customerInfo['보험'] = 'T ALL케어플러스5 파손F';
-                console.log('갤럭시 플립/폴드 보험명 자동 설정: T ALL케어플러스5 파손F');
-            } else {
-                customerInfo['보험'] = 'T ALL케어플러스5 파손80';
-                console.log('갤럭시 보험명 자동 설정: T ALL케어플러스5 파손80');
+        // 현재 선택된 통신사 확인
+        const telecomSelect = document.getElementById('telecom');
+        const selectedTelecom = telecomSelect ? telecomSelect.value : '';
+        
+        // SK 통신사인 경우에만 T ALL케어플러스 보험 적용
+        if (selectedTelecom === 'SK') {
+            if (customerInfo['모델제조사'] === '갤럭시') {
+                // 갤럭시 모델 중 플립, 폴드, F766, F966인 경우 특별 처리
+                const modelName = customerInfo['모델명'] || '';
+                if (modelName.includes('플립') || modelName.includes('폴드') || 
+                    modelName.includes('F766') || modelName.includes('F966')) {
+                    customerInfo['보험'] = 'T ALL케어플러스5 파손F';
+                    console.log('SK 갤럭시 플립/폴드 보험명 자동 설정: T ALL케어플러스5 파손F');
+                } else {
+                    customerInfo['보험'] = 'T ALL케어플러스5 파손80';
+                    console.log('SK 갤럭시 보험명 자동 설정: T ALL케어플러스5 파손80');
+                }
+            } else if (customerInfo['모델제조사'] === '아이폰') {
+                customerInfo['보험'] = 'T올케어+5 I파손';
+                console.log('SK 아이폰 보험명 자동 설정: T올케어+5 I파손');
             }
-        } else if (customerInfo['모델제조사'] === '아이폰') {
-            customerInfo['보험'] = 'T올케어+5 I파손';
-            console.log('아이폰 보험명 자동 설정: T올케어+5 I파손');
         }
     }
     
