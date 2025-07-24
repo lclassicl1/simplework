@@ -2572,3 +2572,200 @@ function normalizeIdNumber(value) {
 /**
  * 천 단위 구분 쉼표 추가 함수
  */
+
+// 전역 함수로 노출
+window.formatBirthDate = formatBirthDate;
+window.convertSKPlan = convertSKPlan;
+window.convertModelName = convertModelName;
+window.showToast = showToast;
+window.openSelectedUrl = openSelectedUrl;
+window.checkPassword = checkPassword;
+window.showPasswordError = showPasswordError;
+window.copyToClipboardWithFeedback = copyToClipboardWithFeedback;
+window.copyToClipboard = copyToClipboard;
+window.handleDoubleClick = handleDoubleClick;
+window.setupDoubleClickCopy = setupDoubleClickCopy;
+window.handleTextareaDoubleClick = handleTextareaDoubleClick;
+window.MODEL_NAME_MAPPING = MODEL_NAME_MAPPING;
+window.CORRECT_PASSWORD = CORRECT_PASSWORD;
+
+// 현재 데이터 저장 함수
+function saveCurrentData() {
+    // 현재 입력된 데이터 수집
+    const currentData = {
+        고객명: document.getElementById('customerName').value,
+        전화번호: document.getElementById('phoneNumber').value,
+        모델명: document.getElementById('modelName').value,
+        색상: document.getElementById('color').value,
+        요금제: document.getElementById('plan').value,
+        단말기일련번호: document.getElementById('deviceSerial').value,
+        유심일련번호: document.getElementById('simSerial').value,
+        원본텍스트: document.getElementById('inputText').value
+    };
+
+    // 필수 데이터가 있는지 확인
+    if (!currentData.고객명 && !currentData.전화번호 && !currentData.원본텍스트) {
+        showToast('저장할 데이터가 없습니다.');
+        return;
+    }
+
+    // HistoryManager를 사용하여 저장
+    if (HistoryManager && HistoryManager.saveToHistory) {
+        const selectedTelecom = document.getElementById('telecomSelect').value;
+        const selectedAgency = document.getElementById('agencySelect').value;
+        
+        // customerInfo 형태로 변환
+        const customerInfo = {
+            고객명: currentData.고객명,
+            전화번호: currentData.전화번호,
+            모델명: currentData.모델명,
+            색상: currentData.색상,
+            요금제: currentData.요금제,
+            단말기일련번호: currentData.단말기일련번호,
+            유심일련번호: currentData.유심일련번호,
+            원본텍스트: currentData.원본텍스트
+        };
+
+        HistoryManager.saveToHistory(customerInfo, selectedTelecom, selectedAgency);
+        showToast('데이터가 저장되었습니다! 💾');
+    } else {
+        showToast('저장 기능을 사용할 수 없습니다.');
+    }
+}
+
+// saveCurrentData 함수를 전역으로 노출
+window.saveCurrentData = saveCurrentData;
+
+// ========================================
+// 유심 관련 통합 함수들
+// ========================================
+
+/**
+ * 유심 상태를 판단하는 통합 함수
+ * @param {string} usimValue - 유심 값
+ * @returns {object} - 유심 상태 정보
+ */
+function analyzeUsimStatus(usimValue) {
+    if (!usimValue) {
+        return {
+            isExisting: false,
+            isESim: false,
+            isReuse: false,
+            isRecycle: false,
+            needsDelivery: true,
+            needsPurchase: true
+        };
+    }
+
+    const lowerValue = usimValue.toLowerCase().trim();
+    
+    // 기존 유심 관련 키워드 (발송 불필요, 구매 불필요)
+    const existingKeywords = ['기존', '기존유심', '재사용', '재활용'];
+    const isExisting = existingKeywords.some(keyword => lowerValue.includes(keyword));
+    
+    // 이심 관련 키워드 (발송 불필요, 구매 불필요)
+    const eSimKeywords = ['이심', 'esim', 'e-sim'];
+    const isESim = eSimKeywords.some(keyword => lowerValue.includes(keyword));
+    
+    // 재사용/재활용 키워드 (기존과 동일하게 처리)
+    const isReuse = lowerValue.includes('재사용');
+    const isRecycle = lowerValue.includes('재활용');
+    
+    // 발송 필요 여부 (기존/이심/재사용/재활용이면 발송 불필요)
+    const needsDelivery = !(isExisting || isESim || isReuse || isRecycle);
+    
+    // 구매 필요 여부 (기존/이심/재사용/재활용이면 구매 불필요)
+    const needsPurchase = !(isExisting || isESim || isReuse || isRecycle);
+    
+    return {
+        isExisting,
+        isESim,
+        isReuse,
+        isRecycle,
+        needsDelivery,
+        needsPurchase
+    };
+}
+
+/**
+ * 대리점별 유심 표시 형식 변환 함수
+ * @param {string} usimValue - 유심 값
+ * @param {string} format - 표시 형식 ('OX', 'YN', '구매비구매', '즉납후납기존', '발송여부')
+ * @returns {string} - 변환된 값
+ */
+function formatUsimForAgency(usimValue, format) {
+    const status = analyzeUsimStatus(usimValue);
+    
+    switch (format) {
+        case 'OX':
+            // O/X 형식 (발송 필요 여부)
+            return status.needsDelivery ? 'O' : 'X';
+            
+        case 'YN':
+            // Y/N 형식 (구매 필요 여부)
+            return status.needsPurchase ? 'Y' : 'N';
+            
+        case '구매비구매':
+            // 구매/비구매 형식
+            return status.needsPurchase ? '구매' : '비구매';
+            
+        case '즉납후납기존':
+            // 즉납/후납/기존 형식
+            if (status.isExisting || status.isReuse || status.isRecycle) {
+                return '기존';
+            } else if (status.isESim) {
+                return '후납(이심)';
+            } else {
+                return '즉납';
+            }
+            
+        case '발송여부':
+            // 발송 여부 형식
+            return status.needsDelivery ? '발송' : '미발송';
+            
+        case '상태':
+            // 상세 상태 형식
+            if (status.isExisting) return '기존유심재사용';
+            if (status.isESim) return '후납(이심)';
+            if (status.isReuse) return '재사용';
+            if (status.isRecycle) return '재활용';
+            return '후청구';
+            
+        default:
+            return usimValue;
+    }
+}
+
+/**
+ * 유심 발송 여부 결정 함수 (SK 이앤티 등에서 사용)
+ * @param {string} usimValue - 유심 값
+ * @returns {string} - 'O' (발송 필요) 또는 'X' (발송 불필요)
+ */
+function getUsimDeliveryStatus(usimValue) {
+    return formatUsimForAgency(usimValue, 'OX');
+}
+
+/**
+ * 유심 구매 여부 결정 함수 (구매/비구매 형식)
+ * @param {string} usimValue - 유심 값
+ * @returns {string} - '구매' 또는 '비구매'
+ */
+function getUsimPurchaseStatus(usimValue) {
+    return formatUsimForAgency(usimValue, '구매비구매');
+}
+
+/**
+ * 유심 결제 방식 결정 함수 (즉납/후납/기존 형식)
+ * @param {string} usimValue - 유심 값
+ * @returns {string} - '즉납', '후납(이심)', 또는 '기존'
+ */
+function getUsimPaymentType(usimValue) {
+    return formatUsimForAgency(usimValue, '즉납후납기존');
+}
+
+// 유심 관련 함수들을 전역으로 노출
+window.analyzeUsimStatus = analyzeUsimStatus;
+window.formatUsimForAgency = formatUsimForAgency;
+window.getUsimDeliveryStatus = getUsimDeliveryStatus;
+window.getUsimPurchaseStatus = getUsimPurchaseStatus;
+window.getUsimPaymentType = getUsimPaymentType;

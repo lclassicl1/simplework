@@ -131,21 +131,9 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                         const isMNO = ['sk', 'kt', 'lg'].includes(currentTelecom);
                         const telecomType = isMNO ? 'MNO' : 'MVNO';
                         
-                        // 유심 발송 여부 (SK 이앤티와 동일한 로직)
+                        // 유심 발송 여부 (통합 함수 사용)
                         const usimValue = info.유심 || '';
-                        let usimDelivery = '';
-                        
-                        // 기존 또는 기존유심이 포함된 경우
-                        if (/기존|기존유심/i.test(usimValue)) {
-                            usimDelivery = 'X';
-                        } else {
-                            // 기존/기존유심이 없는 경우 발송 필요
-                            if (/이심/i.test(usimValue)) {
-                                usimDelivery = 'X'; // 이심인 경우 발송 불필요
-                            } else {
-                                usimDelivery = 'O'; // 일반 유심인 경우 발송 필요
-                            }
-                        }
+                        const usimDelivery = getUsimDeliveryStatus(usimValue);
                         
                         return `■ 택배 배송 요청 양식
 * 개통유형 : ${telecomType} / ${info.가입유형 || ''}
@@ -269,17 +257,8 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                         const usimValue = info.유심 || '';
                         let usimType = '';
                         
-                        // 기존 또는 기존유심이 포함된 경우
-                        if (/기존|기존유심/i.test(usimValue)) {
-                            usimType = 'X';
-                        } else {
-                            // 기존/기존유심이 없는 경우 후납으로 처리
-                            if (/이심/i.test(usimValue)) {
-                                usimType = '후납(이심)';
-                            } else {
-                                usimType = '후납';
-                            }
-                        }
+                        // 유심 결제 방식 (통합 함수 사용)
+                        usimType = getUsimPaymentType(usimValue);
                         
                         // 부가서비스 정보 구성
                         let addonInfo = '';
@@ -322,10 +301,9 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
 ◎ 부가서비스 : ${addonInfo}${minorInfo}`;
                     },
                     stockRequest: (info) => {
-                        // 유심 값에 '이심' 또는 '기존유심' 키워드가 있으면 X, 그렇지 않으면 O
+                        // 유심 발송 여부 (통합 함수 사용)
                         const usimValue = info.유심 || '';
-                        const hasESim = /이심|기존유심/i.test(usimValue);
-                        const usimRequest = hasESim ? 'X' : 'O';
+                        const usimRequest = getUsimDeliveryStatus(usimValue);
                         
                         return `★재고요청(큐브)
 택배or퀵 :	
@@ -399,10 +377,9 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                         const naModel = info['모델명'] || '';
                         const naColor = info['색상'] || '';
                         
-                        // 유심 값에 '이심' 또는 '기존유심' 키워드가 있으면 X, 그렇지 않으면 O
+                        // 유심 발송 여부 (통합 함수 사용)
                         const usimValue = info.유심 || '';
-                        const hasESim = /이심|기존유심/i.test(usimValue);
-                        const usimRequest = hasESim ? 'X' : 'O';
+                        const usimRequest = getUsimDeliveryStatus(usimValue);
                         
                         // 배송요청 양식 (첫 번째 textarea)
                         return `택배요청	
@@ -507,10 +484,9 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                 memo: agencyMemos['SK']['카파'],
                 templates: {
                     stockRequest: (info) => {
-                        // 유심 값에 '이심' 또는 '기존유심' 키워드가 있으면 N, 그렇지 않으면 Y
+                        // 유심 발송 여부 (통합 함수 사용)
                         const usimValue = info.유심 || '';
-                        const hasESim = /이심|기존유심/i.test(usimValue);
-                        const usimRequest = hasESim ? 'X' : 'O';
+                        const usimRequest = formatUsimForAgency(usimValue, 'YN');
                         
                         return `★ 단말기 배정요청 ★	
 * 배송방법 (택배or퀵) :	
@@ -584,10 +560,9 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                 memo: agencyMemos['SK']['삼보(온라인)'],
                 templates: {
                     stockRequest: (info) => {
-                        // 유심 값에 '이심' 또는 '기존유심' 키워드가 있으면 X, 그렇지 않으면 O
+                        // 유심 발송 여부 (통합 함수 사용)
                         const usimValue = info.유심 || '';
-                        const hasESim = /이심|기존유심/i.test(usimValue);
-                        const usimRequest = hasESim ? 'X' : 'O';
+                        const usimRequest = getUsimDeliveryStatus(usimValue);
                         
                         return `★재고요청(삼보)
 택배or퀵 : 택배
@@ -667,17 +642,8 @@ ${info.고객명 || ''} / ${info.전화번호 || ''} / ${info.생년월일 || in
                         const usimValue = info.유심 || '';
                         let usimStatus = '';
                         
-                        // 기존 또는 기존유심이 포함된 경우
-                        if (/기존|기존유심/i.test(usimValue)) {
-                            usimStatus = usimValue; // 원본 값 그대로 사용
-                        } else {
-                            // 기존/기존유심이 없는 경우 후납으로 처리
-                            if (/이심/i.test(usimValue)) {
-                                usimStatus = '후납(이심)';
-                            } else {
-                                usimStatus = '후납';
-                            }
-                        }
+                        // 유심 결제 방식 (통합 함수 사용)
+                        usimStatus = getUsimPaymentType(usimValue);
                         
                         return `★★ 메모 : 7 (${carrierType})  ★★
 [T-GATE 무선 접수 양식 ${currentMonth}월 ★ ]
@@ -724,10 +690,10 @@ ${requestType}
 ${customerName}/${birthOrId}/${phoneNumber}`;
                     },
                     stock: (info) => {
-                        // 유심 값 확인해서 기존유심 여부 결정
+                        // 유심 상태 확인 (통합 함수 사용)
                         const usimValue = info.유심 || '';
-                        const hasExistingUsim = /기존유심|기존/i.test(usimValue);
-                        const customerNameSuffix = hasExistingUsim ? ' (기존유심재사용)' : '';
+                        const usimStatus = analyzeUsimStatus(usimValue);
+                        const customerNameSuffix = usimStatus.isExisting ? ' (기존유심재사용)' : '';
                         
                         return `★라온아이 배정요청
 ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
@@ -738,10 +704,9 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
                             alert('밀리언은 선택약정 24개월만 진행 가능합니다. 어드민 메모를 확인하세요. \n도우미 양식은 24개월로 자동 변환됩니다.');
                         }
                         
-                        // 유심 상태 결정 (기존, 기존유심 문자열이 없으면 후청구, 있으면 기존유심재사용)
+                        // 유심 상태 결정 (통합 함수 사용)
                         const usimValue = info.유심 || '';
-                        const hasExistingUsim = /기존|기존유심/i.test(usimValue);
-                        const usimStatus = hasExistingUsim ? '기존유심재사용' : '후청구';
+                        const usimStatus = formatUsimForAgency(usimValue, '상태');
                         
                         // 할부원금 처리
                         let paymentInfo = '';
@@ -803,10 +768,9 @@ ${info.고객명 || info.가입자명 || ''}${customerNameSuffix}`;
                 memo: agencyMemos['SK']['장천'],
                 templates: {
                     delivery: (info) => {
-                        // 유심 여부 결정 (기존, 기존유심 텍스트가 포함되어 있으면 X, 그렇지 않으면 O)
+                        // 유심 발송 여부 (통합 함수 사용)
                         const usimValue = info.유심 || '';
-                        const hasExistingUsim = /기존|기존유심/i.test(usimValue);
-                        const usimStatus = hasExistingUsim ? 'X' : 'O';
+                        const usimStatus = formatUsimForAgency(usimValue, 'OX');
                         
                         return `■ 배송요청(택배)
 ▶고객명 : ${info.가입자명 || info.고객명 || ''}
@@ -988,7 +952,8 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                         const usimValue = info['유심'] || '';
                         let usimNumber = '';
                         
-                        if (/기존|기존유심/i.test(usimValue)) {
+                        const usimStatus = analyzeUsimStatus(usimValue);
+                        if (usimStatus.isExisting) {
                             usimNumber = '기존';
                         } else {
                             const usimSerial = info['유심일련번호'] || '';
@@ -1085,10 +1050,9 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                 memo: agencyMemos['SK']['이앤티'],
                 templates: {
                     stockRequest: (info) => {
-                        // 유심 값에 '이심' 또는 '기존유심' 키워드가 있으면 비구매, 그렇지 않으면 구매
+                        // 유심 구매 여부 (통합 함수 사용)
                         const usimValue = info.유심 || '';
-                        const hasESim = /이심|기존유심/i.test(usimValue);
-                        const usimStatus = hasESim ? '비구매' : '구매';
+                        const usimStatus = getUsimPurchaseStatus(usimValue);
                         
                         return `▶배송방법(택배/퀵/내방) : 택배   
 - 받는분 : ${info.고객명 || ''}
@@ -1106,21 +1070,9 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                         // 할부선할인 처리 (프리할부가 있으면 프리할부 값, 없으면 X)
                         const installmentDiscount = (info.프리할부 && info.프리할부 !== '0') ? info.프리할부 : 'X';
                         
-                        // 유심 처리 (즉납/후납/기존)
+                        // 유심 결제 방식 (통합 함수 사용)
                         const usimValue = info.유심 || '';
-                        let usimType = '';
-                        
-                        // 기존 또는 기존유심이 포함된 경우
-                        if (/기존|기존유심/i.test(usimValue)) {
-                            usimType = '기존';
-                        } else {
-                            // 기존/기존유심이 없는 경우 후납으로 처리
-                            if (/이심/i.test(usimValue)) {
-                                usimType = '후납(이심)';
-                            } else {
-                                usimType = '후납';
-                            }
-                        }
+                        const usimType = getUsimPaymentType(usimValue);
                         
                         // 공시/선약 처리
                         const contractType = info.공시선약여부 || info.할인유형 || '';
@@ -1334,21 +1286,9 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                         const name = info['가입자명'] || info['고객명'] || '';
                         const contact = info['개통번호'] || info['전화번호'] || '';
                         
-                        // 이앤티와 동일한 유심 처리 로직
+                        // 유심 발송 여부 (통합 함수 사용)
                         const usimValue = info['유심'] || '';
-                        let simIncluded = '';
-                        
-                        // 기존 또는 기존유심이 포함된 경우
-                        if (/기존|기존유심/i.test(usimValue)) {
-                            simIncluded = 'N';
-                        } else {
-                            // 기존/기존유심이 없는 경우
-                            if (/이심/i.test(usimValue)) {
-                                simIncluded = 'N';
-                            } else {
-                                simIncluded = 'Y';
-                            }
-                        }
+                        const simIncluded = formatUsimForAgency(usimValue, 'YN');
                         
                         return `□재고 요청서□
 매장상호 : 에이치엘
@@ -1426,21 +1366,9 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
                                          const capacity = info.용량 || '';
                                          const color = info.색상 || '';
                                          
-                                         // 이앤티와 동일한 유심 발송 여부 로직
+                                         // 유심 발송 여부 (통합 함수 사용)
                                          const usimValue = info.유심 || '';
-                                         let usimDelivery = '';
-                                         
-                                         // 기존 또는 기존유심이 포함된 경우
-                                         if (/기존|기존유심/i.test(usimValue)) {
-                                             usimDelivery = 'X';
-                                         } else {
-                                             // 기존/기존유심이 없는 경우
-                                             if (/이심/i.test(usimValue)) {
-                                                 usimDelivery = 'X'; // 이심인 경우 발송 불필요
-                                             } else {
-                                                 usimDelivery = 'O'; // 일반 유심인 경우 발송 필요
-                                             }
-                                         }
+                                         const usimDelivery = getUsimDeliveryStatus(usimValue);
                                          
                                          return `■ 배송요청
 ＊배송방법 : 택배
@@ -1551,10 +1479,9 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
 주민번호 : ${info.주민번호 || info.생년월일 || ''}
 개통번호 : ${info.개통번호 || info.전화번호 || ''}`,
                     delivery: (info) => {
-                        // 유심 값에 '이심' 또는 '기존유심' 키워드가 있으면 비구매, 그렇지 않으면 구매
+                        // 유심 발송 여부 (통합 함수 사용)
                         const usimValue = info.유심 || '';
-                        const hasESim = /이심|기존유심/i.test(usimValue);
-                        const usimStatus = hasESim ? 'X' : 'O';
+                        const usimStatus = formatUsimForAgency(usimValue, 'OX');
                         
                         return `그룹 : 둘째
 삼차점(판매점) : 라온아이
@@ -1672,21 +1599,9 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
 ▶가입유형 : ${info.가입유형 || ''}
 ▶모델명 : ${info.모델명 || ''} ${info.용량 || ''}`,
                     stockRequest: (info) => {
-                        // 이앤티와 동일한 유심 처리 로직
+                        // 유심 발송 여부 (통합 함수 사용)
                         const usimValue = info.유심 || '';
-                        let simIncluded = '';
-                        
-                        // 기존 또는 기존유심이 포함된 경우
-                        if (/기존|기존유심/i.test(usimValue)) {
-                            simIncluded = 'X';
-                        } else {
-                            // 기존/기존유심이 없는 경우
-                            if (/이심/i.test(usimValue)) {
-                                simIncluded = 'X';
-                            } else {
-                                simIncluded = 'O';
-                            }
-                        }
+                        const simIncluded = formatUsimForAgency(usimValue, 'OX');
                         
                         return `*고객명 : ${info.고객명 || info.가입자명 || ''}
 *전화번호 : ${info.개통번호 || info.전화번호 || ''}
@@ -1733,14 +1648,10 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
                             installmentInfo = `${amount} ${info.할부현금여부} ${months}`;
                         }
                         
-                        // 유심번호 로직 (무브온 재고요청과 동일한 로직)
+                        // 유심번호 로직 (통합 함수 사용)
                         const usimValue = info.유심 || '';
-                        let usimNumber = '';
-                        if (/기존|기존유심/i.test(usimValue)) {
-                            usimNumber = '기존';
-                        } else {
-                            usimNumber = info.유심일련번호 || '';
-                        }
+                        const usimStatus = analyzeUsimStatus(usimValue);
+                        const usimNumber = usimStatus.isExisting ? '기존' : (info.유심일련번호 || '');
                         
                         return `■ 고객명 : ${info.가입자명 || info.고객명 || ''}
 ■ 전화번호 : ${info.개통번호 || info.전화번호 || ''}
@@ -1817,10 +1728,9 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
 ▶가입유형 : ${info.가입유형 || ''}
 ▶모델명 : ${info.모델명 || ''} ${info.용량 || ''}`,
                     delivery: (info) => {
-                        // 이앤티와 동일한 유심 처리 로직
+                        // 유심 구매 여부 (통합 함수 사용)
                         const usimValue = info.유심 || '';
-                        const hasESim = /이심|기존유심|기존/i.test(usimValue);
-                        const usimStatus = hasESim ? '비구매' : '구매';
+                        const usimStatus = getUsimPurchaseStatus(usimValue);
                         
                         return `■배송요청■
 
@@ -1888,10 +1798,9 @@ ${info.가입유형 || ''} ${info.할부현금여부 || ''}개통
 ▶모델명 : ${info.모델명 || 'X'} ${info.용량 || ''}
 ▶접수시간 :  `,
                     delivery: (info) => {
-                        // 이앤티와 동일한 유심 처리 로직
+                        // 유심 구매 여부 (통합 함수 사용)
                         const usimValue = info.유심 || '';
-                        const hasESim = /이심|기존유심|기존/i.test(usimValue);
-                        const usimStatus = hasESim ? '비구매' : '구매';
+                        const usimStatus = getUsimPurchaseStatus(usimValue);
                         
                         return `■배송요청■
 
