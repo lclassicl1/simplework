@@ -347,8 +347,11 @@
     <!-- 변환 이력 팝업 -->
     <div id="historyPopup" class="popup-overlay">
         <div class="popup-content" style="max-width: 800px;">
-                            <span class="popup-close" onclick="HistoryManager.closeHistoryPopup()">&times;</span>
+            <span class="popup-close" onclick="HistoryManager.closeHistoryPopup()">&times;</span>
             <h3 class="popup-title">변환 이력</h3>
+            <div class="history-search-container">
+                <input type="text" id="historySearchInput" class="history-search-input" placeholder="이름으로 검색..." oninput="HistoryManager.searchHistory(this.value)">
+            </div>
             <div id="historyList" class="history-list">
                 <!-- 이력 목록이 여기에 표시됩니다 -->
             </div>

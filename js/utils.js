@@ -2258,6 +2258,66 @@ const HistoryManager = {
             console.error('만료된 항목 정리 중 오류 발생:', e);
             return [];
         }
+    },
+
+    // 이력 검색 기능
+    searchHistory(searchTerm) {
+        try {
+            const history = JSON.parse(localStorage.getItem('conversionHistory') || '[]');
+            const historyList = document.getElementById('historyList');
+            
+            if (!historyList) return;
+            
+            if (history.length === 0) {
+                historyList.innerHTML = '<div class="no-history">저장된 이력이 없습니다.</div>';
+                return;
+            }
+            
+            // 검색어가 없으면 전체 목록 표시
+            if (!searchTerm || searchTerm.trim() === '') {
+                this.loadHistory();
+                return;
+            }
+            
+            const searchLower = searchTerm.toLowerCase().trim();
+            const filteredHistory = history.filter(item => {
+                const customerName = (item.customerInfo.고객명 || item.customerInfo.가입자명 || '').toLowerCase();
+                return customerName.includes(searchLower);
+            });
+            
+            if (filteredHistory.length === 0) {
+                historyList.innerHTML = '<div class="no-history">검색 결과가 없습니다.</div>';
+                return;
+            }
+            
+            historyList.innerHTML = filteredHistory.map(item => {
+                // 단말기 일련번호 유무에 따른 상태 결정
+                const hasDeviceSerial = item.customerInfo.단말기일련번호 && 
+                                       item.customerInfo.단말기일련번호.trim() !== '';
+                const status = hasDeviceSerial ? '개통요청완료' : '개통요청전';
+                const statusClass = hasDeviceSerial ? 'status-completed' : 'status-pending';
+                
+                return `
+                <div class="history-item" onclick="HistoryManager.loadFromHistory('${item.id}')">
+                    <div class="history-header">
+                        <span class="history-name">${item.customerInfo.고객명 || '이름 없음'}</span>
+                        <span class="history-phone">${item.customerInfo.전화번호 || item.customerInfo.연락처 || '전화번호 없음'}</span>
+                        <span class="history-time">${new Date(item.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div class="history-details">
+                        <span class="history-model">${item.customerInfo.모델명 || ''} ${item.customerInfo.색상 || ''}</span>
+                        <span class="history-plan">${item.customerInfo.요금제 || ''}</span>
+                    </div>
+                    <div class="history-footer">
+                        <span class="history-agency">${item.telecom} / ${item.agency}</span>
+                        <span class="history-status ${statusClass}">${status}</span>
+                    </div>
+                </div>
+            `;
+            }).join('');
+        } catch (e) {
+            console.error('이력 검색 중 오류 발생:', e);
+        }
     }
 };
 

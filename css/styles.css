@@ -414,13 +414,33 @@
     }
     
     .popup-title {
-        margin-top: 0;
+        margin-bottom: 20px;
         color: #333;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 10px;
-        margin-bottom: 15px;
+        font-size: 1.5em;
+        text-align: center;
     }
-    
+
+    .history-search-container {
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    .history-search-input {
+        width: 100%;
+        max-width: 300px;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.3s;
+    }
+
+    .history-search-input:focus {
+        border-color: #4CAF50;
+        box-shadow: 0 0 5px rgba(76, 175, 80, 0.2);
+    }
+
     .memo-content {
         white-space: pre-line;
         line-height: 1.5;
