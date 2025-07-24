@@ -1984,7 +1984,7 @@ const HistoryManager = {
             }
             
             // 개선된 중복 체크 (더 유연한 매칭)
-            const exists = history.some(item => {
+            const existingIndex = history.findIndex(item => {
                 const currentName = String(customerInfo.고객명 || '').trim();
                 const currentPhone = String(customerInfo.전화번호 || '').trim();
                 const currentAgency = String(agency || '').trim();
@@ -2006,9 +2006,27 @@ const HistoryManager = {
                        currentAgency === savedAgency;
             });
             
-            if (!exists) {
-                // 최대 50개까지 저장
-                if (history.length >= 50) {
+            if (existingIndex !== -1) {
+                // 기존 항목 업데이트 (단말기 일련번호, 유심 일련번호 등 추가 정보 포함)
+                const existingItem = history[existingIndex];
+                const updatedCustomerInfo = {
+                    ...existingItem.customerInfo,
+                    ...customerInfo,
+                    // 단말기 일련번호와 유심 일련번호는 현재 입력값으로 업데이트
+                    단말기일련번호: customerInfo.단말기일련번호 || existingItem.customerInfo.단말기일련번호 || '',
+                    유심일련번호: customerInfo.유심일련번호 || existingItem.customerInfo.유심일련번호 || ''
+                };
+                
+                history[existingIndex] = {
+                    ...existingItem,
+                    customerInfo: updatedCustomerInfo,
+                    timestamp: new Date().toISOString() // 타임스탬프 업데이트
+                };
+                
+                console.log('기존 항목 업데이트:', existingItem.customerInfo.고객명);
+            } else {
+                // 최대 100개까지 저장
+                if (history.length >= 100) {
                     history.pop(); // 가장 오래된 항목 제거
                 }
                 
@@ -2021,8 +2039,10 @@ const HistoryManager = {
                     timestamp: new Date().toISOString()
                 });
                 
-                localStorage.setItem('conversionHistory', JSON.stringify(history));
+                console.log('새 항목 추가:', customerInfo.고객명);
             }
+            
+            localStorage.setItem('conversionHistory', JSON.stringify(history));
         } catch (e) {
             console.error('이력 저장 중 오류 발생:', e);
         }
@@ -2041,7 +2061,14 @@ const HistoryManager = {
                 return;
             }
             
-            historyList.innerHTML = history.map(item => `
+            historyList.innerHTML = history.map(item => {
+                // 단말기 일련번호 유무에 따른 상태 결정
+                const hasDeviceSerial = item.customerInfo.단말기일련번호 && 
+                                       item.customerInfo.단말기일련번호.trim() !== '';
+                const status = hasDeviceSerial ? '개통요청완료' : '개통요청전';
+                const statusClass = hasDeviceSerial ? 'status-completed' : 'status-pending';
+                
+                return `
                 <div class="history-item" onclick="HistoryManager.loadFromHistory('${item.id}')">
                     <div class="history-header">
                         <span class="history-name">${item.customerInfo.고객명 || '이름 없음'}</span>
@@ -2054,9 +2081,11 @@ const HistoryManager = {
                     </div>
                     <div class="history-footer">
                         <span class="history-agency">${item.telecom} / ${item.agency}</span>
+                        <span class="history-status ${statusClass}">${status}</span>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         } catch (e) {
             console.error('이력 불러오기 중 오류 발생:', e);
         }
@@ -2169,6 +2198,8 @@ const HistoryManager = {
     openHistoryPopup() {
         const popup = document.getElementById('historyPopup');
         if (popup) {
+            // 팝업을 열기 전에 만료된 항목 정리
+            this.cleanupExpiredItems();
             this.loadHistory();
             popup.style.display = 'flex';
         }
@@ -2187,6 +2218,45 @@ const HistoryManager = {
         if (confirm('모든 변환 이력을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
             localStorage.removeItem('conversionHistory');
             this.loadHistory();
+        }
+    },
+
+    // 만료된 항목 정리 (24시간이 지난 개통요청완료 항목 삭제)
+    cleanupExpiredItems() {
+        try {
+            const history = JSON.parse(localStorage.getItem('conversionHistory') || '[]');
+            const now = new Date();
+            const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+            
+            let deletedCount = 0;
+            const filteredHistory = history.filter(item => {
+                const itemDate = new Date(item.timestamp);
+                const hasDeviceSerial = item.customerInfo.단말기일련번호 && 
+                                       item.customerInfo.단말기일련번호.trim() !== '';
+                
+                // 개통요청완료 상태이고 24시간이 지났으면 삭제
+                if (hasDeviceSerial && itemDate < twentyFourHoursAgo) {
+                    deletedCount++;
+                    return false; // 삭제
+                }
+                return true; // 유지
+            });
+            
+            if (deletedCount > 0) {
+                localStorage.setItem('conversionHistory', JSON.stringify(filteredHistory));
+                console.log(`${deletedCount}개의 만료된 개통요청완료 항목이 삭제되었습니다.`);
+                
+                // 팝업이 열려있다면 목록 새로고침
+                const popup = document.getElementById('historyPopup');
+                if (popup && popup.style.display === 'flex') {
+                    this.loadHistory();
+                }
+            }
+            
+            return filteredHistory;
+        } catch (e) {
+            console.error('만료된 항목 정리 중 오류 발생:', e);
+            return [];
         }
     }
 };
@@ -2589,52 +2659,7 @@ window.handleTextareaDoubleClick = handleTextareaDoubleClick;
 window.MODEL_NAME_MAPPING = MODEL_NAME_MAPPING;
 window.CORRECT_PASSWORD = CORRECT_PASSWORD;
 
-// 현재 데이터 저장 함수
-function saveCurrentData() {
-    // 현재 입력된 데이터 수집
-    const currentData = {
-        고객명: document.getElementById('customerName').value,
-        전화번호: document.getElementById('phoneNumber').value,
-        모델명: document.getElementById('modelName').value,
-        색상: document.getElementById('color').value,
-        요금제: document.getElementById('plan').value,
-        단말기일련번호: document.getElementById('deviceSerial').value,
-        유심일련번호: document.getElementById('simSerial').value,
-        원본텍스트: document.getElementById('inputText').value
-    };
 
-    // 필수 데이터가 있는지 확인
-    if (!currentData.고객명 && !currentData.전화번호 && !currentData.원본텍스트) {
-        showToast('저장할 데이터가 없습니다.');
-        return;
-    }
-
-    // HistoryManager를 사용하여 저장
-    if (HistoryManager && HistoryManager.saveToHistory) {
-        const selectedTelecom = document.getElementById('telecomSelect').value;
-        const selectedAgency = document.getElementById('agencySelect').value;
-        
-        // customerInfo 형태로 변환
-        const customerInfo = {
-            고객명: currentData.고객명,
-            전화번호: currentData.전화번호,
-            모델명: currentData.모델명,
-            색상: currentData.색상,
-            요금제: currentData.요금제,
-            단말기일련번호: currentData.단말기일련번호,
-            유심일련번호: currentData.유심일련번호,
-            원본텍스트: currentData.원본텍스트
-        };
-
-        HistoryManager.saveToHistory(customerInfo, selectedTelecom, selectedAgency);
-        showToast('데이터가 저장되었습니다! 💾');
-    } else {
-        showToast('저장 기능을 사용할 수 없습니다.');
-    }
-}
-
-// saveCurrentData 함수를 전역으로 노출
-window.saveCurrentData = saveCurrentData;
 
 // ========================================
 // 유심 관련 통합 함수들

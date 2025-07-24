@@ -106,21 +106,14 @@
                 </div>
                 
                 <div class="form-row">
-                    <div class="form-group serial-group">
+                    <div class="form-group">
                         <label for="deviceSerial">단말기 일련번호:</label>
-                        <input type="text" id="deviceSerial" class="form-control serial-input" placeholder="단말기 일련번호를 입력하세요">
+                        <input type="text" id="deviceSerial" class="form-control" placeholder="단말기 일련번호를 입력하세요">
                     </div>
                     
-                    <div class="form-group serial-group">
+                    <div class="form-group">
                         <label for="simSerial">유심 일련번호:</label>
-                        <input type="text" id="simSerial" class="form-control serial-input" placeholder="유심 일련번호를 입력하세요">
-                    </div>
-                    
-                    <div class="form-group save-group">
-                        <label>&nbsp;</label>
-                        <button id="saveHistoryBtn" class="save-btn" onclick="saveCurrentData()" title="현재 데이터 저장">
-                            💾
-                        </button>
+                        <input type="text" id="simSerial" class="form-control" placeholder="유심 일련번호를 입력하세요">
                     </div>
                 </div>
                 
@@ -896,9 +889,9 @@
                 if (HistoryManager && HistoryManager.saveToHistory) {
                     HistoryManager.saveToHistory(customerInfo, selectedTelecom, selectedAgency);
                 }
-                    
-                    // 더블클릭 이벤트 설정
-                    setupDoubleClickCopy();
+                
+                // 더블클릭 이벤트 설정
+                setupDoubleClickCopy();
                 
             } catch (error) {
                 console.error('변환 중 오류:', error);
@@ -1130,6 +1123,11 @@
         });
         
         document.addEventListener('DOMContentLoaded', function() {
+            // 페이지 로드 시 만료된 항목 자동 정리
+            if (HistoryManager && HistoryManager.cleanupExpiredItems) {
+                HistoryManager.cleanupExpiredItems();
+            }
+            
             // 초기 텍스트에리어에 더블클릭 이벤트 설정
             setupDoubleClickCopy();
             
