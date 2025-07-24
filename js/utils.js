@@ -1453,7 +1453,7 @@ function extractCustomerInfo(text) {
     customerInfo['프리할부'] = '';
     
     // 새로운 패턴: **출고가 숫자 =공시-추가= 형식 (공시, 추가 값이 있을 수도 없을 수도 있음)
-    const newPricePattern = /\*\*\s*출고가\s+([\d,]+)\s*=공시(?:([\d,]+))?-추가(?:([\d,]+))?=\s*(?:현금\s*([\d,]+)|할부(\d+)\s*([\d,]+))?/i;
+    const newPricePattern = /\*\*\s*출고가\s+([\d,.]+)\s*=공시(?:([\d,.]+))?-추가(?:([\d,.]+))?=\s*(?:현금\s*([\d,.]+)|할부(\d+)\s*([\d,.]+))?/i;
     const newPriceMatch = text.match(newPricePattern);
     
     if (newPriceMatch) {
@@ -1487,13 +1487,13 @@ function extractCustomerInfo(text) {
     } else {
     
     // 2. 괄호 포함 패턴 (예: **출고가 (1,540,000)- 공시(700,000)- 전지(100,000) = 현금(740,000))
-        const parenthesizedPattern = /\*\*\s*출고가\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*-\s*공시\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?\s*(?:-\s*(?:추지|추가지원|추가)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*(?:-\s*(?:전지|전환지원금?|전환)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*(?:-\s*(?:프리할부|프리)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?)?\s*=\s*(할부\s*(?:\(?\d*\)?)|\ud604\uae08)\s*[\(\[]?\s*([\d,]+)\s*[\]\)]?/i;
+        const parenthesizedPattern = /\*\*\s*출고가\s*[\(\[]?\s*([\d,.]+)\s*[\]\)]?\s*-\s*공시\s*[\(\[]?\s*([\d,.]+)\s*[\]\)]?\s*(?:-\s*(?:추지|추가지원|추가)\s*[\(\[]?\s*([\d,.]+)\s*[\]\)]?)?\s*(?:-\s*(?:전지|전환지원금?|전환)\s*[\(\[]?\s*([\d,.]+)\s*[\]\)]?)?\s*(?:-\s*(?:프리할부|프리)\s*[\(\[]?\s*([\d,.]+)\s*[\]\)]?)?\s*=\s*(할부\s*(?:\(?\d*\)?)|\ud604\uae08)\s*[\(\[]?\s*([\d,.]+)\s*[\]\)]?/i;
     
     // 3. 일반 패턴 (괄호 없음, 기존 형식 유지)
-        const normalPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*(?:-\s*(?:추지|추가지원|추가)\s+([\d,]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,]+))?\s*(?:-\s*(?:프리할부|프리)\s+([\d,]+))?\s*=\s*(할부\s*(?:\(?\d*\)?)|\ud604\uae08)\s*([\d,]+)/i;
+        const normalPattern = /\*\*\s*출고가\s+([\d,.]+)\s*-\s*공시\s+([\d,.]+)\s*(?:-\s*(?:추지|추가지원|추가)\s+([\d,.]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,.]+))?\s*(?:-\s*(?:프리할부|프리)\s+([\d,.]+))?\s*=\s*(할부\s*(?:\(?\d*\)?)|\ud604\uae08)\s*([\d,.]+)/i;
     
     // 4. 개선된 패턴: 단위 처리 및 키워드 없는 프리할부 지원
-        const improvedPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)\s*(?:-\s*([\d,]+)(?:원)?)?\s*=\s*할부(\d+)\s*([\d,]+)(?:원)?/i;
+        const improvedPattern = /\*\*\s*출고가\s+([\d,.]+)\s*-\s*공시\s+([\d,.]+)\s*-\s*추지\s+([\d,.]+)\s*(?:-\s*([\d,.]+)(?:원)?)?\s*=\s*할부(\d+)\s*([\d,.]+)(?:원)?/i;
     
     // 5. 패턴 매칭 시도 (개선된 패턴 먼저 시도)
     let match = text.match(improvedPattern) || text.match(parenthesizedPattern) || text.match(normalPattern);
@@ -1559,7 +1559,7 @@ function extractCustomerInfo(text) {
         customerInfo['최종구매가'] = addThousandSeparator(groups.최종구매가.trim());
     } else {
         // 추가 패턴 시도: 추지만 있는 경우 (괄호 없음)
-            const pricePattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원|추가)\s+([\d,]+))?(?:\s*-\s*(?:프리할부|프리)\s+([\d,]+))?\s*=\s*(할부\s*(?:\(?\d*\)?)|\ud604\uae08)\s*([\d,]+)/i;
+            const pricePattern = /\*\*\s*출고가\s+([\d,.]+)\s*-\s*공시\s+([\d,.]+)(?:\s*-\s*(?:추지|추가지원|추가)\s+([\d,.]+))?(?:\s*-\s*(?:프리할부|프리)\s+([\d,.]+))?\s*=\s*(할부\s*(?:\(?\d*\)?)|\ud604\uae08)\s*([\d,.]+)/i;
         const priceMatch = text.match(pricePattern);
         
         if (priceMatch) {
@@ -1587,7 +1587,7 @@ function extractCustomerInfo(text) {
             customerInfo['최종구매가'] = addThousandSeparator(priceMatch[6].trim());
         } else {
             // 현금 형식 패턴 확인 (추지와 전환지원금이 모두 있는 경우)
-                const cashConversionPattern = /\*\*\s*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)(?:\s*-\s*(?:추지|추가지원|추가)\s+([\d,]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,]+))?\s*(?:-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/i;
+                const cashConversionPattern = /\*\*\s*출고가\s+([\d,.]+)\s*-\s*공시\s+([\d,.]+)(?:\s*-\s*(?:추지|추가지원|추가)\s+([\d,.]+))?\s*(?:-\s*(?:전지|전환지원금?|전환)\s+([\d,.]+))?\s*(?:-\s*프리할부\s+([\d,.]+))?\s*=\s*현금\s*([\d,.]+)/i;
             const cashConversionMatch = text.match(cashConversionPattern);
             
             if (cashConversionMatch) {
@@ -1601,7 +1601,7 @@ function extractCustomerInfo(text) {
                 customerInfo['최종구매가'] = addThousandSeparator(cashConversionMatch[7].trim());
             } else {
                 // 기존 현금 형식 패턴 (전환지원금 없는 경우)
-                const cashPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*현금\s*([\d,]+)/;
+                const cashPattern = /\*\*출고가\s+([\d,.]+)\s*-\s*공시\s+([\d,.]+)\s*-\s*추지\s+([\d,.]+)(?:\s*-\s*프리할부\s+([\d,.]+))?\s*=\s*현금\s*([\d,.]+)/;
                 const cashMatch = text.match(cashPattern);
                 
                 if (cashMatch) {
@@ -1615,7 +1615,7 @@ function extractCustomerInfo(text) {
                     customerInfo['최종구매가'] = addThousandSeparator(cashMatch[5].trim());
                 } else {
                     // 할부 형식 패턴 확인 (전환지원금 포함)
-                    const installmentConversionPattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)\s*-\s*(전환지원금?|전환)\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*할부(\d+)\s*([\d,]+)/;
+                    const installmentConversionPattern = /\*\*출고가\s+([\d,.]+)\s*-\s*공시\s+([\d,.]+)\s*-\s*추지\s+([\d,.]+)\s*-\s*(전환지원금?|전환)\s+([\d,.]+)(?:\s*-\s*프리할부\s+([\d,.]+))?\s*=\s*할부(\d+)\s*([\d,.]+)/;
                     const installmentConversionMatch = text.match(installmentConversionPattern);
                     
                     if (installmentConversionMatch) {
@@ -1629,7 +1629,7 @@ function extractCustomerInfo(text) {
                         customerInfo['최종구매가'] = addThousandSeparator(installmentConversionMatch[8].trim());
                     } else {
                         // 기존 할부 형식 패턴 (전환지원금 없는 경우)
-                        const alternatePattern = /\*\*출고가\s+([\d,]+)\s*-\s*공시\s+([\d,]+)\s*-\s*추지\s+([\d,]+)(?:\s*-\s*프리할부\s+([\d,]+))?\s*=\s*할부(\d+)\s*([\d,]+)/;
+                        const alternatePattern = /\*\*출고가\s+([\d,.]+)\s*-\s*공시\s+([\d,.]+)\s*-\s*추지\s+([\d,.]+)(?:\s*-\s*프리할부\s+([\d,.]+))?\s*=\s*할부(\d+)\s*([\d,.]+)/;
                         const alternateMatch = text.match(alternatePattern);
                         
                         if (alternateMatch) {
@@ -2276,7 +2276,7 @@ function displayModelColorResults(results) {
 function addThousandSeparator(value) {
     if (!value || value === '' || value === '0') return value;
     
-    // 숫자가 아닌 문자 제거 후 숫자만 추출
+    // 숫자가 아닌 문자 제거 후 숫자만 추출 (쉼표와 점 제거)
     const cleanValue = value.toString().replace(/[^\d]/g, '');
     
     if (cleanValue === '') return value;
