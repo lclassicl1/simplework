@@ -1446,6 +1446,68 @@ ${subscriptionType} 접수 확인 및 신조 부탁드립니다.`;
 ◆ 기타 : X`;
                                      }
                 }
+            },
+            '오케이 대리점': {
+                name: '오케이 대리점',
+                type: 'special',
+                outputType: 'single',
+                memo: agencyMemos['SK']['오케이 대리점'],
+                template: (info) => {
+                    // 할부원금 처리 로직
+                    let installmentInfo = '';
+                    if (info.할부현금여부 === '할부') {
+                        installmentInfo = `${info.현금할부여부 || ''} ${info.할부개월수 || ''} ${info.최종구매가 || ''}`;
+                    } else if (info.할부현금여부 === '현금') {
+                        installmentInfo = `★현금완납 ${info.최종구매가 || ''}`;
+                    }
+                    
+                    // 부가서비스와 보험을 "/"로 구분하여 구성
+                    const additionalServices = [];
+                    
+                    // 부가서비스 정보 추가
+                    const addon = info.부가서비스 || '';
+                    if (addon && addon.trim() !== '') {
+                        additionalServices.push(addon);
+                    }
+                    
+                    // 부가서비스2 정보 추가
+                    const addon2 = info.부가서비스2 || '';
+                    if (addon2 && addon2.trim() !== '') {
+                        additionalServices.push(addon2);
+                    }
+                    
+                    // 보험 정보 추가
+                    const insurance = info.보험 || '';
+                    if (insurance && insurance.trim() !== '') {
+                        additionalServices.push(insurance);
+                    }
+                    
+                    // 부가서비스와 보험을 "/"로 구분
+                    const additionalServicesText = additionalServices.join(' / ');
+                    
+                    // 필드값이 없으면 "X"로 표시하는 함수
+                    const displayField = (value) => {
+                        return (value && value.trim() !== '') ? value : 'X';
+                    };
+                    
+                    return `★ SKT - SA ★ ( 위약금 회선 조회 부탁드립니다 )
+개통유형> ${info.가입유형 || ''}
+통신사(알뜰세부사항)=> ${info.현재통신사 || ''}
+고객명=> ${info.고객명 || info.가입자명 || ''}
+개통번호=> ${info.개통번호 || info.전화번호 || ''}
+주민번호=> ${info.주민번호 || info.생년월일 || ''}
+단말기 => ${info.모델명 || ''} ${info.용량 || ''}
+단말색상=> ${info.색상 || ''}
+일련번호=> ${info.단말기일련번호 || ''}
+유심번호 => ${info.유심 || info.유심일련번호 || ''}
+요금제=> ${info.요금제 || ''}
+부가서비스=-> ${additionalServicesText}
+약정유형 -> ${info.할인유형 || ''} ${info.약정개월수 || ''}
+할부개월수=> ${displayField(info.할부개월수)}
+추가지원금=> ${displayField(info.추가지원금 || info.추지)}
+프리할부=> ${displayField(info.프리할부)}
+할부원금=> ${installmentInfo}`;
+                }
             }
         }
     },

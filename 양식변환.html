@@ -34,6 +34,130 @@
         </div>
     </div>
 
+    <!-- IP 차단 모달 -->
+    <div id="ipBlockModal" style="display: none;">
+        <div class="ip-block-modal-content">
+            <h2>🚫 접근 차단</h2>
+            <div class="ip-block-info">
+                <p><strong>현재 IP 주소:</strong> <span id="currentIPDisplay">확인 중...</span></p>
+                <p><strong>차단 사유:</strong> <span id="blockReason">IP 주소가 허용 목록에 포함되지 않습니다.</span></p>
+            </div>
+            <div class="ip-block-contact">
+                <h3>📞 관리자 연락처</h3>
+                <p><strong>카카오톡:</strong> @관리자ID</p>
+                <p><strong>이메일:</strong> admin@example.com</p>
+                <p><strong>전화번호:</strong> 010-1234-5678</p>
+            </div>
+            <div class="ip-block-instructions">
+                <h3>💡 해결 방법</h3>
+                <ul>
+                    <li>관리자에게 현재 IP 주소를 알려주세요</li>
+                    <li>IP 주소가 허용 목록에 추가되면 다시 시도해주세요</li>
+                    <li>VPN 사용 시 VPN을 해제하고 다시 시도해주세요</li>
+                </ul>
+            </div>
+            <div class="ip-block-actions">
+                <button onclick="retryIPCheckAndShowPassword()" class="ip-block-retry">다시 시도</button>
+                <button onclick="closeIPBlockModal()" class="ip-block-close">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- IP 제한 관리자 인터페이스 모달 -->
+    <div id="ipAdminModal" style="display: none;">
+        <div class="ip-admin-modal-content">
+            <h2>🔧 IP 제한 관리</h2>
+            
+            <!-- 관리자 권한 검증 섹션 -->
+            <div id="adminAuthSection" class="admin-auth-section">
+                <h3>🔐 관리자 인증</h3>
+                <p>관리자 권한이 필요합니다.</p>
+                <input type="password" id="adminPassword" class="admin-password-input" placeholder="관리자 비밀번호" maxlength="8">
+                <button onclick="verifyAdminAccess()" class="admin-verify-btn">인증</button>
+                <div id="adminAuthError" class="admin-auth-error" style="display: none;"></div>
+            </div>
+            
+            <!-- 관리자 설정 섹션 -->
+            <div id="adminSettingsSection" class="admin-settings-section" style="display: none;">
+                <!-- IP 제한 기능 토글 -->
+                <div class="setting-group">
+                    <h3>⚙️ IP 제한 기능</h3>
+                    <div class="toggle-container">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="ipRestrictionToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label">IP 제한 기능 활성화</span>
+                    </div>
+                </div>
+                
+                <!-- 개별 IP 주소 관리 -->
+                <div class="setting-group">
+                    <h3>📋 허용된 IP 주소</h3>
+                    <div class="ip-input-group">
+                        <input type="text" id="newIPInput" class="ip-input" placeholder="예: 192.168.1.100" maxlength="15">
+                        <button onclick="addAllowedIP()" class="add-ip-btn">추가</button>
+                    </div>
+                    <div id="allowedIPsList" class="ip-list">
+                        <!-- 허용된 IP 목록이 여기에 표시됩니다 -->
+                    </div>
+                </div>
+                
+                <!-- IP 범위 관리 -->
+                <div class="setting-group">
+                    <h3>🌐 허용된 IP 범위 (CIDR)</h3>
+                    <div class="ip-input-group">
+                        <input type="text" id="newRangeInput" class="ip-input" placeholder="예: 192.168.1.0/24" maxlength="18">
+                        <button onclick="addAllowedRange()" class="add-ip-btn">추가</button>
+                    </div>
+                    <div id="allowedRangesList" class="ip-list">
+                        <!-- 허용된 IP 범위 목록이 여기에 표시됩니다 -->
+                    </div>
+                </div>
+                
+                <!-- 폴백 설정 -->
+                <div class="setting-group">
+                    <h3>🔄 폴백 설정</h3>
+                    <select id="fallbackActionSelect" class="fallback-select">
+                        <option value="block">IP 확인 실패 시 차단</option>
+                        <option value="warn">IP 확인 실패 시 경고와 함께 허용</option>
+                        <option value="allow">IP 확인 실패 시 허용</option>
+                    </select>
+                </div>
+                
+                <!-- 현재 IP 정보 -->
+                <div class="setting-group">
+                    <h3>📍 현재 IP 정보</h3>
+                    <div class="current-ip-info">
+                        <p><strong>현재 IP:</strong> <span id="adminCurrentIP">확인 중...</span></p>
+                        <button onclick="refreshCurrentIP()" class="refresh-ip-btn">새로고침</button>
+                    </div>
+                </div>
+                
+                <!-- 테스트 및 디버깅 -->
+                <div class="setting-group">
+                    <h3>🧪 테스트 및 디버깅</h3>
+                    <div class="test-actions">
+                        <button onclick="runIPRestrictionTests()" class="test-btn">기능 테스트</button>
+                        <button onclick="runFinalIntegrationTest()" class="test-btn">통합 테스트</button>
+                        <button onclick="testBrowserCompatibility()" class="test-btn">호환성 테스트</button>
+                        <button onclick="optimizeMemoryUsage()" class="test-btn">메모리 최적화</button>
+                    </div>
+                    <div id="testResults" class="test-results" style="display: none;">
+                        <!-- 테스트 결과가 여기에 표시됩니다 -->
+                    </div>
+                </div>
+                
+                <!-- 설정 저장/초기화 -->
+                <div class="setting-actions">
+                    <button onclick="saveIPSettings()" class="save-settings-btn">설정 저장</button>
+                    <button onclick="resetIPSettings()" class="reset-settings-btn">설정 초기화</button>
+                    <button onclick="closeIPAdminModal()" class="close-admin-btn">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 메인 콘텐츠 -->
     <div class="main-content">
     <div class="container">
@@ -66,7 +190,19 @@
                   </div>
             </div>
             
-            <div style="display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-left: auto;">
+            <div style="display: flex; align-items: center; gap: 10px; white-space: nowrap; margin-left: auto;">
+                <button onclick="showIPAdminModal()" style="background-color: #2196f3; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#1976d2'" onmouseout="this.style.backgroundColor='#2196f3'">
+                    🔧 IP 관리
+                </button>
+                <button onclick="runCompleteOptimizationAndTest()" style="background-color: #4caf50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#45a049'" onmouseout="this.style.backgroundColor='#4caf50'">
+                    🧪 테스트
+                </button>
+                <button onclick="runKakaoShareTests()" style="background-color: #ff9800; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#f57c00'" onmouseout="this.style.backgroundColor='#ff9800'">
+                    📱 카카오톡 공유 테스트
+                </button>
+                <button onclick="testKakaoShareFeature()" style="background-color: #9c27b0; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; transition: background-color 0.3s ease;" onmouseover="this.style.backgroundColor='#7b1fa2'" onmouseout="this.style.backgroundColor='#9c27b0'">
+                    🔍 간단 테스트
+                </button>
                 <label for="modelSearch" style="font-size: 14px; color: #555;">출시색상 검색:</label>
                 <div style="position: relative; min-width: 250px;">
                     <input type="text" id="modelSearch" 
@@ -294,6 +430,14 @@
                         </div>
                     </div>
                     
+                    <!-- 오케이 대리점 전용 추가 textarea -->
+                    <div id="okayExtraOutputs" style="display:none;">
+                        <div class="form-group">
+                            <label for="okayOpenText">오케이대리점 개통요청양식:</label>
+                            <textarea id="okayOpenText" class="output-textarea compact-textarea"></textarea>
+                        </div>
+                    </div>
+                    
                     <!-- 코웨어 전용 추가 textarea (개통요청/우주패스) -->
                     <div id="cowareExtraOutputs" style="display:none;">
                         <div class="form-group">
@@ -314,6 +458,15 @@
                             </tbody>
                         </table>
                     </div>
+                    
+                                           <!-- 카카오톡 공유 버튼 -->
+                       <div id="shareButtonContainer" class="share-button-container" style="display: none;">
+                           <button id="kakaoShareBtn" onclick="shareToKakaoTalk()" class="share-button kakao-share-btn" disabled
+                                   aria-label="변환된 텍스트를 카카오톡으로 공유하기"
+                                   title="변환된 텍스트를 클립보드에 복사하고 카카오톡 앱을 호출합니다">
+                               📱 카카오톡 공유
+                           </button>
+                       </div>
                 </div>
                 
                 <!-- 양식이 여러개인 경우를 위한 템플릿 -->
@@ -367,6 +520,39 @@
             <span class="popup-close" onclick="closeAgencyInfo()">&times;</span>
             <h3 class="popup-title" id="popupTitle">대리점 업무 메모</h3>
             <div class="memo-content" id="memoContent"></div>
+        </div>
+    </div>
+    
+    <!-- 텍스트 선택 모달 -->
+    <div id="textSelectionModal" class="popup-overlay" role="dialog" aria-labelledby="textSelectionTitle" aria-describedby="textSelectionInstructions">
+        <div class="popup-content text-selection-modal">
+            <span class="popup-close" onclick="closeTextSelectionModal()" aria-label="모달 닫기">&times;</span>
+            <h3 class="popup-title" id="textSelectionTitle">📋 텍스트 수동 복사</h3>
+            <div class="text-selection-instructions" id="textSelectionInstructions">
+                <p>아래 텍스트를 선택하여 수동으로 복사해주세요:</p>
+                <div class="copy-instructions">
+                    <span class="instruction-step">1. 텍스트를 드래그하여 전체 선택</span>
+                    <span class="instruction-step">2. Ctrl+C (또는 Cmd+C)로 복사</span>
+                    <span class="instruction-step">3. 카카오톡 앱을 열고 채팅방 선택</span>
+                    <span class="instruction-step">4. Ctrl+V로 붙여넣기 후 전송</span>
+                </div>
+                <div class="kakao-note" style="margin-top: 10px; padding: 8px; background-color: #FEE500; border-radius: 4px; font-size: 12px; color: #3C1E1E;">
+                    💡 <strong>참고:</strong> 카카오톡은 보안상 자동 전송을 지원하지 않습니다.<br>
+                    📱 <strong>공유 방법:</strong> 카카오톡에서 "전송" 버튼을 눌러 공유할 상대를 선택하세요.
+                </div>
+            </div>
+            <div class="text-selection-area">
+                <textarea id="textSelectionTextarea" class="text-selection-textarea" readonly
+                          aria-label="복사할 텍스트 영역"></textarea>
+            </div>
+            <div class="text-selection-actions">
+                <button onclick="selectAllText()" class="btn-select-all" aria-label="텍스트 전체 선택">
+                    전체 선택
+                </button>
+                <button onclick="closeTextSelectionModal()" class="btn-close-modal" aria-label="모달 닫기">
+                    닫기
+                </button>
+            </div>
         </div>
     </div>
     
@@ -497,7 +683,8 @@
                     'ontExtraOutputs',
                     'jangcheonExtraOutputs',
                     'hanolExtraOutputs',
-                    'cowareExtraOutputs'
+                    'cowareExtraOutputs',
+                    'okayExtraOutputs'
                 ];
                 
                 containers.forEach(id => {
@@ -569,6 +756,8 @@
                     container = document.getElementById('cubeExtraOutputs');
                 } else if (agency === '코웨어') {
                     container = document.getElementById('cowareExtraOutputs');
+                } else if (agency === '오케이 대리점') {
+                    container = document.getElementById('okayExtraOutputs');
                 } else if (agency === '제이모바일') {
                     container = document.getElementById('hunetExtraOutputs'); // 제이모바일도 휴넷과 같은 컨테이너 사용
                 } else if (agency === '세븐업/무브온') {
@@ -685,6 +874,11 @@
                     
                     if (openText) openText.value = result.openRequest || '';
                     if (spacePassText) spacePassText.value = result.spacePass || '';
+                } else if (agency === '오케이 대리점') {
+                    // 오케이 대리점용 출력 처리 (1개 textarea)
+                    const openText = document.getElementById('okayOpenText');
+                    
+                    if (openText) openText.value = result || '';
                 } else {
                     // 기타 대리점용 출력 처리 (기본 럭스 형태)
                     container.innerHTML = `
@@ -895,6 +1089,11 @@
                 
                 // 더블클릭 이벤트 설정
                 setupDoubleClickCopy();
+                
+                // 공유 버튼 상태 업데이트
+                if (typeof updateShareButtonState === 'function') {
+                    updateShareButtonState();
+                }
                 
             } catch (error) {
                 console.error('변환 중 오류:', error);
@@ -1131,8 +1330,41 @@
                 HistoryManager.cleanupExpiredItems();
             }
             
+            // IP 차단 모달 초기화
+            if (typeof initializeIPBlockModal === 'function') {
+                initializeIPBlockModal();
+            }
+            
+            // IP 관리자 모달 초기화
+            if (typeof initializeIPAdminModal === 'function') {
+                initializeIPAdminModal();
+            }
+            
+            // IP 검증 자동 실행 (비밀번호 인증 전)
+            initializeIPVerification();
+            
+            // IP 제한 기능 최적화 자동 실행 (백그라운드에서)
+            setTimeout(() => {
+                if (typeof runCompleteOptimizationAndTest === 'function') {
+                    console.log('🚀 백그라운드에서 IP 제한 기능 최적화 실행...');
+                    runCompleteOptimizationAndTest().catch(error => {
+                        console.warn('⚠️ 백그라운드 최적화 중 오류 발생:', error);
+                    });
+                }
+            }, 3000); // 3초 후 실행
+            
+            // 자동 잠금 시스템과 IP 검증 연동
+            if (typeof setupAutoLockWithIPVerification === 'function') {
+                setupAutoLockWithIPVerification();
+            }
+            
             // 초기 텍스트에리어에 더블클릭 이벤트 설정
-            setupDoubleClickCopy();
+            setupDoubleClickCopy()
+            
+            // 공유 버튼 상태 초기화
+            if (typeof updateShareButtonState === 'function') {
+                updateShareButtonState();
+            }
             
             // 출시색상 검색 이벤트 리스너 추가
             const searchInput = document.getElementById('modelSearch');

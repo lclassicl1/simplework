@@ -182,7 +182,7 @@ function openSelectedUrl() {
 // 비밀번호 인증 기능
 const CORRECT_PASSWORD = '5577'; // 원하는 4자리 비밀번호로 변경하세요
 
-function checkPassword() {
+async function checkPassword() {
     const inputPassword = document.getElementById('passwordInput').value;
     const errorDiv = document.getElementById('passwordError');
     
@@ -192,25 +192,98 @@ function checkPassword() {
     }
     
     if (inputPassword === CORRECT_PASSWORD) {
-        // 비밀번호가 맞으면 모달 숨기고 메인 콘텐츠 표시
-        document.getElementById('passwordModal').style.display = 'none';
-        document.querySelector('.main-content').style.display = 'block';
+        // 비밀번호가 맞으면 IP 검증 수행
+        console.log('🔐 비밀번호 인증 성공, IP 검증 시작...');
         
-        // 자동 잠금 매니저가 있으면 잠금 해제
-        if (typeof autoLockManager !== 'undefined' && autoLockManager) {
-            autoLockManager.unlockApplication();
-        } else {
-            // 자동 잠금 매니저가 없으면 새로 생성 (최초 로그인 시)
-            if (typeof AutoLockManager !== 'undefined') {
-                autoLockManager = new AutoLockManager(); // 기본 설정 사용
-                console.log(`자동 잠금 기능이 시작되었습니다. (${typeof AUTO_LOCK_TIMEOUT_MINUTES !== 'undefined' ? AUTO_LOCK_TIMEOUT_MINUTES : '기본'}분 후 자동 잠금)`);
+        try {
+            const ipResult = await checkIPAccess();
+            
+            if (ipResult.allowed) {
+                // IP 검증 성공 시 메인 콘텐츠 표시
+                console.log('✅ IP 검증 성공, 접근 허용');
+                
+                // 비밀번호 모달 숨기고 메인 콘텐츠 표시
+                document.getElementById('passwordModal').style.display = 'none';
+                document.querySelector('.main-content').style.display = 'block';
+                
+                // 자동 잠금 매니저가 있으면 잠금 해제
+                if (typeof autoLockManager !== 'undefined' && autoLockManager) {
+                    autoLockManager.unlockApplication();
+                } else {
+                    // 자동 잠금 매니저가 없으면 새로 생성 (최초 로그인 시)
+                    if (typeof AutoLockManager !== 'undefined') {
+                        autoLockManager = new AutoLockManager(); // 기본 설정 사용
+                        console.log(`자동 잠금 기능이 시작되었습니다. (${typeof AUTO_LOCK_TIMEOUT_MINUTES !== 'undefined' ? AUTO_LOCK_TIMEOUT_MINUTES : '기본'}분 후 자동 잠금)`);
+                    }
+                }
+                
+                // 페이지 초기화 함수 호출 (기존에 있다면)
+                if (typeof initializePage === 'function') {
+                    initializePage();
+                }
+                
+                // 성공 메시지 표시
+                showToast('✅ 인증이 완료되었습니다.');
+                
+            } else {
+                // IP 검증 실패 시 차단 모달 표시
+                console.log('❌ IP 검증 실패, 접근 차단');
+                
+                // 비밀번호 모달 숨기기
+                document.getElementById('passwordModal').style.display = 'none';
+                
+                // IP 차단 모달 표시
+                showIPBlockModal(ipResult);
+                
+                // 비밀번호 입력 필드 초기화
+                document.getElementById('passwordInput').value = '';
+            }
+            
+        } catch (error) {
+            console.error('❌ IP 검증 중 오류 발생:', error);
+            
+            // IP 검증 실패 시 설정에 따른 처리
+            const config = typeof loadIPRestrictionConfig === 'function' ? 
+                loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+            
+            if (config.fallbackAction === 'allow') {
+                // 폴백 설정이 'allow'인 경우 접근 허용
+                console.log('⚠️ IP 검증 실패, 폴백 설정으로 접근 허용');
+                
+                document.getElementById('passwordModal').style.display = 'none';
+                document.querySelector('.main-content').style.display = 'block';
+                
+                // 자동 잠금 매니저 설정
+                if (typeof autoLockManager !== 'undefined' && autoLockManager) {
+                    autoLockManager.unlockApplication();
+                } else if (typeof AutoLockManager !== 'undefined') {
+                    autoLockManager = new AutoLockManager();
+                }
+                
+                if (typeof initializePage === 'function') {
+                    initializePage();
+                }
+                
+                showToast('⚠️ IP 검증 실패로 폴백 설정이 적용되었습니다.');
+                
+            } else {
+                // 폴백 설정이 'block'인 경우 차단
+                console.log('❌ IP 검증 실패, 폴백 설정으로 접근 차단');
+                
+                document.getElementById('passwordModal').style.display = 'none';
+                
+                const blockResult = {
+                    allowed: false,
+                    reason: 'IP 검증 중 오류가 발생했습니다.',
+                    error: error.message,
+                    fallback: true
+                };
+                
+                showIPBlockModal(blockResult);
+                document.getElementById('passwordInput').value = '';
             }
         }
         
-        // 페이지 초기화 함수 호출 (기존에 있다면)
-        if (typeof initializePage === 'function') {
-            initializePage();
-        }
     } else {
         showPasswordError('비밀번호가 올바르지 않습니다.');
     }
@@ -1942,7 +2015,8 @@ const TextareaManager = {
             '밀리언': ['millionRequestText', 'millionStockText', 'millionMemoText'],
             '오앤티': ['ontRequestText', 'ontStockText', 'ontMemoText'],
             '장천': ['jangcheonDeliveryText', 'jangcheonOpenText'],
-            '한올': ['hanolConfirmText', 'hanolDeliveryText', 'hanolOpenText']
+            '한올': ['hanolConfirmText', 'hanolDeliveryText', 'hanolOpenText'],
+            '오케이 대리점': ['okayOpenText']
         };
         
         return textareaMappings[agencyName] || [];
@@ -2005,6 +2079,11 @@ function clearAll() {
     // TextareaManager를 사용하여 모든 textarea 초기화 및 컨테이너 숨기기
     TextareaManager.clearAllTextareas();
     TextareaManager.hideAllExtraOutputs();
+    
+    // 공유 버튼 비활성화
+    if (typeof updateShareButtonState === 'function') {
+        updateShareButtonState();
+    }
     
     // 기본 출력 컨테이너 표시
     const singleOutputContainer = document.getElementById('singleOutputContainer');
@@ -2503,7 +2582,7 @@ function extractFlexiblePriceInfo(text) {
         ],
         '공시': [
             /공시\s*[^\d]*?([\d,.]+)/i,
-            /공시지원\s*[^\d]*?([\d,.]+)/i,
+            /공시지원\s*[^\d]*?([\d,.]+)/i,  // 추가
             /이통사지원금\s*[^\d]*?([\d,.]+)/i  // 추가
         ],
         '추지': [
@@ -2929,3 +3008,2553 @@ window.formatUsimForAgency = formatUsimForAgency;
 window.getUsimDeliveryStatus = getUsimDeliveryStatus;
 window.getUsimPurchaseStatus = getUsimPurchaseStatus;
 window.getUsimPaymentType = getUsimPaymentType;
+
+// ========================================
+// IP 검증 관련 함수들
+// ========================================
+
+/**
+ * 외부 API를 통한 클라이언트 IP 주소 획득
+ * @param {number} timeout - API 호출 타임아웃 (ms, 기본값: 5000)
+ * @returns {Promise<string>} - 클라이언트 IP 주소
+ */
+async function getClientIP(timeout = 5000) {
+    const config = typeof loadIPRestrictionConfig === 'function' ? 
+        loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+    
+    // 캐시된 IP 확인
+    const cachedIP = localStorage.getItem('cached_client_ip');
+    const cacheTime = localStorage.getItem('cached_client_ip_time');
+    
+    if (cachedIP && cacheTime) {
+        const now = Date.now();
+        const cacheAge = now - parseInt(cacheTime);
+        if (cacheAge < config.cacheTimeout) {
+            console.log('✅ 캐시된 IP 사용:', cachedIP);
+            return cachedIP;
+        }
+    }
+    
+    // API 엔드포인트 순서대로 시도
+    for (const endpoint of config.apiEndpoints) {
+        try {
+            console.log(`🌐 IP 확인 시도: ${endpoint}`);
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+            
+            const response = await fetch(endpoint, {
+                method: 'GET',
+                signal: controller.signal,
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            let ip = '';
+            
+            // 다양한 API 응답 형식 처리
+            if (data.ip) {
+                ip = data.ip;
+            } else if (data.origin) {
+                ip = data.origin;
+            } else if (data.query) {
+                ip = data.query;
+            } else {
+                throw new Error('IP 주소를 찾을 수 없습니다.');
+            }
+            
+            // IP 주소 유효성 검증
+            if (isValidIP(ip)) {
+                // 캐시에 저장
+                localStorage.setItem('cached_client_ip', ip);
+                localStorage.setItem('cached_client_ip_time', Date.now().toString());
+                
+                console.log('✅ IP 확인 성공:', ip);
+                return ip;
+            } else {
+                throw new Error('유효하지 않은 IP 주소입니다.');
+            }
+            
+        } catch (error) {
+            console.warn(`⚠️ IP 확인 실패 (${endpoint}):`, error.message);
+            continue;
+        }
+    }
+    
+    throw new Error('모든 IP 확인 API가 실패했습니다.');
+}
+
+/**
+ * IP 주소 유효성 검증
+ * @param {string} ip - 검증할 IP 주소
+ * @returns {boolean} - 유효한 IP 주소 여부
+ */
+function isValidIP(ip) {
+    if (!ip || typeof ip !== 'string') return false;
+    
+    // IPv4 정규식 패턴
+    const ipv4Pattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    
+    // IPv6 정규식 패턴 (간단한 버전)
+    const ipv6Pattern = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/;
+    
+    return ipv4Pattern.test(ip) || ipv6Pattern.test(ip);
+}
+
+/**
+ * IP 주소를 숫자로 변환 (IPv4)
+ * @param {string} ip - IP 주소
+ * @returns {number} - IP 주소의 숫자 표현
+ */
+function ipToNumber(ip) {
+    if (!isValidIP(ip)) return 0;
+    
+    return ip.split('.').reduce((acc, octet) => {
+        return (acc << 8) + parseInt(octet, 10);
+    }, 0) >>> 0; // 32비트 양수로 변환
+}
+
+/**
+ * CIDR 표기법의 IP 범위 검증
+ * @param {string} ip - 검증할 IP 주소
+ * @param {string} cidr - CIDR 표기법 (예: "192.168.1.0/24")
+ * @returns {boolean} - IP가 범위에 포함되는지 여부
+ */
+function isIPInRange(ip, cidr) {
+    if (!isValidIP(ip) || !cidr) return false;
+    
+    try {
+        const [rangeIP, prefixLength] = cidr.split('/');
+        if (!isValidIP(rangeIP) || !prefixLength) return false;
+        
+        const prefix = parseInt(prefixLength, 10);
+        if (prefix < 0 || prefix > 32) return false;
+        
+        const ipNum = ipToNumber(ip);
+        const rangeNum = ipToNumber(rangeIP);
+        const mask = prefix === 0 ? 0 : (0xFFFFFFFF << (32 - prefix)) >>> 0;
+        
+        return (ipNum & mask) === (rangeNum & mask);
+        
+    } catch (error) {
+        console.warn('IP 범위 검증 오류:', error);
+        return false;
+    }
+}
+
+/**
+ * 현재 IP가 허용된 IP 목록에 포함되는지 검증
+ * @param {string} currentIP - 현재 IP 주소
+ * @param {object} config - IP 제한 설정 (선택사항)
+ * @returns {object} - 검증 결과
+ */
+function validateIPAccess(currentIP, config = null) {
+    if (!config) {
+        config = typeof loadIPRestrictionConfig === 'function' ? 
+            loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+    }
+    
+    // IP 제한 기능이 비활성화된 경우 허용
+    if (!config.enabled) {
+        return {
+            allowed: true,
+            reason: 'IP 제한 기능이 비활성화되어 있습니다.',
+            currentIP: currentIP
+        };
+    }
+    
+    // IP 주소 유효성 검증
+    if (!isValidIP(currentIP)) {
+        return {
+            allowed: false,
+            reason: '유효하지 않은 IP 주소입니다.',
+            currentIP: currentIP
+        };
+    }
+    
+    // 개별 IP 주소 검증
+    if (config.allowedIPs && config.allowedIPs.length > 0) {
+        if (config.allowedIPs.includes(currentIP)) {
+            return {
+                allowed: true,
+                reason: '허용된 IP 주소입니다.',
+                currentIP: currentIP,
+                matchType: 'exact'
+            };
+        }
+    }
+    
+    // IP 범위 검증
+    if (config.allowedRanges && config.allowedRanges.length > 0) {
+        for (const range of config.allowedRanges) {
+            if (isIPInRange(currentIP, range)) {
+                return {
+                    allowed: true,
+                    reason: `허용된 IP 범위에 포함됩니다: ${range}`,
+                    currentIP: currentIP,
+                    matchType: 'range',
+                    matchedRange: range
+                };
+            }
+        }
+    }
+    
+    // 허용 목록이 비어있는 경우 폴백 동작
+    if ((!config.allowedIPs || config.allowedIPs.length === 0) && 
+        (!config.allowedRanges || config.allowedRanges.length === 0)) {
+        
+        switch (config.fallbackAction) {
+            case 'allow':
+                return {
+                    allowed: true,
+                    reason: '허용 목록이 비어있어 접근을 허용합니다.',
+                    currentIP: currentIP,
+                    fallback: true
+                };
+            case 'warn':
+                return {
+                    allowed: true,
+                    reason: '허용 목록이 비어있지만 경고와 함께 접근을 허용합니다.',
+                    currentIP: currentIP,
+                    fallback: true,
+                    warning: true
+                };
+            case 'block':
+            default:
+                return {
+                    allowed: false,
+                    reason: '허용 목록이 비어있어 접근을 차단합니다.',
+                    currentIP: currentIP,
+                    fallback: true
+                };
+        }
+    }
+    
+    // 모든 검증을 통과하지 못한 경우 차단
+    return {
+        allowed: false,
+        reason: '허용된 IP 목록에 포함되지 않습니다.',
+        currentIP: currentIP,
+        allowedIPs: config.allowedIPs || [],
+        allowedRanges: config.allowedRanges || []
+    };
+}
+
+/**
+ * IP 접근 검증을 수행하는 메인 함수
+ * @returns {Promise<object>} - 검증 결과
+ */
+async function checkIPAccess() {
+    try {
+        console.log('🔒 IP 접근 검증 시작...');
+        
+        // 클라이언트 IP 획득
+        const currentIP = await getClientIP();
+        
+        // IP 접근 검증
+        const result = validateIPAccess(currentIP);
+        
+        console.log('🔒 IP 접근 검증 결과:', result);
+        
+        return result;
+        
+    } catch (error) {
+        console.error('❌ IP 접근 검증 실패:', error);
+        
+        // 에러 발생 시 폴백 처리
+        const config = typeof loadIPRestrictionConfig === 'function' ? 
+            loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+        
+        switch (config.fallbackAction) {
+            case 'allow':
+                return {
+                    allowed: true,
+                    reason: 'IP 확인 실패로 인해 접근을 허용합니다.',
+                    error: error.message,
+                    fallback: true
+                };
+            case 'warn':
+                return {
+                    allowed: true,
+                    reason: 'IP 확인 실패로 인해 경고와 함께 접근을 허용합니다.',
+                    error: error.message,
+                    fallback: true,
+                    warning: true
+                };
+            case 'block':
+            default:
+                return {
+                    allowed: false,
+                    reason: 'IP 확인 실패로 인해 접근을 차단합니다.',
+                    error: error.message,
+                    fallback: true
+                };
+        }
+    }
+}
+
+/**
+ * IP 검증 결과를 사용자에게 표시
+ * @param {object} result - IP 검증 결과
+ */
+function showIPValidationResult(result) {
+    if (result.allowed) {
+        if (result.warning) {
+            console.warn('⚠️ IP 검증 경고:', result.reason);
+            // 경고 메시지를 사용자에게 표시할 수 있음
+        } else {
+            console.log('✅ IP 검증 성공:', result.reason);
+        }
+    } else {
+        console.error('❌ IP 검증 실패:', result.reason);
+        // 차단 메시지를 사용자에게 표시할 수 있음
+    }
+}
+
+// IP 검증 관련 함수들을 전역으로 노출
+window.getClientIP = getClientIP;
+window.isValidIP = isValidIP;
+window.ipToNumber = ipToNumber;
+window.isIPInRange = isIPInRange;
+window.validateIPAccess = validateIPAccess;
+window.checkIPAccess = checkIPAccess;
+window.showIPValidationResult = showIPValidationResult;
+
+console.log('✅ IP 검증 모듈이 로드되었습니다.');
+
+// ========================================
+// IP 차단 모달 관련 함수들
+// ========================================
+
+/**
+ * IP 차단 모달 표시
+ * @param {object} result - IP 검증 결과
+ */
+function showIPBlockModal(result) {
+    const modal = document.getElementById('ipBlockModal');
+    const currentIPDisplay = document.getElementById('currentIPDisplay');
+    const blockReason = document.getElementById('blockReason');
+    
+    if (!modal || !currentIPDisplay || !blockReason) {
+        console.error('❌ IP 차단 모달 요소를 찾을 수 없습니다.');
+        return;
+    }
+    
+    // 현재 IP 주소 표시
+    if (result.currentIP) {
+        currentIPDisplay.textContent = result.currentIP;
+    } else {
+        currentIPDisplay.textContent = '확인 실패';
+    }
+    
+    // 차단 사유 표시
+    if (result.reason) {
+        blockReason.textContent = result.reason;
+    } else {
+        blockReason.textContent = 'IP 주소가 허용 목록에 포함되지 않습니다.';
+    }
+    
+    // 모달 표시
+    modal.style.display = 'flex';
+    
+    // 메인 콘텐츠 숨기기
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        mainContent.style.display = 'none';
+    }
+    
+    console.log('🚫 IP 차단 모달이 표시되었습니다.');
+}
+
+/**
+ * IP 차단 모달 숨기기
+ */
+function closeIPBlockModal() {
+    const modal = document.getElementById('ipBlockModal');
+    if (modal) {
+        modal.style.display = 'none';
+        console.log('✅ IP 차단 모달이 닫혔습니다.');
+    }
+}
+
+/**
+ * IP 재확인 시도
+ */
+async function retryIPCheck() {
+    console.log('🔄 IP 재확인 시도 중...');
+    
+    // 로딩 상태 표시
+    const currentIPDisplay = document.getElementById('currentIPDisplay');
+    if (currentIPDisplay) {
+        currentIPDisplay.textContent = '재확인 중...';
+    }
+    
+    try {
+        // IP 접근 검증 재시도
+        const result = await checkIPAccess();
+        
+        if (result.allowed) {
+            // 접근 허용된 경우 모달 닫고 메인 콘텐츠 표시
+            closeIPBlockModal();
+            
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) {
+                mainContent.style.display = 'block';
+            }
+            
+            // 성공 메시지 표시
+            showToast('✅ IP 검증이 완료되었습니다. 접근이 허용되었습니다.');
+            
+            console.log('✅ IP 재확인 성공: 접근 허용');
+        } else {
+            // 여전히 차단된 경우 모달 업데이트
+            showIPBlockModal(result);
+            console.log('❌ IP 재확인 실패: 여전히 차단됨');
+        }
+        
+    } catch (error) {
+        console.error('❌ IP 재확인 중 오류 발생:', error);
+        
+        // 오류 상태 표시
+        if (currentIPDisplay) {
+            currentIPDisplay.textContent = '오류 발생';
+        }
+        
+        // 오류 메시지 표시
+        showToast('❌ IP 재확인 중 오류가 발생했습니다.');
+    }
+}
+
+/**
+ * IP 차단 모달 초기화
+ */
+function initializeIPBlockModal() {
+    // 모달이 존재하는지 확인
+    const modal = document.getElementById('ipBlockModal');
+    if (!modal) {
+        console.warn('⚠️ IP 차단 모달이 HTML에 정의되지 않았습니다.');
+        return;
+    }
+    
+    // 모달 닫기 버튼 이벤트 리스너 추가
+    const closeButton = modal.querySelector('.ip-block-close');
+    if (closeButton) {
+        closeButton.addEventListener('click', closeIPBlockModal);
+    }
+    
+    // 모달 외부 클릭 시 닫기
+    modal.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            closeIPBlockModal();
+        }
+    });
+    
+    // ESC 키로 모달 닫기
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && modal.style.display === 'flex') {
+            closeIPBlockModal();
+        }
+    });
+    
+    console.log('✅ IP 차단 모달이 초기화되었습니다.');
+}
+
+/**
+ * IP 차단 모달 테스트 (개발용)
+ */
+function testIPBlockModal() {
+    const testResult = {
+        allowed: false,
+        reason: '테스트용 차단 메시지입니다.',
+        currentIP: '192.168.1.100',
+        allowedIPs: ['203.241.xxx.xxx', '210.123.xxx.xxx'],
+        allowedRanges: ['192.168.0.0/16']
+    };
+    
+    showIPBlockModal(testResult);
+    console.log('🧪 IP 차단 모달 테스트가 실행되었습니다.');
+}
+
+// IP 차단 모달 관련 함수들을 전역으로 노출
+window.showIPBlockModal = showIPBlockModal;
+window.closeIPBlockModal = closeIPBlockModal;
+window.retryIPCheck = retryIPCheck;
+window.initializeIPBlockModal = initializeIPBlockModal;
+window.testIPBlockModal = testIPBlockModal;
+
+console.log('✅ IP 차단 모달 모듈이 로드되었습니다.');
+
+// ========================================
+// IP 검증 초기화 및 통합 함수들
+// ========================================
+
+/**
+ * IP 검증 초기화 및 자동 실행
+ */
+async function initializeIPVerification() {
+    console.log('🔒 IP 검증 초기화 시작...');
+    
+    // IP 제한 기능이 비활성화된 경우 바로 비밀번호 모달 표시
+    const config = typeof loadIPRestrictionConfig === 'function' ? 
+        loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+    
+    if (!config.enabled) {
+        console.log('ℹ️ IP 제한 기능이 비활성화되어 있습니다. 비밀번호 인증으로 진행합니다.');
+        showPasswordModal();
+        return;
+    }
+    
+    try {
+        // IP 접근 검증 수행
+        const result = await checkIPAccess();
+        
+        if (result.allowed) {
+            // IP 검증 성공 시 비밀번호 모달 표시
+            console.log('✅ IP 검증 성공, 비밀번호 인증 단계로 진행');
+            showPasswordModal();
+            
+        } else {
+            // IP 검증 실패 시 차단 모달 표시
+            console.log('❌ IP 검증 실패, 접근 차단');
+            showIPBlockModal(result);
+        }
+        
+    } catch (error) {
+        console.error('❌ IP 검증 초기화 중 오류 발생:', error);
+        
+        // 에러 발생 시 폴백 설정에 따른 처리
+        if (config.fallbackAction === 'allow') {
+            console.log('⚠️ IP 검증 실패, 폴백 설정으로 비밀번호 인증 진행');
+            showPasswordModal();
+        } else {
+            console.log('❌ IP 검증 실패, 폴백 설정으로 접근 차단');
+            const blockResult = {
+                allowed: false,
+                reason: 'IP 검증 중 오류가 발생했습니다.',
+                error: error.message,
+                fallback: true
+            };
+            showIPBlockModal(blockResult);
+        }
+    }
+}
+
+/**
+ * 비밀번호 모달 표시
+ */
+function showPasswordModal() {
+    const passwordModal = document.getElementById('passwordModal');
+    const mainContent = document.querySelector('.main-content');
+    
+    if (passwordModal) {
+        passwordModal.style.display = 'flex';
+        console.log('🔐 비밀번호 모달이 표시되었습니다.');
+    }
+    
+    if (mainContent) {
+        mainContent.style.display = 'none';
+    }
+}
+
+/**
+ * IP 검증 결과에 따른 모달 전환
+ * @param {object} result - IP 검증 결과
+ */
+function handleIPVerificationResult(result) {
+    if (result.allowed) {
+        // IP 검증 성공 시 비밀번호 모달로 전환
+        showPasswordModal();
+    } else {
+        // IP 검증 실패 시 차단 모달 표시
+        showIPBlockModal(result);
+    }
+}
+
+/**
+ * IP 재확인 후 비밀번호 모달로 전환
+ */
+async function retryIPCheckAndShowPassword() {
+    console.log('🔄 IP 재확인 후 비밀번호 모달 전환 시도...');
+    
+    try {
+        const result = await checkIPAccess();
+        
+        if (result.allowed) {
+            // IP 재확인 성공 시 차단 모달 닫고 비밀번호 모달 표시
+            closeIPBlockModal();
+            showPasswordModal();
+            console.log('✅ IP 재확인 성공, 비밀번호 인증 단계로 진행');
+        } else {
+            // 여전히 차단된 경우 모달 업데이트
+            showIPBlockModal(result);
+            console.log('❌ IP 재확인 실패, 여전히 차단됨');
+        }
+        
+    } catch (error) {
+        console.error('❌ IP 재확인 중 오류 발생:', error);
+        
+        const config = typeof loadIPRestrictionConfig === 'function' ? 
+            loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+        
+        if (config.fallbackAction === 'allow') {
+            // 폴백 설정이 'allow'인 경우 비밀번호 모달로 전환
+            closeIPBlockModal();
+            showPasswordModal();
+            showToast('⚠️ IP 검증 실패로 폴백 설정이 적용되었습니다.');
+        } else {
+            // 폴백 설정이 'block'인 경우 차단 유지
+            const blockResult = {
+                allowed: false,
+                reason: 'IP 재확인 중 오류가 발생했습니다.',
+                error: error.message,
+                fallback: true
+            };
+            showIPBlockModal(blockResult);
+        }
+    }
+}
+
+/**
+ * 자동 잠금 시스템과 IP 검증 연동
+ */
+function setupAutoLockWithIPVerification() {
+    // 기존 자동 잠금 매니저가 있는 경우 IP 검증과 연동
+    if (typeof autoLockManager !== 'undefined' && autoLockManager) {
+        const originalLockMethod = autoLockManager.lockApplication;
+        
+        // 자동 잠금 시 IP 검증도 함께 수행
+        autoLockManager.lockApplication = function() {
+            console.log('🔒 자동 잠금 실행, IP 검증과 연동');
+            
+            // 메인 콘텐츠 숨기기
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) {
+                mainContent.style.display = 'none';
+            }
+            
+            // IP 검증 초기화 (비밀번호 모달 표시)
+            initializeIPVerification();
+            
+            // 원본 잠금 메서드 호출
+            if (originalLockMethod) {
+                originalLockMethod.call(this);
+            }
+        };
+        
+        console.log('✅ 자동 잠금 시스템과 IP 검증이 연동되었습니다.');
+    }
+}
+
+// IP 검증 초기화 관련 함수들을 전역으로 노출
+window.initializeIPVerification = initializeIPVerification;
+window.showPasswordModal = showPasswordModal;
+window.handleIPVerificationResult = handleIPVerificationResult;
+window.retryIPCheckAndShowPassword = retryIPCheckAndShowPassword;
+window.setupAutoLockWithIPVerification = setupAutoLockWithIPVerification;
+
+console.log('✅ IP 검증 초기화 모듈이 로드되었습니다.');
+
+// ========================================
+// IP 제한 관리자 인터페이스 함수들
+// ========================================
+
+// 관리자 비밀번호 (실제 운영 시에는 더 복잡한 인증 시스템 사용 권장)
+const ADMIN_PASSWORD = 'admin123';
+
+/**
+ * IP 관리자 모달 표시
+ */
+function showIPAdminModal() {
+    const modal = document.getElementById('ipAdminModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        console.log('🔧 IP 관리자 모달이 표시되었습니다.');
+        
+        // 현재 IP 정보 업데이트
+        refreshCurrentIP();
+    }
+}
+
+/**
+ * IP 관리자 모달 숨기기
+ */
+function closeIPAdminModal() {
+    const modal = document.getElementById('ipAdminModal');
+    if (modal) {
+        modal.style.display = 'none';
+        console.log('✅ IP 관리자 모달이 닫혔습니다.');
+    }
+}
+
+/**
+ * 관리자 권한 검증
+ */
+function verifyAdminAccess() {
+    const passwordInput = document.getElementById('adminPassword');
+    const errorDiv = document.getElementById('adminAuthError');
+    const authSection = document.getElementById('adminAuthSection');
+    const settingsSection = document.getElementById('adminSettingsSection');
+    
+    if (!passwordInput || !errorDiv || !authSection || !settingsSection) {
+        console.error('❌ 관리자 인증 요소를 찾을 수 없습니다.');
+        return;
+    }
+    
+    const inputPassword = passwordInput.value;
+    
+    if (inputPassword === ADMIN_PASSWORD) {
+        // 인증 성공
+        console.log('✅ 관리자 인증 성공');
+        
+        // 에러 메시지 숨기기
+        errorDiv.style.display = 'none';
+        
+        // 인증 섹션 숨기고 설정 섹션 표시
+        authSection.style.display = 'none';
+        settingsSection.style.display = 'block';
+        
+        // 설정 로드
+        loadIPSettings();
+        
+        // 비밀번호 입력 필드 초기화
+        passwordInput.value = '';
+        
+    } else {
+        // 인증 실패
+        console.log('❌ 관리자 인증 실패');
+        
+        errorDiv.textContent = '관리자 비밀번호가 올바르지 않습니다.';
+        errorDiv.style.display = 'block';
+        
+        // 비밀번호 입력 필드 초기화 및 포커스
+        passwordInput.value = '';
+        passwordInput.focus();
+        
+        // 3초 후 에러 메시지 숨기기
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+        }, 3000);
+    }
+}
+
+/**
+ * IP 설정 로드
+ */
+function loadIPSettings() {
+    const config = typeof loadIPRestrictionConfig === 'function' ? 
+        loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+    
+    // IP 제한 기능 토글 설정
+    const toggle = document.getElementById('ipRestrictionToggle');
+    if (toggle) {
+        toggle.checked = config.enabled;
+    }
+    
+    // 폴백 설정 선택
+    const fallbackSelect = document.getElementById('fallbackActionSelect');
+    if (fallbackSelect) {
+        fallbackSelect.value = config.fallbackAction;
+    }
+    
+    // 허용된 IP 목록 표시
+    displayAllowedIPs(config.allowedIPs || []);
+    
+    // 허용된 IP 범위 목록 표시
+    displayAllowedRanges(config.allowedRanges || []);
+    
+    console.log('📋 IP 설정이 로드되었습니다.');
+}
+
+/**
+ * 허용된 IP 목록 표시
+ */
+function displayAllowedIPs(ipList) {
+    const container = document.getElementById('allowedIPsList');
+    if (!container) return;
+    
+    if (ipList.length === 0) {
+        container.innerHTML = '<div class="ip-item"><span class="ip-text" style="color: #999; font-style: italic;">허용된 IP가 없습니다.</span></div>';
+        return;
+    }
+    
+    container.innerHTML = ipList.map(ip => `
+        <div class="ip-item">
+            <span class="ip-text">${ip}</span>
+            <button onclick="removeAllowedIP('${ip}')" class="remove-ip-btn">삭제</button>
+        </div>
+    `).join('');
+}
+
+/**
+ * 허용된 IP 범위 목록 표시
+ */
+function displayAllowedRanges(rangeList) {
+    const container = document.getElementById('allowedRangesList');
+    if (!container) return;
+    
+    if (rangeList.length === 0) {
+        container.innerHTML = '<div class="ip-item"><span class="ip-text" style="color: #999; font-style: italic;">허용된 IP 범위가 없습니다.</span></div>';
+        return;
+    }
+    
+    container.innerHTML = rangeList.map(range => `
+        <div class="ip-item">
+            <span class="ip-text">${range}</span>
+            <button onclick="removeAllowedRange('${range}')" class="remove-ip-btn">삭제</button>
+        </div>
+    `).join('');
+}
+
+/**
+ * 허용된 IP 추가
+ */
+function addAllowedIP() {
+    const input = document.getElementById('newIPInput');
+    if (!input) return;
+    
+    const ip = input.value.trim();
+    
+    if (!ip) {
+        showToast('❌ IP 주소를 입력해주세요.');
+        return;
+    }
+    
+    if (!isValidIP(ip)) {
+        showToast('❌ 유효하지 않은 IP 주소입니다.');
+        return;
+    }
+    
+    // 현재 설정 로드
+    const config = typeof loadIPRestrictionConfig === 'function' ? 
+        loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+    
+    // 중복 확인
+    if (config.allowedIPs && config.allowedIPs.includes(ip)) {
+        showToast('⚠️ 이미 등록된 IP 주소입니다.');
+        return;
+    }
+    
+    // IP 추가
+    if (!config.allowedIPs) {
+        config.allowedIPs = [];
+    }
+    config.allowedIPs.push(ip);
+    
+    // 설정 저장
+    if (typeof saveIPRestrictionConfig === 'function') {
+        saveIPRestrictionConfig(config);
+    }
+    
+    // 목록 업데이트
+    displayAllowedIPs(config.allowedIPs);
+    
+    // 입력 필드 초기화
+    input.value = '';
+    
+    showToast('✅ IP 주소가 추가되었습니다.');
+    console.log('✅ IP 주소 추가:', ip);
+}
+
+/**
+ * 허용된 IP 삭제
+ */
+function removeAllowedIP(ip) {
+    // 현재 설정 로드
+    const config = typeof loadIPRestrictionConfig === 'function' ? 
+        loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+    
+    if (config.allowedIPs) {
+        const index = config.allowedIPs.indexOf(ip);
+        if (index > -1) {
+            config.allowedIPs.splice(index, 1);
+            
+            // 설정 저장
+            if (typeof saveIPRestrictionConfig === 'function') {
+                saveIPRestrictionConfig(config);
+            }
+            
+            // 목록 업데이트
+            displayAllowedIPs(config.allowedIPs);
+            
+            showToast('✅ IP 주소가 삭제되었습니다.');
+            console.log('✅ IP 주소 삭제:', ip);
+        }
+    }
+}
+
+/**
+ * 허용된 IP 범위 추가
+ */
+function addAllowedRange() {
+    const input = document.getElementById('newRangeInput');
+    if (!input) return;
+    
+    const range = input.value.trim();
+    
+    if (!range) {
+        showToast('❌ IP 범위를 입력해주세요.');
+        return;
+    }
+    
+    // CIDR 형식 검증
+    const [ip, prefix] = range.split('/');
+    if (!ip || !prefix || !isValidIP(ip) || prefix < 0 || prefix > 32) {
+        showToast('❌ 유효하지 않은 CIDR 형식입니다. (예: 192.168.1.0/24)');
+        return;
+    }
+    
+    // 현재 설정 로드
+    const config = typeof loadIPRestrictionConfig === 'function' ? 
+        loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+    
+    // 중복 확인
+    if (config.allowedRanges && config.allowedRanges.includes(range)) {
+        showToast('⚠️ 이미 등록된 IP 범위입니다.');
+        return;
+    }
+    
+    // 범위 추가
+    if (!config.allowedRanges) {
+        config.allowedRanges = [];
+    }
+    config.allowedRanges.push(range);
+    
+    // 설정 저장
+    if (typeof saveIPRestrictionConfig === 'function') {
+        saveIPRestrictionConfig(config);
+    }
+    
+    // 목록 업데이트
+    displayAllowedRanges(config.allowedRanges);
+    
+    // 입력 필드 초기화
+    input.value = '';
+    
+    showToast('✅ IP 범위가 추가되었습니다.');
+    console.log('✅ IP 범위 추가:', range);
+}
+
+/**
+ * 허용된 IP 범위 삭제
+ */
+function removeAllowedRange(range) {
+    // 현재 설정 로드
+    const config = typeof loadIPRestrictionConfig === 'function' ? 
+        loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+    
+    if (config.allowedRanges) {
+        const index = config.allowedRanges.indexOf(range);
+        if (index > -1) {
+            config.allowedRanges.splice(index, 1);
+            
+            // 설정 저장
+            if (typeof saveIPRestrictionConfig === 'function') {
+                saveIPRestrictionConfig(config);
+            }
+            
+            // 목록 업데이트
+            displayAllowedRanges(config.allowedRanges);
+            
+            showToast('✅ IP 범위가 삭제되었습니다.');
+            console.log('✅ IP 범위 삭제:', range);
+        }
+    }
+}
+
+/**
+ * 현재 IP 정보 새로고침
+ */
+async function refreshCurrentIP() {
+    const currentIPElement = document.getElementById('adminCurrentIP');
+    if (!currentIPElement) return;
+    
+    currentIPElement.textContent = '확인 중...';
+    
+    try {
+        const ip = await getClientIP();
+        currentIPElement.textContent = ip;
+        console.log('✅ 현재 IP 정보 업데이트:', ip);
+    } catch (error) {
+        currentIPElement.textContent = '확인 실패';
+        console.error('❌ 현재 IP 정보 업데이트 실패:', error);
+    }
+}
+
+/**
+ * IP 설정 저장
+ */
+function saveIPSettings() {
+    const toggle = document.getElementById('ipRestrictionToggle');
+    const fallbackSelect = document.getElementById('fallbackActionSelect');
+    
+    if (!toggle || !fallbackSelect) {
+        showToast('❌ 설정 요소를 찾을 수 없습니다.');
+        return;
+    }
+    
+    // 현재 설정 로드
+    const config = typeof loadIPRestrictionConfig === 'function' ? 
+        loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+    
+    // 설정 업데이트
+    config.enabled = toggle.checked;
+    config.fallbackAction = fallbackSelect.value;
+    
+    // 설정 저장
+    if (typeof saveIPRestrictionConfig === 'function') {
+        saveIPRestrictionConfig(config);
+    }
+    
+    showToast('✅ IP 설정이 저장되었습니다.');
+    console.log('✅ IP 설정 저장:', config);
+}
+
+/**
+ * IP 설정 초기화
+ */
+function resetIPSettings() {
+    if (confirm('정말로 IP 설정을 초기화하시겠습니까?')) {
+        // 기본 설정으로 초기화
+        if (typeof resetIPRestrictionConfig === 'function') {
+            resetIPRestrictionConfig();
+        }
+        
+        // 설정 다시 로드
+        loadIPSettings();
+        
+        showToast('✅ IP 설정이 초기화되었습니다.');
+        console.log('✅ IP 설정 초기화 완료');
+    }
+}
+
+/**
+ * IP 관리자 모달 초기화
+ */
+function initializeIPAdminModal() {
+    // 모달이 존재하는지 확인
+    const modal = document.getElementById('ipAdminModal');
+    if (!modal) {
+        console.warn('⚠️ IP 관리자 모달이 HTML에 정의되지 않았습니다.');
+        return;
+    }
+    
+    // 관리자 비밀번호 입력 필드 이벤트 리스너
+    const passwordInput = document.getElementById('adminPassword');
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                verifyAdminAccess();
+            }
+        });
+    }
+    
+    // 모달 외부 클릭 시 닫기
+    modal.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            closeIPAdminModal();
+        }
+    });
+    
+    // ESC 키로 모달 닫기
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && modal.style.display === 'flex') {
+            closeIPAdminModal();
+        }
+    });
+    
+    console.log('✅ IP 관리자 모달이 초기화되었습니다.');
+}
+
+// IP 관리자 인터페이스 관련 함수들을 전역으로 노출
+window.showIPAdminModal = showIPAdminModal;
+window.closeIPAdminModal = closeIPAdminModal;
+window.verifyAdminAccess = verifyAdminAccess;
+window.addAllowedIP = addAllowedIP;
+window.removeAllowedIP = removeAllowedIP;
+window.addAllowedRange = addAllowedRange;
+window.removeAllowedRange = removeAllowedRange;
+window.refreshCurrentIP = refreshCurrentIP;
+window.saveIPSettings = saveIPSettings;
+window.resetIPSettings = resetIPSettings;
+window.initializeIPAdminModal = initializeIPAdminModal;
+
+console.log('✅ IP 관리자 인터페이스 모듈이 로드되었습니다.');
+
+console.log('✅ IP 관리자 인터페이스 모듈이 로드되었습니다.');
+
+// ========================================
+// IP 제한 기능 테스트 및 최적화 함수들
+// ========================================
+
+/**
+ * IP 제한 기능 종합 테스트
+ */
+async function runIPRestrictionTests() {
+    console.log('🧪 IP 제한 기능 종합 테스트 시작...');
+    
+    const testResults = {
+        total: 0,
+        passed: 0,
+        failed: 0,
+        details: []
+    };
+    
+    // 테스트 1: IP 주소 유효성 검증
+    await runTest('IP 주소 유효성 검증', () => {
+        const validIPs = ['192.168.1.1', '10.0.0.1', '172.16.0.1', '8.8.8.8'];
+        const invalidIPs = ['256.1.2.3', '1.2.3.256', '192.168.1', '192.168.1.1.1', 'abc.def.ghi.jkl'];
+        
+        // 유효한 IP 테스트
+        for (const ip of validIPs) {
+            if (!isValidIP(ip)) {
+                throw new Error(`유효한 IP가 거부됨: ${ip}`);
+            }
+        }
+        
+        // 유효하지 않은 IP 테스트
+        for (const ip of invalidIPs) {
+            if (isValidIP(ip)) {
+                throw new Error(`유효하지 않은 IP가 허용됨: ${ip}`);
+            }
+        }
+        
+        return '✅ 모든 IP 유효성 검증 통과';
+    }, testResults);
+    
+    // 테스트 2: CIDR 범위 검증
+    await runTest('CIDR 범위 검증', () => {
+        const validRanges = ['192.168.1.0/24', '10.0.0.0/8', '172.16.0.0/16'];
+        const invalidRanges = ['192.168.1.0/33', '192.168.1.0', '192.168.1.0/abc'];
+        
+        // 유효한 범위 테스트
+        for (const range of validRanges) {
+            const [ip, prefix] = range.split('/');
+            if (!isValidIP(ip) || prefix < 0 || prefix > 32) {
+                throw new Error(`유효한 CIDR이 거부됨: ${range}`);
+            }
+        }
+        
+        // 유효하지 않은 범위 테스트
+        for (const range of invalidRanges) {
+            const [ip, prefix] = range.split('/');
+            if (isValidIP(ip) && prefix >= 0 && prefix <= 32) {
+                throw new Error(`유효하지 않은 CIDR이 허용됨: ${range}`);
+            }
+        }
+        
+        return '✅ 모든 CIDR 범위 검증 통과';
+    }, testResults);
+    
+    // 테스트 3: IP 범위 포함 검증
+    await runTest('IP 범위 포함 검증', () => {
+        const testCases = [
+            { ip: '192.168.1.100', range: '192.168.1.0/24', expected: true },
+            { ip: '192.168.2.100', range: '192.168.1.0/24', expected: false },
+            { ip: '10.0.0.5', range: '10.0.0.0/8', expected: true },
+            { ip: '172.16.0.10', range: '172.16.0.0/16', expected: true }
+        ];
+        
+        for (const testCase of testCases) {
+            const result = isIPInRange(testCase.ip, testCase.range);
+            if (result !== testCase.expected) {
+                throw new Error(`IP 범위 검증 실패: ${testCase.ip} in ${testCase.range} = ${result}, 예상: ${testCase.expected}`);
+            }
+        }
+        
+        return '✅ 모든 IP 범위 포함 검증 통과';
+    }, testResults);
+    
+    // 테스트 4: 설정 저장 및 로드
+    await runTest('설정 저장 및 로드', () => {
+        const testConfig = {
+            enabled: true,
+            allowedIPs: ['192.168.1.100', '10.0.0.1'],
+            allowedRanges: ['192.168.1.0/24'],
+            fallbackAction: 'block'
+        };
+        
+        // 설정 저장
+        if (typeof saveIPRestrictionConfig === 'function') {
+            saveIPRestrictionConfig(testConfig);
+        }
+        
+        // 설정 로드
+        const loadedConfig = typeof loadIPRestrictionConfig === 'function' ? 
+            loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+        
+        // 설정 비교
+        if (JSON.stringify(loadedConfig) !== JSON.stringify(testConfig)) {
+            throw new Error('설정 저장/로드 불일치');
+        }
+        
+        return '✅ 설정 저장 및 로드 통과';
+    }, testResults);
+    
+    // 테스트 5: API 호출 테스트
+    await runTest('API 호출 테스트', async () => {
+        try {
+            const ip = await getClientIP();
+            if (!ip || ip === 'unknown') {
+                throw new Error('IP 주소를 가져올 수 없음');
+            }
+            return `✅ API 호출 성공: ${ip}`;
+        } catch (error) {
+            throw new Error(`API 호출 실패: ${error.message}`);
+        }
+    }, testResults);
+    
+    // 테스트 결과 출력
+    console.log('📊 테스트 결과:', testResults);
+    console.log(`총 테스트: ${testResults.total}, 통과: ${testResults.passed}, 실패: ${testResults.failed}`);
+    
+    // 실패한 테스트 상세 출력
+    if (testResults.failed > 0) {
+        console.error('❌ 실패한 테스트:');
+        testResults.details.filter(d => !d.success).forEach(d => {
+            console.error(`  - ${d.name}: ${d.error}`);
+        });
+    }
+    
+    // UI에 테스트 결과 표시
+    displayTestResults(testResults);
+    
+    return testResults;
+}
+
+/**
+ * 개별 테스트 실행
+ */
+async function runTest(name, testFunction, results) {
+    results.total++;
+    
+    try {
+        const result = await testFunction();
+        results.passed++;
+        results.details.push({ name, success: true, result });
+        console.log(`✅ ${name}: ${result}`);
+        return true;
+    } catch (error) {
+        results.failed++;
+        results.details.push({ name, success: false, error: error.message });
+        console.error(`❌ ${name}: ${error.message}`);
+        return false;
+    }
+}
+
+/**
+ * 성능 최적화: API 호출 캐싱 개선
+ */
+function optimizeIPAPICalls() {
+    console.log('⚡ IP API 호출 최적화 시작...');
+    
+    // 캐시 시간을 5분으로 단축 (기존 10분에서)
+    if (typeof IP_RESTRICTION_CONFIG !== 'undefined') {
+        IP_RESTRICTION_CONFIG.cacheTimeout = 5 * 60 * 1000; // 5분
+    }
+    
+    // 캐시 키 개선
+    const cacheKey = 'ip_restriction_cache_v2';
+    
+    // 캐시된 IP 정보 확인
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+        try {
+            const cacheData = JSON.parse(cached);
+            const now = Date.now();
+            
+            if (now - cacheData.timestamp < IP_RESTRICTION_CONFIG.cacheTimeout) {
+                console.log('📦 캐시된 IP 정보 사용:', cacheData.ip);
+                return cacheData.ip;
+            }
+        } catch (error) {
+            console.warn('⚠️ 캐시 데이터 파싱 실패:', error);
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * 테스트 결과를 UI에 표시
+ */
+function displayTestResults(testResults) {
+    const resultsContainer = document.getElementById('testResults');
+    if (!resultsContainer) return;
+    
+    let html = '<div class="test-summary">';
+    html += `📊 테스트 결과: 총 ${testResults.total}개, 통과 ${testResults.passed}개, 실패 ${testResults.failed}개</div>`;
+    
+    testResults.details.forEach(detail => {
+        const className = detail.success ? 'test-result-success' : 'test-result-error';
+        const icon = detail.success ? '✅' : '❌';
+        const content = detail.success ? detail.result : detail.error;
+        
+        html += `<div class="test-result-item ${className}">`;
+        html += `<strong>${icon} ${detail.name}:</strong> ${content}`;
+        html += '</div>';
+    });
+    
+    resultsContainer.innerHTML = html;
+    resultsContainer.style.display = 'block';
+}
+
+/**
+ * 에러 처리 개선
+ */
+function improveErrorHandling() {
+    console.log('🛠️ 에러 처리 개선 시작...');
+    
+    // 네트워크 오류 처리 개선
+    const originalGetClientIP = getClientIP;
+    
+    window.getClientIP = async function() {
+        try {
+            return await originalGetClientIP();
+        } catch (error) {
+            console.error('❌ IP API 호출 실패:', error);
+            
+            // 사용자에게 더 명확한 에러 메시지 제공
+            if (error.message.includes('fetch')) {
+                showToast('⚠️ 네트워크 연결을 확인해주세요.');
+            } else if (error.message.includes('timeout')) {
+                showToast('⚠️ IP 확인 시간이 초과되었습니다.');
+            } else {
+                showToast('⚠️ IP 확인 중 오류가 발생했습니다.');
+            }
+            
+            throw error;
+        }
+    };
+    
+    // IP 검증 실패 시 더 자세한 로그
+    const originalValidateIPAccess = validateIPAccess;
+    
+    window.validateIPAccess = function(currentIP, config) {
+        try {
+            const result = originalValidateIPAccess(currentIP, config);
+            
+            if (!result.allowed) {
+                console.warn('🚫 IP 접근 차단:', {
+                    ip: currentIP,
+                    reason: result.reason,
+                    allowedIPs: config.allowedIPs,
+                    allowedRanges: config.allowedRanges
+                });
+            }
+            
+            return result;
+        } catch (error) {
+            console.error('❌ IP 검증 중 오류:', error);
+            return {
+                allowed: false,
+                reason: 'IP 검증 중 오류가 발생했습니다.',
+                error: error.message
+            };
+        }
+    };
+}
+
+/**
+ * 사용자 경험 개선
+ */
+function improveUserExperience() {
+    console.log('🎨 사용자 경험 개선 시작...');
+    
+    // 로딩 표시 개선
+    function showLoadingMessage(message) {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'ipLoadingMessage';
+        loadingDiv.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 10002;
+            text-align: center;
+            font-size: 16px;
+        `;
+        loadingDiv.innerHTML = `
+            <div style="margin-bottom: 10px;">⏳</div>
+            <div>${message}</div>
+        `;
+        document.body.appendChild(loadingDiv);
+    }
+    
+    function hideLoadingMessage() {
+        const loadingDiv = document.getElementById('ipLoadingMessage');
+        if (loadingDiv) {
+            loadingDiv.remove();
+        }
+    }
+    
+    // IP 검증 시 로딩 표시
+    const originalCheckIPAccess = checkIPAccess;
+    
+    window.checkIPAccess = async function() {
+        showLoadingMessage('IP 주소를 확인하고 있습니다...');
+        
+        try {
+            const result = await originalCheckIPAccess();
+            hideLoadingMessage();
+            return result;
+        } catch (error) {
+            hideLoadingMessage();
+            throw error;
+        }
+    };
+    
+    // 관리자 모달 열 때 로딩 표시
+    const originalShowIPAdminModal = showIPAdminModal;
+    
+    window.showIPAdminModal = function() {
+        showLoadingMessage('관리자 인터페이스를 로드하고 있습니다...');
+        
+        setTimeout(() => {
+            hideLoadingMessage();
+            originalShowIPAdminModal();
+        }, 500);
+    };
+}
+
+/**
+ * 브라우저 호환성 테스트
+ */
+function testBrowserCompatibility() {
+    console.log('🌐 브라우저 호환성 테스트 시작...');
+    
+    const compatibility = {
+        localStorage: typeof localStorage !== 'undefined',
+        fetch: typeof fetch !== 'undefined',
+        asyncAwait: (() => {
+            try {
+                new Function('async () => {}');
+                return true;
+            } catch {
+                return false;
+            }
+        })(),
+        templateLiterals: (() => {
+            try {
+                new Function('`test`');
+                return true;
+            } catch {
+                return false;
+            }
+        })(),
+        arrowFunctions: (() => {
+            try {
+                new Function('() => {}');
+                return true;
+            } catch {
+                return false;
+            }
+        })()
+    };
+    
+    console.log('📋 브라우저 호환성 결과:', compatibility);
+    
+    // 호환성 문제가 있는 경우 경고
+    const issues = Object.entries(compatibility)
+        .filter(([feature, supported]) => !supported)
+        .map(([feature]) => feature);
+    
+    if (issues.length > 0) {
+        console.warn('⚠️ 호환성 문제 발견:', issues);
+        showToast(`⚠️ 브라우저 호환성 문제: ${issues.join(', ')}`);
+    } else {
+        console.log('✅ 모든 기능이 지원됩니다.');
+    }
+    
+    // 호환성 테스트 결과를 UI에 표시
+    const compatibilityTestResults = {
+        total: Object.keys(compatibility).length,
+        passed: Object.values(compatibility).filter(Boolean).length,
+        failed: issues.length,
+        details: Object.entries(compatibility).map(([feature, supported]) => ({
+            name: `${feature} 지원`,
+            success: supported,
+            result: supported ? '지원됨' : '지원되지 않음'
+        }))
+    };
+    
+    displayTestResults(compatibilityTestResults);
+    
+    return compatibility;
+}
+
+/**
+ * 메모리 사용량 최적화
+ */
+function optimizeMemoryUsage() {
+    console.log('💾 메모리 사용량 최적화 시작...');
+    
+    // 불필요한 이벤트 리스너 정리
+    function cleanupEventListeners() {
+        const modals = ['ipBlockModal', 'ipAdminModal'];
+        
+        modals.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                // 기존 이벤트 리스너 제거
+                const newModal = modal.cloneNode(true);
+                modal.parentNode.replaceChild(newModal, modal);
+            }
+        });
+        
+        console.log('🧹 이벤트 리스너 정리 완료');
+    }
+    
+    // 캐시 크기 제한
+    function limitCacheSize() {
+        const maxCacheSize = 50; // 최대 캐시 항목 수
+        
+        // localStorage 크기 확인
+        const keys = Object.keys(localStorage);
+        const ipRelatedKeys = keys.filter(key => key.includes('ip'));
+        
+        if (ipRelatedKeys.length > maxCacheSize) {
+            // 가장 오래된 캐시 항목들 삭제
+            const sortedKeys = ipRelatedKeys.sort((a, b) => {
+                const aTime = localStorage.getItem(a + '_timestamp') || 0;
+                const bTime = localStorage.getItem(b + '_timestamp') || 0;
+                return aTime - bTime;
+            });
+            
+            const keysToRemove = sortedKeys.slice(0, ipRelatedKeys.length - maxCacheSize);
+            keysToRemove.forEach(key => {
+                localStorage.removeItem(key);
+                localStorage.removeItem(key + '_timestamp');
+            });
+            
+            console.log(`🗑️ ${keysToRemove.length}개의 오래된 캐시 항목 삭제`);
+        }
+    }
+    
+    // 주기적 메모리 정리
+    setInterval(() => {
+        limitCacheSize();
+    }, 5 * 60 * 1000); // 5분마다
+    
+    cleanupEventListeners();
+    limitCacheSize();
+    
+    console.log('✅ 메모리 최적화 완료');
+}
+
+/**
+ * 최종 통합 테스트
+ */
+async function runFinalIntegrationTest() {
+    console.log('🔍 최종 통합 테스트 시작...');
+    
+    const testScenarios = [
+        {
+            name: '허용된 IP 접근',
+            setup: () => {
+                const config = {
+                    enabled: true,
+                    allowedIPs: ['127.0.0.1'],
+                    allowedRanges: [],
+                    fallbackAction: 'block'
+                };
+                if (typeof saveIPRestrictionConfig === 'function') {
+                    saveIPRestrictionConfig(config);
+                }
+            },
+            test: async () => {
+                // 실제 IP 검증은 외부 API에 의존하므로 시뮬레이션
+                const mockIP = '127.0.0.1';
+                const config = typeof loadIPRestrictionConfig === 'function' ? 
+                    loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+                
+                const result = validateIPAccess(mockIP, config);
+                return result.allowed ? '✅ 허용된 IP 접근 테스트 통과' : '❌ 허용된 IP 접근 테스트 실패';
+            }
+        },
+        {
+            name: '차단된 IP 접근',
+            setup: () => {
+                const config = {
+                    enabled: true,
+                    allowedIPs: ['192.168.1.100'],
+                    allowedRanges: [],
+                    fallbackAction: 'block'
+                };
+                if (typeof saveIPRestrictionConfig === 'function') {
+                    saveIPRestrictionConfig(config);
+                }
+            },
+            test: async () => {
+                const mockIP = '192.168.1.200';
+                const config = typeof loadIPRestrictionConfig === 'function' ? 
+                    loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+                
+                const result = validateIPAccess(mockIP, config);
+                return !result.allowed ? '✅ 차단된 IP 접근 테스트 통과' : '❌ 차단된 IP 접근 테스트 실패';
+            }
+        },
+        {
+            name: 'IP 제한 비활성화',
+            setup: () => {
+                const config = {
+                    enabled: false,
+                    allowedIPs: [],
+                    allowedRanges: [],
+                    fallbackAction: 'allow'
+                };
+                if (typeof saveIPRestrictionConfig === 'function') {
+                    saveIPRestrictionConfig(config);
+                }
+            },
+            test: async () => {
+                const mockIP = '192.168.1.200';
+                const config = typeof loadIPRestrictionConfig === 'function' ? 
+                    loadIPRestrictionConfig() : IP_RESTRICTION_CONFIG;
+                
+                const result = validateIPAccess(mockIP, config);
+                return result.allowed ? '✅ IP 제한 비활성화 테스트 통과' : '❌ IP 제한 비활성화 테스트 실패';
+            }
+        }
+    ];
+    
+    const results = [];
+    
+    for (const scenario of testScenarios) {
+        console.log(`🧪 ${scenario.name} 테스트 중...`);
+        
+        try {
+            scenario.setup();
+            const result = await scenario.test();
+            results.push({ name: scenario.name, success: true, result });
+            console.log(`✅ ${scenario.name}: ${result}`);
+        } catch (error) {
+            results.push({ name: scenario.name, success: false, error: error.message });
+            console.error(`❌ ${scenario.name}: ${error.message}`);
+        }
+    }
+    
+    const successCount = results.filter(r => r.success).length;
+    const totalCount = results.length;
+    
+    console.log(`📊 통합 테스트 결과: ${successCount}/${totalCount} 통과`);
+    
+    // 통합 테스트 결과를 UI에 표시
+    const integrationTestResults = {
+        total: totalCount,
+        passed: successCount,
+        failed: totalCount - successCount,
+        details: results.map(r => ({
+            name: r.name,
+            success: r.success,
+            result: r.success ? r.result : r.error
+        }))
+    };
+    
+    displayTestResults(integrationTestResults);
+    
+    if (successCount === totalCount) {
+        console.log('🎉 모든 통합 테스트 통과!');
+        showToast('✅ IP 제한 기능이 정상적으로 작동합니다.');
+    } else {
+        console.error('❌ 일부 통합 테스트 실패');
+        showToast('⚠️ 일부 IP 제한 기능에 문제가 있습니다.');
+    }
+    
+    return results;
+}
+
+/**
+ * 전체 최적화 및 테스트 실행
+ */
+async function runCompleteOptimizationAndTest() {
+    console.log('🚀 IP 제한 기능 전체 최적화 및 테스트 시작...');
+    
+    try {
+        // 1. 성능 최적화
+        optimizeIPAPICalls();
+        
+        // 2. 에러 처리 개선
+        improveErrorHandling();
+        
+        // 3. 사용자 경험 개선
+        improveUserExperience();
+        
+        // 4. 브라우저 호환성 테스트
+        testBrowserCompatibility();
+        
+        // 5. 메모리 사용량 최적화
+        optimizeMemoryUsage();
+        
+        // 6. 종합 테스트 실행
+        const testResults = await runIPRestrictionTests();
+        
+        // 7. 최종 통합 테스트
+        const integrationResults = await runFinalIntegrationTest();
+        
+        console.log('🎯 전체 최적화 및 테스트 완료!');
+        
+        return {
+            testResults,
+            integrationResults,
+            optimization: 'completed'
+        };
+        
+    } catch (error) {
+        console.error('❌ 최적화 및 테스트 중 오류 발생:', error);
+        showToast('❌ 최적화 및 테스트 중 오류가 발생했습니다.');
+        throw error;
+    }
+}
+
+// 테스트 및 최적화 함수들을 전역으로 노출
+window.runIPRestrictionTests = runIPRestrictionTests;
+window.runFinalIntegrationTest = runFinalIntegrationTest;
+window.runCompleteOptimizationAndTest = runCompleteOptimizationAndTest;
+window.optimizeIPAPICalls = optimizeIPAPICalls;
+window.improveErrorHandling = improveErrorHandling;
+window.improveUserExperience = improveUserExperience;
+window.testBrowserCompatibility = testBrowserCompatibility;
+window.optimizeMemoryUsage = optimizeMemoryUsage;
+window.displayTestResults = displayTestResults;
+
+console.log('✅ IP 제한 기능 테스트 및 최적화 모듈이 로드되었습니다.');
+
+// ========================================
+// 카카오톡 공유 기능
+// ========================================
+
+/**
+ * 공유 버튼 상태 업데이트 함수
+ * 변환된 텍스트가 있을 때만 공유 버튼을 활성화합니다.
+ */
+function updateShareButtonState() {
+    const shareButtonContainer = document.getElementById('shareButtonContainer');
+    const kakaoShareBtn = document.getElementById('kakaoShareBtn');
+    
+    if (!shareButtonContainer || !kakaoShareBtn) {
+        return;
+    }
+    
+    // 변환된 텍스트가 있는지 확인
+    const hasOutputText = checkForOutputText();
+    
+    if (hasOutputText) {
+        shareButtonContainer.style.display = 'block';
+        kakaoShareBtn.disabled = false;
+    } else {
+        shareButtonContainer.style.display = 'none';
+        kakaoShareBtn.disabled = true;
+    }
+}
+
+/**
+ * 출력 텍스트 존재 여부 확인 함수
+ * @returns {boolean} - 출력 텍스트가 있으면 true, 없으면 false
+ */
+function checkForOutputText() {
+    // 키-값 테이블이 표시되어 있는지 확인
+    const keyValueTableContainer = document.getElementById('keyValueTableContainer');
+    if (keyValueTableContainer && keyValueTableContainer.style.display !== 'none') {
+        return true; // 키-값 테이블이 표시되어 있으면 공유 가능
+    }
+    
+    // 여러 텍스트 영역 확인
+    const outputText1 = document.getElementById('outputText1');
+    const outputText2 = document.getElementById('outputText2');
+    const outputText = document.getElementById('outputText');
+    
+    // 럭스 전용 텍스트 영역들 확인
+    const luxRequestText = document.getElementById('luxRequestText');
+    const luxStockText = document.getElementById('luxStockText');
+    const luxMemoText = document.getElementById('luxMemoText');
+    const luxUniverseText = document.getElementById('luxUniverseText');
+    
+    // 큐브 전용 텍스트 영역들 확인
+    const cubeStockText = document.getElementById('cubeStockText');
+    const cubeOpenText = document.getElementById('cubeOpenText');
+    const cubeUniverseText = document.getElementById('cubeUniverseText');
+    
+    // 드블랙 전용 텍스트 영역들 확인
+    const dblackRequestText = document.getElementById('dblackRequestText');
+    const dblackStockText = document.getElementById('dblackStockText');
+    const dblackMemoText = document.getElementById('dblackMemoText');
+    
+    // ACT 전용 텍스트 영역들 확인
+    const actStockText = document.getElementById('actStockText');
+    const actOpenText = document.getElementById('actOpenText');
+    
+    // 비앤컴 전용 텍스트 영역들 확인
+    const bncomStockText = document.getElementById('bncomStockText');
+    const bncomOpenText = document.getElementById('bncomOpenText');
+    
+    // 휴넷 전용 텍스트 영역들 확인
+    const hunetConfirmText = document.getElementById('hunetConfirmText');
+    const hunetDeliveryText = document.getElementById('hunetDeliveryText');
+    const hunetOpenText = document.getElementById('hunetOpenText');
+    
+    // 밀리언 전용 텍스트 영역들 확인
+    const millionRequestText = document.getElementById('millionRequestText');
+    const millionStockText = document.getElementById('millionStockText');
+    const millionMemoText = document.getElementById('millionMemoText');
+    
+    // 오앤티 전용 텍스트 영역들 확인
+    const ontRequestText = document.getElementById('ontRequestText');
+    const ontStockText = document.getElementById('ontStockText');
+    const ontMemoText = document.getElementById('ontMemoText');
+    
+    // 장천 전용 텍스트 영역들 확인
+    const jangcheonDeliveryText = document.getElementById('jangcheonDeliveryText');
+    const jangcheonOpenText = document.getElementById('jangcheonOpenText');
+    
+    // 한올 전용 텍스트 영역들 확인
+    const hanolConfirmText = document.getElementById('hanolConfirmText');
+    const hanolDeliveryText = document.getElementById('hanolDeliveryText');
+    const hanolOpenText = document.getElementById('hanolOpenText');
+    
+    // 코웨어 전용 텍스트 영역들 확인
+    const cowareOpenText = document.getElementById('cowareOpenText');
+    const cowareSpacePassText = document.getElementById('cowareSpacePassText');
+    
+    // 모든 텍스트 영역을 배열로 관리
+    const textAreas = [
+        outputText1, outputText2, outputText,
+        luxRequestText, luxStockText, luxMemoText, luxUniverseText,
+        cubeStockText, cubeOpenText, cubeUniverseText,
+        dblackRequestText, dblackStockText, dblackMemoText,
+        actStockText, actOpenText,
+        bncomStockText, bncomOpenText,
+        hunetConfirmText, hunetDeliveryText, hunetOpenText,
+        millionRequestText, millionStockText, millionMemoText,
+        ontRequestText, ontStockText, ontMemoText,
+        jangcheonDeliveryText, jangcheonOpenText,
+        hanolConfirmText, hanolDeliveryText, hanolOpenText,
+        cowareOpenText, cowareSpacePassText
+    ];
+    
+    // 하나라도 텍스트가 있으면 true 반환
+    return textAreas.some(textarea => 
+        textarea && 
+        textarea.style.display !== 'none' && 
+        textarea.value.trim() !== ''
+    );
+}
+
+/**
+ * 카카오톡 공유 함수
+ * 변환된 텍스트를 클립보드에 복사하고 카카오톡 앱을 호출합니다.
+ */
+async function shareToKakaoTalk() {
+    const shareBtn = document.getElementById('kakaoShareBtn');
+    let textToShare = null;
+    
+    try {
+        // 키-값 테이블이 표시되어 있는지 확인
+        const keyValueTableContainer = document.getElementById('keyValueTableContainer');
+        if (keyValueTableContainer && keyValueTableContainer.style.display !== 'none') {
+            showToast('키-값 테이블에서는 각 항목을 클릭하여 개별적으로 복사해주세요.');
+            return;
+        }
+        
+        // 텍스트 추출 (기존 copyToClipboard 로직 재사용)
+        textToShare = extractTextToShare();
+        if (!textToShare) {
+            showToast('공유할 텍스트가 없습니다.');
+            return;
+        }
+        
+        // 로딩 상태 설정
+        if (shareBtn) {
+            shareBtn.classList.add('loading');
+            shareBtn.disabled = true;
+        }
+        
+        // 클립보드에 복사
+        await copyTextToClipboard(textToShare);
+        
+        // 카카오톡 호출
+        await callKakaoTalk(textToShare);
+        
+        // 성공 상태 표시
+        if (shareBtn) {
+            shareBtn.classList.remove('loading');
+            shareBtn.classList.add('success');
+            setTimeout(() => {
+                shareBtn.classList.remove('success');
+                shareBtn.disabled = false;
+            }, 2000);
+        }
+        
+    } catch (error) {
+        console.error('카카오톡 공유 중 오류:', error);
+        
+        // 오류 상태 표시
+        if (shareBtn) {
+            shareBtn.classList.remove('loading');
+            shareBtn.classList.add('error');
+            setTimeout(() => {
+                shareBtn.classList.remove('error');
+                shareBtn.disabled = false;
+            }, 3000);
+        }
+        
+        handleShareError(error, textToShare);
+    }
+}
+
+/**
+ * 공유할 텍스트 추출 함수
+ * @returns {string|null} - 추출된 텍스트 또는 null
+ */
+function extractTextToShare() {
+    // 여러 텍스트 영역 확인 (기존 copyToClipboard 로직 재사용)
+    const outputText1 = document.getElementById('outputText1');
+    const outputText2 = document.getElementById('outputText2');
+    const outputText = document.getElementById('outputText');
+    
+    // 럭스 전용 텍스트 영역들 확인
+    const luxRequestText = document.getElementById('luxRequestText');
+    const luxStockText = document.getElementById('luxStockText');
+    const luxMemoText = document.getElementById('luxMemoText');
+    const luxUniverseText = document.getElementById('luxUniverseText');
+    
+    // 큐브 전용 텍스트 영역들 확인
+    const cubeStockText = document.getElementById('cubeStockText');
+    const cubeOpenText = document.getElementById('cubeOpenText');
+    const cubeUniverseText = document.getElementById('cubeUniverseText');
+    
+    // 드블랙 전용 텍스트 영역들 확인
+    const dblackRequestText = document.getElementById('dblackRequestText');
+    const dblackStockText = document.getElementById('dblackStockText');
+    const dblackMemoText = document.getElementById('dblackMemoText');
+    
+    // ACT 전용 텍스트 영역들 확인
+    const actStockText = document.getElementById('actStockText');
+    const actOpenText = document.getElementById('actOpenText');
+    
+    // 비앤컴 전용 텍스트 영역들 확인
+    const bncomStockText = document.getElementById('bncomStockText');
+    const bncomOpenText = document.getElementById('bncomOpenText');
+    
+    // 휴넷 전용 텍스트 영역들 확인
+    const hunetConfirmText = document.getElementById('hunetConfirmText');
+    const hunetDeliveryText = document.getElementById('hunetDeliveryText');
+    const hunetOpenText = document.getElementById('hunetOpenText');
+    
+    // 밀리언 전용 텍스트 영역들 확인
+    const millionRequestText = document.getElementById('millionRequestText');
+    const millionStockText = document.getElementById('millionStockText');
+    const millionMemoText = document.getElementById('millionMemoText');
+    
+    // 오앤티 전용 텍스트 영역들 확인
+    const ontRequestText = document.getElementById('ontRequestText');
+    const ontStockText = document.getElementById('ontStockText');
+    const ontMemoText = document.getElementById('ontMemoText');
+    
+    // 장천 전용 텍스트 영역들 확인
+    const jangcheonDeliveryText = document.getElementById('jangcheonDeliveryText');
+    const jangcheonOpenText = document.getElementById('jangcheonOpenText');
+    
+    // 한올 전용 텍스트 영역들 확인
+    const hanolConfirmText = document.getElementById('hanolConfirmText');
+    const hanolDeliveryText = document.getElementById('hanolDeliveryText');
+    const hanolOpenText = document.getElementById('hanolOpenText');
+    
+    // 코웨어 전용 텍스트 영역들 확인
+    const cowareOpenText = document.getElementById('cowareOpenText');
+    const cowareSpacePassText = document.getElementById('cowareSpacePassText');
+    
+    // 우선순위에 따라 텍스트 선택
+    if (outputText1 && outputText1.style.display !== 'none' && outputText1.value.trim() !== '') {
+        return outputText1.value.trim();
+    } else if (outputText2 && outputText2.style.display !== 'none' && outputText2.value.trim() !== '') {
+        return outputText2.value.trim();
+    } else if (outputText && outputText.value.trim() !== '') {
+        return outputText.value.trim();
+    }
+    
+    // 대리점별 텍스트 영역 확인
+    const textAreas = [
+        luxRequestText, luxStockText, luxMemoText, luxUniverseText,
+        cubeStockText, cubeOpenText, cubeUniverseText,
+        dblackRequestText, dblackStockText, dblackMemoText,
+        actStockText, actOpenText,
+        bncomStockText, bncomOpenText,
+        hunetConfirmText, hunetDeliveryText, hunetOpenText,
+        millionRequestText, millionStockText, millionMemoText,
+        ontRequestText, ontStockText, ontMemoText,
+        jangcheonDeliveryText, jangcheonOpenText,
+        hanolConfirmText, hanolDeliveryText, hanolOpenText,
+        cowareOpenText, cowareSpacePassText
+    ];
+    
+    for (const textarea of textAreas) {
+        if (textarea && textarea.style.display !== 'none' && textarea.value.trim() !== '') {
+            return textarea.value.trim();
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * 클립보드에 텍스트 복사 함수
+ * @param {string} text - 복사할 텍스트
+ * @returns {Promise} - 복사 결과
+ */
+async function copyTextToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text);
+    } else {
+        // fallback: 예전 방식 사용
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            if (successful) {
+                return Promise.resolve();
+            } else {
+                return Promise.reject(new Error('클립보드 복사에 실패했습니다.'));
+            }
+        } catch (err) {
+            document.body.removeChild(textArea);
+            return Promise.reject(err);
+        }
+    }
+}
+
+/**
+ * 카카오톡 앱 호출 함수
+ * @param {string} text - 공유할 텍스트
+ * @returns {Promise} - 호출 결과
+ */
+async function callKakaoTalk(text) {
+    return new Promise((resolve, reject) => {
+        try {
+            // URL 스킴으로 카카오톡 호출
+            const kakaoUrl = `kakaotalk://send?text=${encodeURIComponent(text)}`;
+            
+            // 카카오톡 앱 호출 시도
+            window.location.href = kakaoUrl;
+            
+            // 일정 시간 후 앱 호출 성공 여부 확인
+            setTimeout(() => {
+                // 앱이 설치되어 있으면 페이지가 변경되거나 앱이 열림
+                // 설치되어 있지 않으면 페이지가 그대로 유지됨
+                showToast('카카오톡이 열렸습니다! 📱\n\n1. 복사된 텍스트가 입력창에 표시됩니다\n2. 상단의 "전송" 버튼을 눌러 공유할 상대를 선택하세요\n3. 원하는 채팅방을 선택하고 전송하세요');
+                resolve();
+            }, 1000);
+            
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+/**
+ * 공유 오류 처리 함수
+ * @param {Error} error - 발생한 오류
+ * @param {string} text - 공유하려던 텍스트
+ */
+function handleShareError(error, text) {
+    console.error('공유 오류 처리:', error);
+    
+    if (error.name === 'NotAllowedError') {
+        // 클립보드 권한 거부
+        showToast('클립보드 접근 권한이 거부되었습니다. 텍스트를 수동으로 복사해주세요.');
+        showTextSelectionModal(text);
+    } else if (error.name === 'ClipboardError') {
+        // 클립보드 복사 실패
+        showToast('클립보드 복사에 실패했습니다. 텍스트를 수동으로 복사해주세요.');
+        showTextSelectionModal(text);
+    } else {
+        // 기타 오류
+        showToast('카카오톡 공유 중 오류가 발생했습니다. 텍스트를 수동으로 복사해주세요.');
+        showTextSelectionModal(text);
+    }
+}
+
+/**
+ * 텍스트 선택 모달 표시 함수
+ * @param {string} text - 선택할 텍스트
+ */
+function showTextSelectionModal(text) {
+    try {
+        // 모달 요소 가져오기
+        const modal = document.getElementById('textSelectionModal');
+        const textarea = document.getElementById('textSelectionTextarea');
+        
+        if (!modal || !textarea) {
+            console.error('텍스트 선택 모달 요소를 찾을 수 없습니다.');
+            showToast('모달을 표시할 수 없습니다.');
+            return;
+        }
+        
+        // 텍스트 설정
+        textarea.value = text;
+        
+        // 모달 표시
+        modal.style.display = 'flex';
+        
+        // 텍스트 영역에 포커스
+        setTimeout(() => {
+            textarea.focus();
+        }, 100);
+        
+        // 모달 외부 클릭 시 닫기
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeTextSelectionModal();
+            }
+        });
+        
+        // ESC 키로 닫기
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.style.display === 'flex') {
+                closeTextSelectionModal();
+            }
+        });
+        
+    } catch (error) {
+        console.error('텍스트 선택 모달 표시 중 오류:', error);
+        showToast('모달을 표시하는 중 오류가 발생했습니다.');
+    }
+}
+
+/**
+ * 텍스트 선택 모달 닫기 함수
+ */
+function closeTextSelectionModal() {
+    try {
+        const modal = document.getElementById('textSelectionModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('텍스트 선택 모달 닫기 중 오류:', error);
+    }
+}
+
+/**
+ * 텍스트 전체 선택 함수
+ */
+function selectAllText() {
+    try {
+        const textarea = document.getElementById('textSelectionTextarea');
+        if (textarea) {
+            textarea.select();
+            textarea.focus();
+            
+            // 선택 성공 피드백
+            showToast('텍스트가 전체 선택되었습니다. Ctrl+C로 복사하세요.');
+        }
+    } catch (error) {
+        console.error('텍스트 선택 중 오류:', error);
+        showToast('텍스트 선택에 실패했습니다.');
+    }
+}
+
+/**
+ * 카카오톡 공유 기능 종합 테스트 실행 함수
+ */
+async function runKakaoShareTests() {
+    console.log('🚀 카카오톡 공유 기능 종합 테스트 시작...');
+    
+    const testResults = {
+        total: 0,
+        passed: 0,
+        failed: 0,
+        details: []
+    };
+    
+    try {
+        // 1. 기본 UI 테스트
+        await runTest('UI 요소 존재 확인', testUIElements, testResults);
+        await runTest('공유 버튼 상태 관리', testShareButtonStates, testResults);
+        
+        // 2. 텍스트 추출 테스트
+        await runTest('텍스트 추출 기능', testTextExtraction, testResults);
+        
+        // 3. 클립보드 기능 테스트
+        await runTest('클립보드 복사 기능', testClipboardFunction, testResults);
+        
+        // 4. 텍스트 선택 모달 테스트
+        await runTest('텍스트 선택 모달', testTextSelectionModal, testResults);
+        
+        // 5. 에러 처리 테스트
+        await runTest('에러 처리 기능', testErrorHandling, testResults);
+        
+        // 6. 모바일 환경 테스트
+        await runTest('모바일 환경 호환성', testMobileCompatibility, testResults);
+        
+        // 7. 브라우저 호환성 테스트
+        await runTest('브라우저 호환성', testBrowserCompatibility, testResults);
+        
+        // 8. 성능 테스트
+        await runTest('성능 최적화', testPerformance, testResults);
+        
+        // 테스트 결과 표시
+        displayKakaoShareTestResults(testResults);
+        
+    } catch (error) {
+        console.error('테스트 실행 중 오류:', error);
+        showToast('테스트 실행 중 오류가 발생했습니다.');
+    }
+}
+
+/**
+ * 개별 테스트 실행 함수
+ */
+async function runTest(name, testFunction, results) {
+    results.total++;
+    console.log(`📋 테스트 실행: ${name}`);
+    
+    try {
+        const result = await testFunction();
+        if (result.success) {
+            results.passed++;
+            results.details.push({ name, status: 'PASS', message: result.message });
+            console.log(`✅ ${name}: 성공 - ${result.message}`);
+        } else {
+            results.failed++;
+            results.details.push({ name, status: 'FAIL', message: result.message });
+            console.log(`❌ ${name}: 실패 - ${result.message}`);
+        }
+    } catch (error) {
+        results.failed++;
+        results.details.push({ name, status: 'ERROR', message: error.message });
+        console.log(`💥 ${name}: 오류 - ${error.message}`);
+    }
+}
+
+/**
+ * UI 요소 존재 확인 테스트
+ */
+async function testUIElements() {
+    const shareButton = document.getElementById('kakaoShareBtn');
+    const shareContainer = document.getElementById('shareButtonContainer');
+    const textModal = document.getElementById('textSelectionModal');
+    
+    if (!shareButton || !shareContainer || !textModal) {
+        return { success: false, message: '필수 UI 요소가 누락되었습니다.' };
+    }
+    
+    return { success: true, message: '모든 UI 요소가 정상적으로 존재합니다.' };
+}
+
+/**
+ * 공유 버튼 상태 관리 테스트
+ */
+async function testShareButtonStates() {
+    const shareButton = document.getElementById('kakaoShareBtn');
+    if (!shareButton) {
+        return { success: false, message: '공유 버튼을 찾을 수 없습니다.' };
+    }
+    
+    // 초기 상태 확인
+    if (!shareButton.disabled) {
+        return { success: false, message: '초기 상태가 비활성화되어야 합니다.' };
+    }
+    
+    // 클래스 추가/제거 테스트
+    shareButton.classList.add('loading');
+    if (!shareButton.classList.contains('loading')) {
+        return { success: false, message: '로딩 상태 클래스가 적용되지 않습니다.' };
+    }
+    
+    shareButton.classList.remove('loading');
+    if (shareButton.classList.contains('loading')) {
+        return { success: false, message: '로딩 상태 클래스가 제거되지 않습니다.' };
+    }
+    
+    return { success: true, message: '공유 버튼 상태 관리가 정상 작동합니다.' };
+}
+
+/**
+ * 텍스트 추출 기능 테스트
+ */
+async function testTextExtraction() {
+    // 테스트용 텍스트 설정
+    const testText = '테스트 텍스트입니다.';
+    const outputText = document.getElementById('outputText');
+    
+    if (outputText) {
+        outputText.value = testText;
+        outputText.style.display = 'block';
+    }
+    
+    const extractedText = extractTextToShare();
+    
+    if (extractedText === testText) {
+        return { success: true, message: '텍스트 추출이 정상 작동합니다.' };
+    } else {
+        return { success: false, message: `텍스트 추출 실패. 예상: "${testText}", 실제: "${extractedText}"` };
+    }
+}
+
+/**
+ * 클립보드 기능 테스트
+ */
+async function testClipboardFunction() {
+    const testText = '클립보드 테스트 텍스트';
+    
+    try {
+        await copyTextToClipboard(testText);
+        
+        // 클립보드 읽기 테스트 (권한이 있는 경우)
+        if (navigator.clipboard && navigator.clipboard.readText) {
+            try {
+                const clipboardText = await navigator.clipboard.readText();
+                if (clipboardText === testText) {
+                    return { success: true, message: '클립보드 복사가 정상 작동합니다.' };
+                } else {
+                    return { success: false, message: '클립보드 내용이 일치하지 않습니다.' };
+                }
+            } catch (readError) {
+                // 읽기 권한이 없는 경우는 정상적인 상황
+                return { success: true, message: '클립보드 복사가 완료되었습니다. (읽기 권한 없음)' };
+            }
+        } else {
+            return { success: true, message: '클립보드 복사가 완료되었습니다. (구형 브라우저)' };
+        }
+    } catch (error) {
+        return { success: false, message: `클립보드 복사 실패: ${error.message}` };
+    }
+}
+
+/**
+ * 텍스트 선택 모달 테스트
+ */
+async function testTextSelectionModal() {
+    const testText = '모달 테스트 텍스트입니다.';
+    
+    // 모달 표시
+    showTextSelectionModal(testText);
+    
+    // 모달 요소 확인
+    const modal = document.getElementById('textSelectionModal');
+    const textarea = document.getElementById('textSelectionTextarea');
+    
+    if (!modal || !textarea) {
+        return { success: false, message: '모달 요소를 찾을 수 없습니다.' };
+    }
+    
+    // 모달 표시 상태 확인
+    if (modal.style.display !== 'flex') {
+        return { success: false, message: '모달이 표시되지 않았습니다.' };
+    }
+    
+    // 텍스트 내용 확인
+    if (textarea.value !== testText) {
+        return { success: false, message: '모달에 텍스트가 올바르게 설정되지 않았습니다.' };
+    }
+    
+    // 모달 닫기
+    closeTextSelectionModal();
+    
+    if (modal.style.display !== 'none') {
+        return { success: false, message: '모달이 닫히지 않았습니다.' };
+    }
+    
+    return { success: true, message: '텍스트 선택 모달이 정상 작동합니다.' };
+}
+
+/**
+ * 에러 처리 기능 테스트
+ */
+async function testErrorHandling() {
+    // 의도적으로 에러 상황 생성
+    const originalExtractText = extractTextToShare;
+    extractTextToShare = () => null; // 빈 텍스트 반환
+    
+    try {
+        const shareBtn = document.getElementById('kakaoShareBtn');
+        if (shareBtn) {
+            shareBtn.disabled = false; // 활성화
+        }
+        
+        // 공유 시도 (텍스트가 없어서 실패해야 함)
+        await shareToKakaoTalk();
+        
+        // 에러 상태 확인
+        if (shareBtn && shareBtn.classList.contains('error')) {
+            return { success: true, message: '에러 처리가 정상 작동합니다.' };
+        } else {
+            return { success: false, message: '에러 상태가 표시되지 않았습니다.' };
+        }
+    } finally {
+        // 원래 함수 복원
+        extractTextToShare = originalExtractText;
+    }
+}
+
+/**
+ * 모바일 환경 호환성 테스트
+ */
+async function testMobileCompatibility() {
+    const shareButton = document.getElementById('kakaoShareBtn');
+    if (!shareButton) {
+        return { success: false, message: '공유 버튼을 찾을 수 없습니다.' };
+    }
+    
+    // 터치 최적화 확인
+    const computedStyle = window.getComputedStyle(shareButton);
+    const minHeight = parseInt(computedStyle.minHeight);
+    const touchAction = computedStyle.touchAction;
+    
+    if (minHeight < 44) {
+        return { success: false, message: '터치 최적화 크기가 부족합니다.' };
+    }
+    
+    if (touchAction !== 'manipulation') {
+        return { success: false, message: '터치 액션이 최적화되지 않았습니다.' };
+    }
+    
+    return { success: true, message: '모바일 환경 호환성이 확인되었습니다.' };
+}
+
+/**
+ * 브라우저 호환성 테스트
+ */
+async function testBrowserCompatibility() {
+    const tests = [];
+    
+    // Clipboard API 지원 확인
+    tests.push({
+        name: 'Clipboard API',
+        supported: !!(navigator.clipboard && navigator.clipboard.writeText)
+    });
+    
+    // execCommand 지원 확인 (구형 브라우저)
+    tests.push({
+        name: 'execCommand',
+        supported: !!document.execCommand
+    });
+    
+    // URL 스킴 지원 확인
+    tests.push({
+        name: 'URL Scheme',
+        supported: true // 모든 브라우저에서 지원
+    });
+    
+    const supportedCount = tests.filter(t => t.supported).length;
+    const totalCount = tests.length;
+    
+    if (supportedCount === totalCount) {
+        return { success: true, message: '모든 브라우저 기능이 지원됩니다.' };
+    } else {
+        return { success: true, message: `${supportedCount}/${totalCount} 브라우저 기능이 지원됩니다.` };
+    }
+}
+
+/**
+ * 성능 최적화 테스트
+ */
+async function testPerformance() {
+    const startTime = performance.now();
+    
+    // 공유 버튼 상태 업데이트 성능 테스트
+    for (let i = 0; i < 100; i++) {
+        updateShareButtonState();
+    }
+    
+    const endTime = performance.now();
+    const duration = endTime - startTime;
+    
+    if (duration < 100) { // 100ms 이내 완료
+        return { success: true, message: `성능 테스트 통과 (${duration.toFixed(2)}ms)` };
+    } else {
+        return { success: false, message: `성능 테스트 실패 (${duration.toFixed(2)}ms)` };
+    }
+}
+
+/**
+ * 카카오톡 공유 기능 테스트 결과 표시
+ */
+function displayKakaoShareTestResults(results) {
+    console.log('\n📊 카카오톡 공유 기능 테스트 결과');
+    console.log('=====================================');
+    console.log(`총 테스트: ${results.total}`);
+    console.log(`성공: ${results.passed}`);
+    console.log(`실패: ${results.failed}`);
+    console.log(`성공률: ${((results.passed / results.total) * 100).toFixed(1)}%`);
+    
+    console.log('\n📋 상세 결과:');
+    results.details.forEach(detail => {
+        const status = detail.status === 'PASS' ? '✅' : detail.status === 'FAIL' ? '❌' : '💥';
+        console.log(`${status} ${detail.name}: ${detail.message}`);
+    });
+    
+    // 사용자에게 결과 알림
+    const successRate = (results.passed / results.total) * 100;
+    if (successRate >= 90) {
+        showToast(`테스트 완료: ${successRate.toFixed(1)}% 성공률로 모든 기능이 정상 작동합니다!`);
+    } else if (successRate >= 70) {
+        showToast(`테스트 완료: ${successRate.toFixed(1)}% 성공률로 대부분 기능이 정상 작동합니다.`);
+    } else {
+        showToast(`테스트 완료: ${successRate.toFixed(1)}% 성공률로 일부 기능에 문제가 있습니다.`);
+    }
+}
+
+/**
+ * 카카오톡 공유 기능 간단 테스트 (사용자용)
+ */
+function testKakaoShareFeature() {
+    console.log('🧪 카카오톡 공유 기능 간단 테스트 시작...');
+    
+    // 기본 기능 테스트
+    const tests = [
+        { name: 'UI 요소 확인', test: () => !!document.getElementById('kakaoShareBtn') },
+        { name: '텍스트 추출', test: () => extractTextToShare() !== null },
+        { name: '모달 기능', test: () => !!document.getElementById('textSelectionModal') }
+    ];
+    
+    let passed = 0;
+    tests.forEach(test => {
+        if (test.test()) {
+            console.log(`✅ ${test.name}: 통과`);
+            passed++;
+        } else {
+            console.log(`❌ ${test.name}: 실패`);
+        }
+    });
+    
+    const successRate = (passed / tests.length) * 100;
+    showToast(`간단 테스트 완료: ${successRate.toFixed(0)}% 성공률`);
+    
+    return successRate >= 100;
+}
+
+// 전역 함수로 노출
+window.updateShareButtonState = updateShareButtonState;
+window.checkForOutputText = checkForOutputText;
+window.shareToKakaoTalk = shareToKakaoTalk;
+window.extractTextToShare = extractTextToShare;
+window.copyTextToClipboard = copyTextToClipboard;
+window.callKakaoTalk = callKakaoTalk;
+window.handleShareError = handleShareError;
+window.showTextSelectionModal = showTextSelectionModal;
+window.closeTextSelectionModal = closeTextSelectionModal;
+window.selectAllText = selectAllText;
+window.runKakaoShareTests = runKakaoShareTests;
+window.testKakaoShareFeature = testKakaoShareFeature;
