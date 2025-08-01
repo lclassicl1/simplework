@@ -7,7 +7,7 @@ const AUTO_LOCK_TIMEOUT_MINUTES = 10; // 자동 잠금 시간 (분)
 // 🔒 IP 제한 설정 상수
 const IP_RESTRICTION_STORAGE_KEY = 'ip_restriction_config'; // localStorage 키
 const IP_RESTRICTION_CONFIG = {
-    enabled: false, // IP 제한 기능 활성화 여부 (기본: 비활성화)
+    enabled: true, // IP 제한 기능 활성화 여부 (기본: 비활성화)
     allowedIPs: [], // 허용된 개별 IP 주소 목록
     allowedRanges: [], // 허용된 IP 범위 목록 (CIDR 표기법)
     fallbackAction: 'block', // IP 확인 실패 시 동작 ('block' | 'warn' | 'allow')
