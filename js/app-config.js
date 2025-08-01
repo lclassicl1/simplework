@@ -7,7 +7,7 @@ const AUTO_LOCK_TIMEOUT_MINUTES = 10; // 자동 잠금 시간 (분)
 // 🔒 IP 제한 설정 상수
 const IP_RESTRICTION_STORAGE_KEY = 'ip_restriction_config'; // localStorage 키
 const IP_RESTRICTION_CONFIG = {
-    enabled: true, // IP 제한 기능 활성화 여부 (기본: 비활성화)
+    enabled: true, // IP 제한 기능 활성화 여부
     allowedIPs: [], // 허용된 개별 IP 주소 목록
     allowedRanges: [], // 허용된 IP 범위 목록 (CIDR 표기법)
     fallbackAction: 'block', // IP 확인 실패 시 동작 ('block' | 'warn' | 'allow')
@@ -108,17 +108,31 @@ function initializeUsefulSites() {
  * @returns {object} 로드된 IP 제한 설정
  */
 function loadIPRestrictionConfig() {
+    console.log('🔍 IP 제한 설정 로드 시작...');
+    console.log('📋 기본 설정:', IP_RESTRICTION_CONFIG);
+    
     try {
         const savedConfig = localStorage.getItem(IP_RESTRICTION_STORAGE_KEY);
+        console.log('💾 localStorage에서 읽은 원시 데이터:', savedConfig);
+        
         if (savedConfig) {
             const parsedConfig = JSON.parse(savedConfig);
+            console.log('🔧 파싱된 설정:', parsedConfig);
+            
             // 기본 설정과 병합하여 누락된 속성 보완
-            return { ...IP_RESTRICTION_CONFIG, ...parsedConfig };
+            const mergedConfig = { ...IP_RESTRICTION_CONFIG, ...parsedConfig };
+            console.log('✅ 최종 병합된 설정:', mergedConfig);
+            return mergedConfig;
+        } else {
+            console.log('⚠️ localStorage에 저장된 설정이 없습니다. 기본 설정을 사용합니다.');
         }
     } catch (error) {
-        console.warn('IP 제한 설정 로드 중 오류 발생:', error);
+        console.warn('❌ IP 제한 설정 로드 중 오류 발생:', error);
     }
-    return { ...IP_RESTRICTION_CONFIG }; // 기본 설정 반환
+    
+    const defaultConfig = { ...IP_RESTRICTION_CONFIG };
+    console.log('🔄 기본 설정 반환:', defaultConfig);
+    return defaultConfig;
 }
 
 /**
@@ -233,17 +247,33 @@ function removeAllowedRange(range) {
  * 현재 IP 제한 설정 상태 출력
  */
 function logIPRestrictionStatus() {
+    console.log('🔍 IP 제한 설정 상태 진단 시작...');
+    
+    // localStorage 직접 확인
+    const rawData = localStorage.getItem(IP_RESTRICTION_STORAGE_KEY);
+    console.log('💾 localStorage 원시 데이터:', rawData);
+    
+    // 설정 로드
     const config = loadIPRestrictionConfig();
-    console.log('🔒 IP 제한 설정 상태:');
-    console.log('  - 활성화:', config.enabled);
-    console.log('  - 허용 IP 개수:', config.allowedIPs.length);
-    console.log('  - 허용 IP 범위 개수:', config.allowedRanges.length);
+    console.log('🔒 현재 IP 제한 설정 상태:', config);
+    
+    // 주요 설정값 분석
+    console.log('📊 설정 분석:');
+    console.log('  - IP 제한 활성화:', config.enabled);
+    console.log('  - 허용 IP 개수:', config.allowedIPs ? config.allowedIPs.length : 0);
+    console.log('  - 허용 IP 목록:', config.allowedIPs);
+    console.log('  - 허용 범위 개수:', config.allowedRanges ? config.allowedRanges.length : 0);
+    console.log('  - 허용 범위 목록:', config.allowedRanges);
     console.log('  - 폴백 동작:', config.fallbackAction);
-    if (config.allowedIPs.length > 0) {
-        console.log('  - 허용 IP 목록:', config.allowedIPs);
-    }
-    if (config.allowedRanges.length > 0) {
-        console.log('  - 허용 IP 범위:', config.allowedRanges);
+    
+    // 문제 진단
+    if (config.enabled && config.allowedIPs.length === 0 && config.allowedRanges.length === 0) {
+        console.log('⚠️ 문제 발견: IP 제한이 활성화되어 있지만 허용 목록이 비어있습니다.');
+        console.log('   이 경우 fallbackAction에 따라 처리됩니다:', config.fallbackAction);
+    } else if (!config.enabled) {
+        console.log('ℹ️ IP 제한이 비활성화되어 있습니다.');
+    } else {
+        console.log('✅ IP 제한이 활성화되어 있고 허용 목록이 설정되어 있습니다.');
     }
 }
 
@@ -273,6 +303,8 @@ console.log('⏰ 자동 잠금 시간 설정:', AUTO_LOCK_TIMEOUT_MINUTES + '분
 console.log('🔒 IP 제한 기능 설정 완료');
 
 // IP 제한 설정 초기화 및 상태 출력
+console.log('🔄 IP 제한 설정을 기본값으로 강제 초기화합니다...');
+resetIPRestrictionConfig();
 logIPRestrictionStatus();
 
 // DOM이 로드되면 자동으로 초기화 (옵션)
